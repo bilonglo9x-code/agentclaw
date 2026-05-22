@@ -20,18 +20,26 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
 ## Where things live
 
 - `artifacts/goclaw-mobile/` — Expo React Native app
-  - `app/` — expo-router screens (5 tabs + chat detail + login)
+  - `app/` — expo-router screens (5 tabs + detail screens + login)
   - `app/(tabs)/` — Chat list, Agents grid, Dashboard, Monitor, More
-  - `app/chat/[id].tsx` — Individual chat screen with WS messaging
+  - `app/chat/[id].tsx` — Individual chat screen with WS messaging + streaming
   - `app/login.tsx` — Server URL + API token login screen
+  - `app/traces.tsx` — Execution traces list (HTTP `/v1/traces`) with status/cost/duration
+  - `app/approvals.tsx` — Approve/deny tool executions (WS `exec.approval.*` + real-time events)
+  - `app/skills.tsx` — Skills list (WS `skills.list`) with language badges, deps warnings
   - `context/AuthContext.tsx` — Auth state, AsyncStorage persistence, WS+HTTP client lifecycle
   - `context/AppContext.tsx` — Mock/demo data context (fallback when not connected)
-  - `lib/api/protocol.ts` — WS method/event constants (mirrors Go backend)
+  - `lib/api/protocol.ts` — WS method/event constants (mirrors Go backend protocol)
   - `lib/api/ws-client.ts` — WebSocket JSON-RPC client (full auth + reconnect)
   - `lib/api/http-client.ts` — HTTP REST client with auth headers
   - `hooks/useAgents.ts` — Fetch agents via HTTP `/v1/agents`, fallback to WS `agents.list`
   - `hooks/useSessions.ts` — List sessions via WS `sessions.list`
   - `hooks/useMessages.ts` — Chat history + send via WS + streaming events
+  - `hooks/useLogs.ts` — WS `logs.tail` with `log` event subscription; real-time log streaming
+  - `hooks/useUsage.ts` — HTTP `/v1/usage/summary` + `/v1/usage/timeseries`; period filter (today/7d/30d)
+  - `hooks/useTraces.ts` — HTTP `/v1/traces`; refreshes on agent events
+  - `hooks/useApprovals.ts` — WS `exec.approval.list` + `exec.approval.requested/resolved` events; approve/deny
+  - `hooks/useSkills.ts` — WS `skills.list` with HTTP fallback
   - `constants/colors.ts` — Dark zinc theme (amber #f97316 primary)
   - `components/` — Shared UI: ConversationItem, AgentCard, SearchBar, EmptyState
 - `artifacts/api-server/` — Express API server

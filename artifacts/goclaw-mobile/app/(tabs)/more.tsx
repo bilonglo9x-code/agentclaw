@@ -12,11 +12,13 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useApprovals } from "@/hooks/useApprovals";
 
 interface MenuItem {
   icon: keyof typeof Ionicons["glyphMap"];
   label: string;
   badge?: string;
+  badgeCount?: number;
   color?: string;
   danger?: boolean;
   onPress?: () => void;
@@ -33,17 +35,27 @@ export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected, tenantName, role, logout } = useAuth();
+  const { pendingCount } = useApprovals();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const SECTIONS: MenuSection[] = [
     {
       title: "Tính năng",
       items: [
-        { icon: "flash-outline", label: "Skills", badge: "12", color: "#f59e0b" },
+        { icon: "flash-outline", label: "Skills", color: "#f59e0b", onPress: () => router.push("/skills") },
+        { icon: "shield-outline", label: "Approvals", color: "#f97316", badgeCount: pendingCount, onPress: () => router.push("/approvals") },
         { icon: "hardware-chip-outline", label: "Channels", badge: "Telegram, Slack +2", color: "#60a5fa" },
         { icon: "time-outline", label: "Cron Jobs", badge: "3 active", color: "#22c55e" },
         { icon: "link-outline", label: "Webhooks", color: "#a78bfa" },
         { icon: "server-outline", label: "MCP Servers", badge: "2", color: "#f97316" },
+      ],
+    },
+    {
+      title: "Observability",
+      items: [
+        { icon: "search-outline", label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
+        { icon: "document-text-outline", label: "Logs", color: "#a1a1aa", onPress: () => {} },
+        { icon: "radio-outline", label: "Events", color: "#a78bfa" },
       ],
     },
     {
@@ -175,6 +187,11 @@ export default function MoreScreen() {
                       {item.badge}
                     </Text>
                   )}
+                  {!!item.badgeCount && item.badgeCount > 0 && (
+                    <View style={[styles.countDot, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.countDotText}>{item.badgeCount}</Text>
+                    </View>
+                  )}
                   {!item.danger && <Ionicons name="chevron-forward" size={15} color={colors.mutedForeground} />}
                 </View>
               </TouchableOpacity>
@@ -232,6 +249,8 @@ const styles = StyleSheet.create({
   noBorder: { borderBottomWidth: 0 },
   menuIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   menuLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
-  menuRight: { flexDirection: "row", alignItems: "center", gap: 4 },
+  menuRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   menuBadge: { fontSize: 12, fontFamily: "Inter_400Regular", maxWidth: 110 },
+  countDot: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  countDotText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
 });
