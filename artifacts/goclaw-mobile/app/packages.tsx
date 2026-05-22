@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  tabRow: { paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
+  tabRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   tabChip: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1 },
   tabLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   countBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, minWidth: 20, alignItems: "center" },

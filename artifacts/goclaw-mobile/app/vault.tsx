@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   totalBadge: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  filterRow: { paddingHorizontal: 14, paddingVertical: 6, gap: 8, alignItems: "center" },
+  filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   scopeDot: { width: 6, height: 6, borderRadius: 3 },
