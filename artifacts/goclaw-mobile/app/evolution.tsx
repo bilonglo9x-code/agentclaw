@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   chartCount: { fontSize: 10, fontFamily: "Inter_700Bold", minWidth: 22, textAlign: "right" },
   chartFail: { fontSize: 10, fontFamily: "Inter_700Bold" },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
-  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   countBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, minWidth: 16, alignItems: "center" },
   countText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },

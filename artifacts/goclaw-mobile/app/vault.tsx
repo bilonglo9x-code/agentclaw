@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 36 },
   searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   scopeDot: { width: 6, height: 6, borderRadius: 3 },
   dividerV: { width: 1, height: 20 },

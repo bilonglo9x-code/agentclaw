@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   distDot: { width: 6, height: 6, borderRadius: 3 },
   distText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   agentChips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   agentDot: { width: 6, height: 6, borderRadius: 3 },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   tabRow: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth, marginHorizontal: 16 },

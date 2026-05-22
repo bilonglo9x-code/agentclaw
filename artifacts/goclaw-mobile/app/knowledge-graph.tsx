@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold" },
   statLabel: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: 2 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
-  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   filterCount: { fontSize: 10, fontFamily: "Inter_700Bold" },
   typeDot: { width: 6, height: 6, borderRadius: 3 },

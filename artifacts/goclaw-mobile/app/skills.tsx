@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   langLegendText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   searchWrap: { marginBottom: 4 },
   chips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   errorBanner: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },

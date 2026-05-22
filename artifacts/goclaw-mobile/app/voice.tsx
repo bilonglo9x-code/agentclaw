@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   demoVoice: { fontSize: 10, fontFamily: "Inter_400Regular" },
   demoInput: { borderWidth: 1, borderRadius: 10, padding: 8, fontSize: 13, fontFamily: "Inter_400Regular", minHeight: 52 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
-  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   divider: { width: 1, height: 18, marginHorizontal: 2 },
   selectedBanner: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 14, marginBottom: 4, borderRadius: 12, borderWidth: 1, padding: 10 },
