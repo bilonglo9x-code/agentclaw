@@ -181,18 +181,31 @@ export default function TeamsScreen() {
                     <Text style={[styles.noTasks, { color: colors.mutedForeground }]}>Không có tasks</Text>
                   ) : (
                     <>
-                      {/* Task status summary */}
+                      {/* Task progress bar + status chips */}
                       <View style={styles.taskSummary}>
                         {Object.entries(taskCounts).map(([status, count]) => {
                           const cfg = TASK_STATUS_CONFIG[status as TaskStatus];
                           return cfg ? (
-                            <View key={status} style={styles.taskStatusChip}>
-                              <View style={[styles.miniDot, { backgroundColor: cfg.color }]} />
-                              <Text style={[styles.taskStatusCount, { color: cfg.color }]}>{count}</Text>
+                            <View key={status} style={[styles.taskStatusChip, { backgroundColor: cfg.color + "15" }]}>
+                              <Ionicons name={cfg.icon} size={10} color={cfg.color} />
+                              <Text style={[styles.taskStatusCount, { color: cfg.color }]}>{count} {cfg.label}</Text>
                             </View>
                           ) : null;
                         })}
                       </View>
+
+                      {/* Stacked progress bar */}
+                      {tasks.length > 0 && (
+                        <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}>
+                          {Object.entries(taskCounts).map(([status, count]) => {
+                            const cfg = TASK_STATUS_CONFIG[status as TaskStatus];
+                            const pct = (count / tasks.length) * 100;
+                            return cfg ? (
+                              <View key={status} style={[styles.progressSegment, { width: `${pct}%`, backgroundColor: cfg.color }]} />
+                            ) : null;
+                          })}
+                        </View>
+                      )}
                       {tasks.map((task) => {
                         const cfg = TASK_STATUS_CONFIG[task.status] ?? TASK_STATUS_CONFIG.pending;
                         return (
@@ -257,10 +270,12 @@ const styles = StyleSheet.create({
   teamRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   tasksSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingBottom: 10 },
-  taskSummary: { flexDirection: "row", gap: 8, paddingVertical: 8 },
-  taskStatusChip: { flexDirection: "row", alignItems: "center", gap: 4 },
+  taskSummary: { flexDirection: "row", gap: 6, paddingVertical: 8, flexWrap: "wrap" },
+  taskStatusChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
   miniDot: { width: 6, height: 6, borderRadius: 3 },
-  taskStatusCount: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  taskStatusCount: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  progressTrack: { height: 6, borderRadius: 3, flexDirection: "row", overflow: "hidden", marginBottom: 8 },
+  progressSegment: { height: 6 },
   taskRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
   taskInfo: { flex: 1 },
   taskSubject: { fontSize: 13, fontFamily: "Inter_400Regular" },

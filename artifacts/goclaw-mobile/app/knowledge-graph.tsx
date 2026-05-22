@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Platform,
   ScrollView,
@@ -18,6 +19,8 @@ import { useKnowledgeGraph, KGEntity } from "@/hooks/useKnowledgeGraph";
 import { useAgents } from "@/hooks/useAgents";
 import { SearchBar } from "@/components/SearchBar";
 
+type ViewMode = "list" | "map";
+
 const TYPE_COLORS: Record<string, string> = {
   person: "#f97316",
   organization: "#60a5fa",
@@ -26,20 +29,188 @@ const TYPE_COLORS: Record<string, string> = {
   concept: "#a78bfa",
   product: "#3b82f6",
   document: "#71717a",
+  technology: "#06b6d4",
 };
 
 function getTypeColor(type: string): string {
   return TYPE_COLORS[type.toLowerCase()] ?? "#a1a1aa";
 }
 
+const SCREEN_W = Dimensions.get("window").width;
+
+function EntityBubble({
+  entity,
+  onPress,
+}: {
+  entity: KGEntity;
+  onPress: () => void;
+}) {
+  const tc = getTypeColor(entity.type);
+  const size = Math.max(48, Math.min(88, 48 + (entity.relation_count ?? 0) * 6));
+  const fontSize = size > 65 ? 11 : 9;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.75}
+      style={[
+        styles.bubble,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: tc + "22",
+          borderColor: tc + "80",
+        },
+      ]}
+    >
+      <Text style={[styles.bubbleText, { color: tc, fontSize }]} numberOfLines={2}>
+        {entity.name}
+      </Text>
+      {(entity.relation_count ?? 0) > 0 && (
+        <View style={[styles.bubbleRelCount, { backgroundColor: tc }]}>
+          <Text style={styles.bubbleRelText}>{entity.relation_count}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function MapView({
+  entities,
+  selectedType,
+  colors,
+  onSelect,
+}: {
+  entities: KGEntity[];
+  selectedType: string | null;
+  colors: ReturnType<typeof useColors>;
+  onSelect: (e: KGEntity) => void;
+}) {
+  const byType = useMemo(() => {
+    const groups: Record<string, KGEntity[]> = {};
+    entities.forEach((e) => {
+      const t = e.type || "other";
+      if (!groups[t]) groups[t] = [];
+      groups[t].push(e);
+    });
+    return groups;
+  }, [entities]);
+
+  const filteredGroups = selectedType ? { [selectedType]: byType[selectedType] ?? [] } : byType;
+
+  return (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.mapScroll}>
+      {Object.entries(filteredGroups).map(([type, items]) => {
+        const tc = getTypeColor(type);
+        return (
+          <View key={type} style={styles.typeGroup}>
+            <View style={styles.typeGroupHeader}>
+              <View style={[styles.typeGroupDot, { backgroundColor: tc }]} />
+              <Text style={[styles.typeGroupLabel, { color: tc }]}>
+                {type.toUpperCase()}
+              </Text>
+              <Text style={[styles.typeGroupCount, { color: colors.mutedForeground }]}>
+                {items.length}
+              </Text>
+            </View>
+            <View style={styles.bubblesRow}>
+              {items.map((e) => (
+                <EntityBubble key={e.id} entity={e} onPress={() => onSelect(e)} />
+              ))}
+            </View>
+          </View>
+        );
+      })}
+      {entities.length === 0 && (
+        <View style={styles.emptyWrap}>
+          <Ionicons name="git-network-outline" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa có entity nào</Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+function EntityDetailSheet({
+  entity,
+  colors,
+  onClose,
+  onDelete,
+}: {
+  entity: KGEntity;
+  colors: ReturnType<typeof useColors>;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  const tc = getTypeColor(entity.type);
+  return (
+    <View style={[styles.detailSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.detailHeader}>
+        <View style={[styles.detailDot, { backgroundColor: tc }]} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.detailName, { color: colors.foreground }]}>{entity.name}</Text>
+          <View style={[styles.typeBadge, { backgroundColor: tc + "18", alignSelf: "flex-start", marginTop: 4 }]}>
+            <Text style={[styles.typeText, { color: tc }]}>{entity.type}</Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={onClose} style={styles.detailClose} activeOpacity={0.7}>
+          <Ionicons name="close" size={20} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
+
+      {entity.description ? (
+        <Text style={[styles.detailDesc, { color: colors.mutedForeground }]}>{entity.description}</Text>
+      ) : null}
+
+      <View style={styles.detailStats}>
+        {entity.relation_count != null && (
+          <View style={[styles.detailStat, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="git-network-outline" size={14} color={colors.primary} />
+            <Text style={[styles.detailStatText, { color: colors.foreground }]}>{entity.relation_count} relations</Text>
+          </View>
+        )}
+        <View style={[styles.detailStat, { backgroundColor: colors.secondary }]}>
+          <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
+          <Text style={[styles.detailStatText, { color: colors.mutedForeground }]}>
+            {new Date(entity.created_at).toLocaleDateString("vi")}
+          </Text>
+        </View>
+      </View>
+
+      {entity.properties && Object.keys(entity.properties).length > 0 && (
+        <View style={[styles.propsBox, { borderColor: colors.border }]}>
+          {Object.entries(entity.properties).slice(0, 6).map(([k, v]) => (
+            <View key={k} style={[styles.propRow, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.propKey, { color: colors.mutedForeground }]}>{k}</Text>
+              <Text style={[styles.propVal, { color: colors.foreground }]} numberOfLines={1}>{String(v)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.deleteBtn, { borderColor: colors.destructive + "50" }]}
+        onPress={onDelete}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={14} color={colors.destructive} />
+        <Text style={[styles.deleteBtnText, { color: colors.destructive }]}>Xóa entity</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function EntityCard({
   item,
   colors,
   onDelete,
+  onPress,
 }: {
   item: KGEntity;
   colors: ReturnType<typeof useColors>;
   onDelete: () => void;
+  onPress: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const tc = getTypeColor(item.type);
@@ -47,7 +218,7 @@ function EntityCard({
   return (
     <TouchableOpacity
       style={[styles.entityCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => setExpanded(!expanded)}
+      onPress={() => { setExpanded(!expanded); onPress(); }}
       onLongPress={() => Alert.alert("Xóa entity?", item.name, [
         { text: "Hủy", style: "cancel" },
         { text: "Xóa", style: "destructive", onPress: onDelete },
@@ -65,7 +236,7 @@ function EntityCard({
             {item.relation_count != null && item.relation_count > 0 && (
               <View style={[styles.relBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Ionicons name="git-network-outline" size={10} color={colors.mutedForeground} />
-                <Text style={[styles.relText, { color: colors.mutedForeground }]}>{item.relation_count} relations</Text>
+                <Text style={[styles.relText, { color: colors.mutedForeground }]}>{item.relation_count} links</Text>
               </View>
             )}
           </View>
@@ -83,9 +254,7 @@ function EntityCard({
               {Object.entries(item.properties).slice(0, 6).map(([k, v]) => (
                 <View key={k} style={[styles.propRow, { borderBottomColor: colors.border }]}>
                   <Text style={[styles.propKey, { color: colors.mutedForeground }]}>{k}</Text>
-                  <Text style={[styles.propVal, { color: colors.foreground }]} numberOfLines={1}>
-                    {String(v)}
-                  </Text>
+                  <Text style={[styles.propVal, { color: colors.foreground }]} numberOfLines={1}>{String(v)}</Text>
                 </View>
               ))}
             </View>
@@ -106,14 +275,20 @@ export default function KnowledgeGraphScreen() {
   const { agents } = useAgents();
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedEntity, setSelectedEntity] = useState<KGEntity | null>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { entities, stats, loading, error, search, setSearch, refresh, deleteEntity } =
     useKnowledgeGraph(selectedAgent || undefined);
 
   const entityTypes = stats?.entity_types ? Object.keys(stats.entity_types) : [...new Set(entities.map((e) => e.type))];
-
   const filtered = selectedType ? entities.filter((e) => e.type === selectedType) : entities;
+
+  const handleDelete = (id: string) => {
+    setSelectedEntity(null);
+    deleteEntity(id);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -125,10 +300,29 @@ export default function KnowledgeGraphScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Knowledge Graph</Text>
           {stats && (
             <Text style={[styles.count, { color: colors.mutedForeground }]}>
-              {stats.entity_count} entities
+              {stats.entity_count}
             </Text>
           )}
         </View>
+
+        {/* View toggle: List | Map */}
+        <View style={[styles.viewToggle, { backgroundColor: colors.muted }]}>
+          <TouchableOpacity
+            style={[styles.toggleBtn, viewMode === "list" && { backgroundColor: colors.card }]}
+            onPress={() => setViewMode("list")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="list-outline" size={14} color={viewMode === "list" ? colors.foreground : colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleBtn, viewMode === "map" && { backgroundColor: colors.card }]}
+            onPress={() => setViewMode("map")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="git-network-outline" size={14} color={viewMode === "map" ? colors.primary : colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
@@ -169,10 +363,15 @@ export default function KnowledgeGraphScreen() {
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Relations</Text>
           </View>
           {Object.entries(stats.entity_types).slice(0, 4).map(([type, count]) => (
-            <View key={type} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: getTypeColor(type) }]}>{count}</Text>
+            <TouchableOpacity
+              key={type}
+              style={[styles.statCard, { backgroundColor: selectedType === type ? getTypeColor(type) + "25" : colors.card, borderColor: selectedType === type ? getTypeColor(type) + "60" : colors.border }]}
+              onPress={() => setSelectedType(selectedType === type ? null : type)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statValue, { color: getTypeColor(type) }]}>{count as number}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{type}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -199,7 +398,7 @@ export default function KnowledgeGraphScreen() {
               >
                 <View style={[styles.typeDot, { backgroundColor: tc }]} />
                 <Text style={[styles.filterText, { color: active ? tc : colors.mutedForeground }]}>{t}</Text>
-                {stats?.entity_types[t] && (
+                {stats?.entity_types[t] != null && (
                   <Text style={[styles.filterCount, { color: active ? tc : colors.mutedForeground }]}>
                     {stats.entity_types[t]}
                   </Text>
@@ -223,6 +422,15 @@ export default function KnowledgeGraphScreen() {
           <Ionicons name="alert-circle-outline" size={36} color={colors.destructive} />
           <Text style={[styles.emptyText, { color: colors.destructive }]}>{error}</Text>
         </View>
+      ) : viewMode === "map" ? (
+        <View style={{ flex: 1 }}>
+          <MapView
+            entities={filtered}
+            selectedType={selectedType}
+            colors={colors}
+            onSelect={(e) => setSelectedEntity(e)}
+          />
+        </View>
       ) : (
         <FlatList
           data={filtered}
@@ -232,6 +440,7 @@ export default function KnowledgeGraphScreen() {
               item={item}
               colors={colors}
               onDelete={() => deleteEntity(item.id)}
+              onPress={() => setSelectedEntity(item)}
             />
           )}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
@@ -250,6 +459,16 @@ export default function KnowledgeGraphScreen() {
           }
         />
       )}
+
+      {/* Entity detail bottom sheet */}
+      {selectedEntity && (
+        <EntityDetailSheet
+          entity={selectedEntity}
+          colors={colors}
+          onClose={() => setSelectedEntity(null)}
+          onDelete={() => handleDelete(selectedEntity.id)}
+        />
+      )}
     </View>
   );
 }
@@ -261,6 +480,8 @@ const styles = StyleSheet.create({
   titleArea: { flex: 1, flexDirection: "row", alignItems: "baseline", gap: 8 },
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   count: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  viewToggle: { flexDirection: "row", borderRadius: 10, padding: 3, gap: 2 },
+  toggleBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   agentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   agentChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
@@ -274,6 +495,8 @@ const styles = StyleSheet.create({
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   filterCount: { fontSize: 10, fontFamily: "Inter_700Bold" },
   typeDot: { width: 6, height: 6, borderRadius: 3 },
+  typeBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  typeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   list: { padding: 14, gap: 8 },
   entityCard: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
   entityHeader: { flexDirection: "row", alignItems: "center", padding: 12, gap: 10 },
@@ -281,18 +504,54 @@ const styles = StyleSheet.create({
   entityMain: { flex: 1, gap: 4 },
   entityName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   entityMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  typeBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  typeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   relBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
   relText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   entityBody: { borderTopWidth: StyleSheet.hairlineWidth, padding: 12, gap: 8 },
   entityDesc: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
   propsGrid: { gap: 0 },
-  propRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
+  propsBox: { borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  propRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
   propKey: { fontSize: 12, fontFamily: "Inter_500Medium", flexShrink: 0 },
   propVal: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, textAlign: "right" },
   entityDate: { fontSize: 10, fontFamily: "Inter_400Regular" },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 10, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", marginTop: 4 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  mapScroll: { padding: 14, gap: 16, paddingBottom: 60 },
+  typeGroup: { gap: 10 },
+  typeGroupHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  typeGroupDot: { width: 8, height: 8, borderRadius: 4 },
+  typeGroupLabel: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.6 },
+  typeGroupCount: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  bubblesRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  bubble: { alignItems: "center", justifyContent: "center", borderWidth: 1.5, position: "relative" },
+  bubbleText: { fontFamily: "Inter_600SemiBold", textAlign: "center", paddingHorizontal: 4 },
+  bubbleRelCount: { position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  bubbleRelText: { color: "#fff", fontSize: 8, fontFamily: "Inter_700Bold" },
+  detailSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  detailHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  detailDot: { width: 12, height: 12, borderRadius: 6, marginTop: 4, flexShrink: 0 },
+  detailName: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  detailClose: { padding: 4 },
+  detailDesc: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  detailStats: { flexDirection: "row", gap: 8 },
+  detailStat: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  detailStatText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  deleteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 40, borderRadius: 12, borderWidth: 1, marginTop: 4 },
+  deleteBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });

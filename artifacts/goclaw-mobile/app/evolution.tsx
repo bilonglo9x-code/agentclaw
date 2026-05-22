@@ -183,19 +183,32 @@ export default function EvolutionScreen() {
         </ScrollView>
       )}
 
-      {/* Metrics summary */}
+      {/* Metrics bar chart */}
       {toolAggs.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
-          {toolAggs.slice(0, 5).map((t) => (
-            <View key={t.tool_name} style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.metricTool, { color: colors.foreground }]} numberOfLines={1}>{t.tool_name}</Text>
-              <Text style={[styles.metricValue, { color: colors.primary }]}>{t.call_count} calls</Text>
-              <Text style={[styles.metricSub, { color: t.failure_count > 0 ? "#ef4444" : "#22c55e" }]}>
-                {t.failure_count > 0 ? `${t.failure_count} fail` : "100% ok"}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
+        <View style={[styles.chartBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.chartTitle, { color: colors.mutedForeground }]}>TOOL USAGE</Text>
+          {(() => {
+            const maxCalls = Math.max(...toolAggs.map((t) => t.call_count), 1);
+            return toolAggs.slice(0, 6).map((t) => {
+              const pct = t.call_count / maxCalls;
+              const successPct = t.call_count > 0 ? (t.call_count - t.failure_count) / t.call_count : 1;
+              return (
+                <View key={t.tool_name} style={styles.chartRow}>
+                  <Text style={[styles.chartLabel, { color: colors.foreground }]} numberOfLines={1}>{t.tool_name}</Text>
+                  <View style={styles.chartBarArea}>
+                    <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
+                      <View style={[styles.chartBarFill, { width: `${pct * 100}%`, backgroundColor: t.failure_count > 0 ? "#f97316" : "#22c55e" }]} />
+                    </View>
+                    <Text style={[styles.chartCount, { color: colors.mutedForeground }]}>{t.call_count}</Text>
+                    {t.failure_count > 0 && (
+                      <Text style={[styles.chartFail, { color: "#ef4444" }]}>-{t.failure_count}</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            });
+          })()}
+        </View>
       )}
 
       {/* Status filter */}
@@ -275,11 +288,15 @@ const styles = StyleSheet.create({
   agentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   agentChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   agentChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  metricsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 6, gap: 8 },
-  metricCard: { borderRadius: 12, borderWidth: 1, padding: 10, minWidth: 90, gap: 2 },
-  metricTool: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  metricValue: { fontSize: 13, fontFamily: "Inter_700Bold" },
-  metricSub: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  chartBox: { marginHorizontal: 14, marginBottom: 8, borderRadius: 14, borderWidth: 1, padding: 12, gap: 8 },
+  chartTitle: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  chartRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  chartLabel: { width: 100, fontSize: 11, fontFamily: "Inter_500Medium" },
+  chartBarArea: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+  chartBarTrack: { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
+  chartBarFill: { height: 8, borderRadius: 4 },
+  chartCount: { fontSize: 10, fontFamily: "Inter_700Bold", minWidth: 22, textAlign: "right" },
+  chartFail: { fontSize: 10, fontFamily: "Inter_700Bold" },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },

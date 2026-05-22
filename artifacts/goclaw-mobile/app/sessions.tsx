@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -56,12 +57,23 @@ export default function SessionsScreen() {
   const { connected } = useAuth();
   const { agents } = useAgents();
   const [agentFilter, setAgentFilter] = useState<string | undefined>(undefined);
+  const [search, setSearch] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { sessions: liveSessions, total, loading, error, refresh, deleteSession } = useSessionsHistory(agentFilter);
-  const sessions = connected && liveSessions.length > 0
+  const baseSessions = connected && liveSessions.length > 0
     ? liveSessions
     : MOCK_SESSIONS.filter((s) => !agentFilter || s.agentName?.toLowerCase().includes(agentFilter.toLowerCase()));
+
+  const sessions = search
+    ? baseSessions.filter((s) => {
+        const q = search.toLowerCase();
+        return (s.label ?? s.key).toLowerCase().includes(q) ||
+          (s.agentName ?? "").toLowerCase().includes(q) ||
+          (s.model ?? "").toLowerCase().includes(q) ||
+          (s.channel ?? "").toLowerCase().includes(q);
+      })
+    : baseSessions;
 
   const agentOptions = [
     { id: undefined, label: "Tất cả" },
@@ -95,6 +107,23 @@ export default function SessionsScreen() {
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
+      </View>
+
+      {/* Inline search bar */}
+      <View style={[styles.searchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Ionicons name="search-outline" size={14} color={colors.mutedForeground} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.foreground }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Tìm theo tên, agent, model..."
+          placeholderTextColor={colors.mutedForeground}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
+            <Ionicons name="close-circle" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Summary cards */}
@@ -143,7 +172,11 @@ export default function SessionsScreen() {
           const chCfg = CHANNEL_ICONS[item.channel ?? "web"] ?? CHANNEL_ICONS.web;
           const totalTok = (item.inputTokens ?? 0) + (item.outputTokens ?? 0);
           return (
-            <View style={[styles.sessionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.sessionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push(`/chat/${item.key}`)}
+              activeOpacity={0.8}
+            >
               <View style={styles.cardTop}>
                 <View style={[styles.sessionIcon, { backgroundColor: colors.primary + "18" }]}>
                   <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
@@ -192,7 +225,7 @@ export default function SessionsScreen() {
                 </View>
                 <Text style={[styles.updatedAt, { color: colors.mutedForeground }]}>{fmtDate(item.updated)}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
@@ -227,6 +260,8 @@ const styles = StyleSheet.create({
   errorBanner: { marginHorizontal: 16, marginBottom: 6, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   list: { paddingHorizontal: 14, paddingTop: 8 },
+  searchRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginBottom: 10, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 38, gap: 8 },
+  searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
   sessionCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   sessionIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0 },
