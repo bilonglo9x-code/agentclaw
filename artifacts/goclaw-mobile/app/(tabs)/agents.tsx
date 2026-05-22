@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Platform,
   ScrollView,
@@ -12,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
+import { useAgents as useRealAgents } from "@/hooks/useAgents";
 import { AgentCard } from "@/components/AgentCard";
 import { SearchBar } from "@/components/SearchBar";
 import { EmptyState } from "@/components/EmptyState";
@@ -19,7 +22,7 @@ import { EmptyState } from "@/components/EmptyState";
 const FILTERS = [
   { label: "Tất cả", value: "all" },
   { label: "Agent", value: "open" },
-  { label: "Team", value: "predefined" },
+  { label: "Predefined", value: "predefined" },
   { label: "Active", value: "active" },
   { label: "Idle", value: "idle" },
 ];
@@ -27,15 +30,31 @@ const FILTERS = [
 export default function AgentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { agents } = useApp();
+  const { agents: mockAgents } = useApp();
+  const { connected } = useAuth();
+  const { agents: realAgents, loading } = useRealAgents();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
+  const rawAgents = connected && realAgents.length > 0
+    ? realAgents.map((a) => ({
+        id: a.id,
+        key: a.agent_key,
+        displayName: a.display_name ?? a.id,
+        description: a.workspace ?? "",
+        type: a.agent_type as "open" | "predefined",
+        status: (a.status === "active" ? "active" : "idle") as "active" | "idle",
+        model: a.model,
+        provider: a.provider ?? "",
+      }))
+    : mockAgents;
+
   const filtered = useMemo(
     () =>
-      agents.filter((a) => {
+      rawAgents.filter((a) => {
         const q = search.toLowerCase();
         const matchSearch =
+          !q ||
           a.displayName.toLowerCase().includes(q) ||
           a.description.toLowerCase().includes(q);
         const matchFilter =
@@ -45,7 +64,7 @@ export default function AgentsScreen() {
           a.type === filter;
         return matchSearch && matchFilter;
       }),
-    [agents, search, filter]
+    [rawAgents, search, filter],
   );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -54,12 +73,15 @@ export default function AgentsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Agents</Text>
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {loading && <ActivityIndicator color={colors.primary} size="small" />}
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: colors.primary }]}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchWrap}>
@@ -109,7 +131,6 @@ export default function AgentsScreen() {
           contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.row}
-          scrollEnabled={!!filtered.length}
         />
       )}
     </View>
@@ -125,14 +146,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
   },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  fab: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  fab: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   searchWrap: { marginBottom: 4 },
   chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
