@@ -5,7 +5,7 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
@@ -15,23 +15,23 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
-        <Label>Chats</Label>
+        <Label>Chat</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="agents">
         <Icon sf={{ default: "cpu", selected: "cpu.fill" }} />
         <Label>Agents</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="tasks">
-        <Icon sf={{ default: "checklist", selected: "checklist.checked" }} />
-        <Label>Tasks</Label>
+      <NativeTabs.Trigger name="dashboard">
+        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
+        <Label>Dashboard</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="flows">
-        <Icon sf={{ default: "arrow.triangle.branch", selected: "arrow.triangle.branch" }} />
-        <Label>Flows</Label>
+      <NativeTabs.Trigger name="monitor">
+        <Icon sf={{ default: "antenna.radiowaves.left.and.right", selected: "antenna.radiowaves.left.and.right" }} />
+        <Label>Monitor</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-        <Label>Settings</Label>
+      <NativeTabs.Trigger name="more">
+        <Icon sf={{ default: "ellipsis", selected: "ellipsis" }} />
+        <Label>More</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -39,9 +39,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -54,7 +52,7 @@ function ClassicTabLayout() {
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.tabBar,
-          borderTopWidth: 1,
+          borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
           elevation: 0,
           paddingBottom: isWeb ? 0 : insets.bottom,
@@ -62,20 +60,20 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.tabBar }]} />
           ) : null,
+        tabBarLabelStyle: {
+          fontFamily: "Inter_500Medium",
+          fontSize: 10,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Chats",
+          title: "Chat",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
               <SymbolView
@@ -94,61 +92,49 @@ function ClassicTabLayout() {
           title: "Agents",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name={focused ? "cpu.fill" : "cpu"}
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name={focused ? "cpu.fill" : "cpu"} tintColor={color} size={24} />
             ) : (
               <Ionicons name={focused ? "hardware-chip" : "hardware-chip-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
-        name="tasks"
+        name="dashboard"
         options={{
-          title: "Tasks",
+          title: "Dashboard",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name={focused ? "checklist.checked" : "checklist"}
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name={focused ? "chart.bar.fill" : "chart.bar"} tintColor={color} size={24} />
             ) : (
-              <Ionicons name={focused ? "checkbox" : "checkbox-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "bar-chart" : "bar-chart-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
-        name="flows"
+        name="monitor"
         options={{
-          title: "Flows",
+          title: "Monitor",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
               <SymbolView
-                name="arrow.triangle.branch"
+                name="antenna.radiowaves.left.and.right"
                 tintColor={color}
                 size={24}
               />
             ) : (
-              <Ionicons name={focused ? "git-network" : "git-network-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "radio" : "radio-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="more"
         options={{
-          title: "Settings",
+          title: "More",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name={focused ? "gearshape.fill" : "gearshape"}
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name="ellipsis" tintColor={color} size={24} />
             ) : (
-              <Ionicons name={focused ? "settings" : "settings-outline"} size={22} color={color} />
+              <Ionicons name={focused ? "ellipsis-horizontal-circle" : "ellipsis-horizontal-circle-outline"} size={22} color={color} />
             ),
         }}
       />

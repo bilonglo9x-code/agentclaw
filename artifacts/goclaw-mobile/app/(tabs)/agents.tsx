@@ -11,18 +11,17 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-import { useApp, AgentType } from "@/context/AppContext";
+import { useApp } from "@/context/AppContext";
 import { AgentCard } from "@/components/AgentCard";
 import { SearchBar } from "@/components/SearchBar";
 import { EmptyState } from "@/components/EmptyState";
 
-type Filter = "all" | AgentType | "active";
-
-const FILTERS: { label: string; value: Filter }[] = [
-  { label: "All", value: "all" },
+const FILTERS = [
+  { label: "Tất cả", value: "all" },
+  { label: "Agent", value: "open" },
+  { label: "Team", value: "predefined" },
   { label: "Active", value: "active" },
-  { label: "Custom", value: "open" },
-  { label: "System", value: "predefined" },
+  { label: "Idle", value: "idle" },
 ];
 
 export default function AgentsScreen() {
@@ -30,7 +29,7 @@ export default function AgentsScreen() {
   const insets = useSafeAreaInsets();
   const { agents } = useApp();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState("all");
 
   const filtered = useMemo(
     () =>
@@ -38,11 +37,11 @@ export default function AgentsScreen() {
         const q = search.toLowerCase();
         const matchSearch =
           a.displayName.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q) ||
-          a.model.toLowerCase().includes(q);
+          a.description.toLowerCase().includes(q);
         const matchFilter =
           filter === "all" ||
           (filter === "active" && a.status === "active") ||
+          (filter === "idle" && a.status === "idle") ||
           a.type === filter;
         return matchSearch && matchFilter;
       }),
@@ -56,15 +55,15 @@ export default function AgentsScreen() {
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Agents</Text>
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={20} color="#fff" />
+          <Ionicons name="add" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.searchWrap}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search agents..." />
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm agent..." />
       </View>
 
       <ScrollView
@@ -72,37 +71,31 @@ export default function AgentsScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chips}
       >
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f.value}
-            onPress={() => setFilter(f.value)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: filter === f.value ? colors.primary : colors.muted,
-                borderColor: filter === f.value ? colors.primary : colors.border,
-              },
-            ]}
-            activeOpacity={0.7}
-          >
-            <Text
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <TouchableOpacity
+              key={f.value}
+              onPress={() => setFilter(f.value)}
               style={[
-                styles.chipText,
-                { color: filter === f.value ? "#fff" : colors.mutedForeground },
+                styles.chip,
+                {
+                  backgroundColor: active ? colors.primary + "25" : colors.muted,
+                  borderColor: active ? colors.primary + "60" : colors.border,
+                },
               ]}
+              activeOpacity={0.7}
             >
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {filtered.length === 0 ? (
-        <EmptyState
-          icon="hardware-chip-outline"
-          title="No agents found"
-          subtitle="Try adjusting your search or filter"
-        />
+        <EmptyState icon="hardware-chip-outline" title="Không tìm thấy agent" subtitle="Thử điều chỉnh bộ lọc" />
       ) : (
         <FlatList
           data={filtered}
@@ -130,14 +123,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
-  title: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
-  },
-  addBtn: {
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  fab: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -145,21 +134,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   searchWrap: { marginBottom: 4 },
-  chips: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-  },
+  chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontSize: 13, fontFamily: "Inter_500Medium" },
   grid: { paddingHorizontal: 12, paddingTop: 8 },
   row: { gap: 8, marginBottom: 8, paddingHorizontal: 4 },
   cardWrap: { flex: 1 },

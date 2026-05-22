@@ -40,22 +40,22 @@ export default function ChatsScreen() {
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Chats</Text>
         <TouchableOpacity
-          style={[styles.composeBtn, { backgroundColor: colors.primary }]}
-          activeOpacity={0.8}
+          style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+          activeOpacity={0.7}
         >
-          <Ionicons name="create-outline" size={18} color="#fff" />
+          <Ionicons name="create-outline" size={18} color={colors.foreground} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.searchWrap}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search conversations..." />
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm cuộc trò chuyện..." />
       </View>
 
       {filtered.length === 0 ? (
         <EmptyState
           icon="chatbubbles-outline"
-          title={search ? "No results" : "No conversations yet"}
-          subtitle={search ? "Try a different search term" : "Start a chat with one of your agents"}
+          title={search ? "Không tìm thấy" : "Chưa có cuộc trò chuyện"}
+          subtitle={search ? "Thử từ khóa khác" : "Bắt đầu chat với một agent"}
         />
       ) : (
         <FlatList
@@ -74,7 +74,7 @@ export default function ChatsScreen() {
       )}
 
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 80 }]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 84 }]}
         activeOpacity={0.85}
       >
         <Ionicons name="add" size={26} color="#fff" />
@@ -90,14 +90,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   title: {
     fontSize: 28,
     fontFamily: "Inter_700Bold",
     letterSpacing: -0.5,
   },
-  composeBtn: {
+  iconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -105,19 +105,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   searchWrap: { marginBottom: 4 },
-  list: { paddingBottom: 120 },
+  list: { paddingBottom: 130 },
   fab: {
     position: "absolute",
     right: 20,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: "#f97316",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 8,
   },
 });

@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   StyleSheet,
@@ -17,30 +16,77 @@ import { useColors } from "@/hooks/useColors";
 import { useApp, Message } from "@/context/AppContext";
 import * as Haptics from "expo-haptics";
 
+interface ToolCallBadgeProps {
+  colors: ReturnType<typeof useColors>;
+}
+
+function ToolCallBadge({ colors }: ToolCallBadgeProps) {
+  return (
+    <View
+      style={[
+        styles.toolBadge,
+        { backgroundColor: "#3b82f615", borderColor: "#3b82f630" },
+      ]}
+    >
+      <Ionicons name="settings-outline" size={12} color="#60a5fa" />
+      <Text style={styles.toolBadgeText}>query_database</Text>
+      <Text style={[styles.toolBadgeDuration, { color: colors.mutedForeground }]}>· 0.3s</Text>
+    </View>
+  );
+}
+
+function ThinkingBubble({ colors }: { colors: ReturnType<typeof useColors> }) {
+  return (
+    <View style={styles.bubbleWrap}>
+      <View style={[styles.agentAvatar, { backgroundColor: colors.primary + "20" }]}>
+        <Ionicons name="sparkles" size={13} color={colors.primary} />
+      </View>
+      <View style={[styles.bubble, styles.assistantBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.thinkingDots}>
+          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+          <Text style={[styles.thinkingText, { color: colors.mutedForeground }]}>Đang xử lý...</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function MessageBubble({ message, colors }: { message: Message; colors: ReturnType<typeof useColors> }) {
   const isUser = message.role === "user";
+
+  if (message.streaming) {
+    return <ThinkingBubble colors={colors} />;
+  }
+
   return (
     <View style={[styles.bubbleWrap, isUser ? styles.userWrap : styles.assistantWrap]}>
       {!isUser && (
         <View style={[styles.agentAvatar, { backgroundColor: colors.primary + "20" }]}>
-          <Ionicons name="sparkles" size={14} color={colors.primary} />
+          <Ionicons name="sparkles" size={13} color={colors.primary} />
         </View>
       )}
-      <View
-        style={[
-          styles.bubble,
-          isUser
-            ? [styles.userBubble, { backgroundColor: colors.userBubble }]
-            : [styles.assistantBubble, { backgroundColor: colors.card, borderColor: colors.border }],
-        ]}
-      >
-        {message.streaming ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <Text style={[styles.bubbleText, { color: isUser ? colors.userBubbleText : colors.foreground }]}>
+      <View style={styles.bubbleContent}>
+        {!isUser && message.content.includes("query") && (
+          <ToolCallBadge colors={colors} />
+        )}
+        <View
+          style={[
+            styles.bubble,
+            isUser
+              ? [styles.userBubble, { backgroundColor: "#7c3400" }]
+              : [styles.assistantBubble, { backgroundColor: colors.card, borderColor: colors.border }],
+          ]}
+        >
+          <Text style={[styles.bubbleText, { color: colors.foreground }]}>
             {message.content}
           </Text>
-        )}
+        </View>
+        <Text style={[styles.bubbleTime, { color: colors.mutedForeground }, isUser && styles.timeRight]}>
+          {new Date().toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
+          {isUser ? " ✓✓" : ""}
+        </Text>
       </View>
     </View>
   );
@@ -83,6 +129,7 @@ export default function ChatScreen() {
       behavior="padding"
       keyboardVerticalOffset={0}
     >
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -100,15 +147,30 @@ export default function ChatScreen() {
         </View>
 
         <View style={styles.agentInfo}>
-          <Text style={[styles.agentName, { color: colors.foreground }]}>{conversation.agentName}</Text>
-          <Text style={[styles.agentModel, { color: colors.mutedForeground }]}>{conversation.model}</Text>
+          <View style={styles.agentNameRow}>
+            <Text style={[styles.agentName, { color: colors.foreground }]}>{conversation.agentName}</Text>
+            <View style={[styles.onlineDot, { backgroundColor: colors.success }]} />
+          </View>
+          <TouchableOpacity activeOpacity={0.7}>
+            <View style={[styles.modelBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Text style={[styles.modelBadgeText, { color: colors.mutedForeground }]}>
+                {conversation.model} ▾
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.moreBtn} activeOpacity={0.7}>
-          <Ionicons name="ellipsis-horizontal" size={20} color={colors.foreground} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+            <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Messages */}
       <FlatList
         data={[...messages].reverse()}
         keyExtractor={(item) => item.id}
@@ -124,50 +186,53 @@ export default function ChatScreen() {
         scrollEnabled={!!messages.length}
       />
 
+      {/* Input area */}
       <View
         style={[
-          styles.inputBar,
-          {
-            backgroundColor: colors.background,
-            borderTopColor: colors.border,
-            paddingBottom: insets.bottom + 8,
-          },
+          styles.inputArea,
+          { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 },
         ]}
       >
-        <TouchableOpacity style={styles.attachBtn} activeOpacity={0.7}>
-          <Ionicons name="attach" size={22} color={colors.mutedForeground} />
-        </TouchableOpacity>
+        {/* Toolbar row */}
+        <View style={styles.toolbar}>
+          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+            <Ionicons name="attach" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+            <Ionicons name="mic-outline" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+            <Ionicons name="camera-outline" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <View style={styles.toolbarSpacer} />
+          <Text style={[styles.contextText, { color: colors.mutedForeground }]}>context: 12% ▓░░░░</Text>
+        </View>
 
-        <TextInput
-          ref={inputRef}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.muted,
-              borderColor: colors.border,
-              color: colors.foreground,
-            },
-          ]}
-          value={text}
-          onChangeText={setText}
-          placeholder="Message..."
-          placeholderTextColor={colors.mutedForeground}
-          multiline
-          maxLength={4000}
-          returnKeyType="default"
-        />
-
-        <TouchableOpacity
-          style={[
-            styles.sendBtn,
-            { backgroundColor: text.trim() ? colors.primary : colors.muted },
-          ]}
-          onPress={handleSend}
-          disabled={!text.trim()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-up" size={18} color={text.trim() ? "#fff" : colors.mutedForeground} />
-        </TouchableOpacity>
+        {/* Text + send row */}
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={inputRef}
+            style={[
+              styles.input,
+              { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground },
+            ]}
+            value={text}
+            onChangeText={setText}
+            placeholder="Nhập tin nhắn..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            maxLength={4000}
+            returnKeyType="default"
+          />
+          <TouchableOpacity
+            style={[styles.sendBtn, { backgroundColor: text.trim() ? colors.primary : colors.secondary }]}
+            onPress={handleSend}
+            disabled={!text.trim()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-up" size={18} color={text.trim() ? "#fff" : colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -190,24 +255,26 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  agentInitials: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
+  agentInitials: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  agentInfo: { flex: 1, gap: 3 },
+  agentNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  agentName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  onlineDot: { width: 7, height: 7, borderRadius: 4 },
+  modelBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  agentInfo: { flex: 1 },
-  agentName: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  agentModel: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-  },
-  moreBtn: { padding: 4 },
-  messageList: { paddingHorizontal: 16 },
+  modelBadgeText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  headerActions: { flexDirection: "row", gap: 6 },
+  iconBtn: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  messageList: { paddingHorizontal: 14 },
   bubbleWrap: {
-    marginVertical: 4,
+    marginVertical: 5,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 8,
@@ -215,45 +282,49 @@ const styles = StyleSheet.create({
   userWrap: { justifyContent: "flex-end" },
   assistantWrap: { justifyContent: "flex-start" },
   agentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    marginBottom: 16,
   },
-  bubble: {
-    maxWidth: "78%",
-    padding: 12,
-    borderRadius: 18,
-  },
-  userBubble: {
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    borderBottomLeftRadius: 4,
+  bubbleContent: { maxWidth: "80%", gap: 3 },
+  toolBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
   },
-  bubbleText: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 22,
+  toolBadgeText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#60a5fa" },
+  toolBadgeDuration: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  bubble: {
+    padding: 11,
+    borderRadius: 18,
   },
-  inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
+  userBubble: { borderBottomRightRadius: 4 },
+  assistantBubble: { borderBottomLeftRadius: 4, borderWidth: 1 },
+  bubbleText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 21 },
+  bubbleTime: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  timeRight: { textAlign: "right" },
+  thinkingDots: { flexDirection: "row", alignItems: "center", gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  thinkingText: { fontSize: 12, fontFamily: "Inter_400Regular", marginLeft: 4 },
+  inputArea: {
+    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 12,
     paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
     gap: 8,
   },
-  attachBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
+  toolbar: { flexDirection: "row", alignItems: "center", gap: 8 },
+  toolbarBtn: { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  toolbarSpacer: { flex: 1 },
+  contextText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   input: {
     flex: 1,
     borderRadius: 20,
@@ -261,7 +332,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 9,
     paddingBottom: 9,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
     maxHeight: 120,
   },
@@ -271,6 +342,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
   },
 });
