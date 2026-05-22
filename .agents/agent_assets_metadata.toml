@@ -6,3 +6,9 @@ id = "KttBJC567k5F-Fqmj_pE2"
 uri = "file://agentclaw-spec.md"
 type = "text"
 title = "AgentClaw — App Spec & Feature Development Plan"
+
+[[outputs]]
+id = "YFmTk8hV8anD_6gctFaHv"
+uri = "file://MASTER_SPEC.md"
+type = "text"
+title = "GoClaw — Master Spec (merged)"
