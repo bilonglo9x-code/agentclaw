@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   totalBadge: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   timeRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4, gap: 2 },
-  timeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
+  timeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, alignSelf: "flex-start" },
   timeChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   timeRight: { flex: 1, alignItems: "flex-end", paddingRight: 8 },
   timeCount: { fontSize: 10, fontFamily: "Inter_400Regular" },

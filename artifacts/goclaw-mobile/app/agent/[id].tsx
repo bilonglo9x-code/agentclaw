@@ -172,7 +172,7 @@ export default function AgentDetailScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={[styles.tabRow, { borderBottomColor: colors.border }]}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
+            contentContainerStyle={{ paddingHorizontal: 16, alignItems: "center" }}
           >
             {TABS.map((t) => (
               <TouchableOpacity
