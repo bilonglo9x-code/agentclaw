@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -10,9 +10,28 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useApprovals } from "@/hooks/useApprovals";
+
+const FAVORITES_KEY = "goclaw:favorites";
+
+const ALL_SHORTCUTS = [
+  { key: "search", icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Tìm kiếm", color: "#60a5fa", route: "/search" },
+  { key: "traces", icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Traces", color: "#a78bfa", route: "/traces" },
+  { key: "approvals", icon: "shield-outline" as keyof typeof Ionicons["glyphMap"], label: "Approvals", color: "#f97316", route: "/approvals" },
+  { key: "skills", icon: "flash-outline" as keyof typeof Ionicons["glyphMap"], label: "Skills", color: "#f59e0b", route: "/skills" },
+  { key: "memory", icon: "library-outline" as keyof typeof Ionicons["glyphMap"], label: "Memory", color: "#22c55e", route: "/memory" },
+  { key: "kg", icon: "git-network-outline" as keyof typeof Ionicons["glyphMap"], label: "KG", color: "#a78bfa", route: "/knowledge-graph" },
+  { key: "models", icon: "cube-outline" as keyof typeof Ionicons["glyphMap"], label: "Models", color: "#60a5fa", route: "/models" },
+  { key: "events", icon: "radio-outline" as keyof typeof Ionicons["glyphMap"], label: "Events", color: "#a78bfa", route: "/events" },
+  { key: "devices", icon: "phone-portrait-outline" as keyof typeof Ionicons["glyphMap"], label: "Devices", color: "#22c55e", route: "/devices" },
+  { key: "evolution", icon: "bulb-outline" as keyof typeof Ionicons["glyphMap"], label: "Evolution", color: "#f59e0b", route: "/evolution" },
+  { key: "vault", icon: "archive-outline" as keyof typeof Ionicons["glyphMap"], label: "Vault", color: "#60a5fa", route: "/vault" },
+  { key: "teams", icon: "people-circle-outline" as keyof typeof Ionicons["glyphMap"], label: "Teams", color: "#22c55e", route: "/teams" },
+];
+const DEFAULT_PINNED = ["search", "traces", "approvals", "skills", "memory", "kg"];
 
 interface MenuItem {
   icon: keyof typeof Ionicons["glyphMap"];
@@ -37,6 +56,33 @@ export default function MoreScreen() {
   const { connected, tenantName, role, logout } = useAuth();
   const { pendingCount } = useApprovals();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const [pinnedKeys, setPinnedKeys] = useState<string[]>(DEFAULT_PINNED);
+  const [editMode, setEditMode] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FAVORITES_KEY).then((val) => {
+      if (val) {
+        try { setPinnedKeys(JSON.parse(val)); } catch {}
+      }
+    });
+  }, []);
+
+  const togglePin = (key: string) => {
+    setPinnedKeys((prev) => {
+      let next: string[];
+      if (prev.includes(key)) {
+        next = prev.filter((k) => k !== key);
+      } else if (prev.length < 6) {
+        next = [...prev, key];
+      } else {
+        return prev;
+      }
+      AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const quickItems = ALL_SHORTCUTS.filter((s) => pinnedKeys.includes(s.key));
 
   const SECTIONS: MenuSection[] = [
     {
@@ -48,6 +94,7 @@ export default function MoreScreen() {
         { icon: "time-outline", label: "Cron Jobs", color: "#22c55e", onPress: () => router.push("/cron") },
         { icon: "server-outline", label: "MCP Servers", color: "#a78bfa", onPress: () => router.push("/mcp") },
         { icon: "volume-high-outline", label: "Voices & TTS", color: "#f97316", onPress: () => router.push("/voice") },
+        { icon: "cube-outline", label: "Models", color: "#60a5fa", onPress: () => router.push("/models") },
       ],
     },
     {
@@ -77,6 +124,7 @@ export default function MoreScreen() {
         { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
         { icon: "cube-outline", label: "Packages", color: "#3b82f6", onPress: () => router.push("/packages") },
         { icon: "cloud-upload-outline", label: "Backup & Restore", color: "#f97316", onPress: () => router.push("/backup") },
+        { icon: "phone-portrait-outline", label: "Devices", color: "#a78bfa", onPress: () => router.push("/devices") },
       ],
     },
     ...(role === "owner" || role === "admin"
@@ -113,14 +161,11 @@ export default function MoreScreen() {
     },
   ];
 
-  const QUICK_ACCESS = [
-    { icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Tìm kiếm", color: "#60a5fa", onPress: () => router.push("/search") },
-    { icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Traces", color: "#a78bfa", onPress: () => router.push("/traces") },
-    { icon: "shield-outline" as keyof typeof Ionicons["glyphMap"], label: "Approvals", color: "#f97316", badge: pendingCount, onPress: () => router.push("/approvals") },
-    { icon: "flash-outline" as keyof typeof Ionicons["glyphMap"], label: "Skills", color: "#f59e0b", onPress: () => router.push("/skills") },
-    { icon: "library-outline" as keyof typeof Ionicons["glyphMap"], label: "Memory", color: "#22c55e", onPress: () => router.push("/memory") },
-    { icon: "git-network-outline" as keyof typeof Ionicons["glyphMap"], label: "KG", color: "#a78bfa", onPress: () => router.push("/knowledge-graph") },
-  ];
+  const QUICK_ACCESS = quickItems.map((s) => ({
+    ...s,
+    badge: s.key === "approvals" ? pendingCount : undefined,
+    onPress: () => router.push(s.route as Parameters<typeof router.push>[0]),
+  }));
 
   return (
     <ScrollView
@@ -130,7 +175,42 @@ export default function MoreScreen() {
     >
       {/* Quick Access Grid */}
       <View style={styles.quickAccessSection}>
-        <Text style={[styles.quickAccessTitle, { color: colors.mutedForeground }]}>TRUY CẬP NHANH</Text>
+        <View style={styles.quickAccessHeader}>
+          <Text style={[styles.quickAccessTitle, { color: colors.mutedForeground }]}>TRUY CẬP NHANH</Text>
+          <TouchableOpacity
+            onPress={() => setEditMode((v) => !v)}
+            style={[styles.editModeBtn, { backgroundColor: editMode ? colors.primary + "22" : colors.muted, borderColor: editMode ? colors.primary + "40" : colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.editModeBtnText, { color: editMode ? colors.primary : colors.mutedForeground }]}>
+              {editMode ? "Xong" : "Sửa"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {editMode && (
+          <View style={[styles.editPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.editHint, { color: colors.mutedForeground }]}>Chọn tối đa 6 shortcut ({pinnedKeys.length}/6)</Text>
+            <View style={styles.editGrid}>
+              {ALL_SHORTCUTS.map((s) => {
+                const pinned = pinnedKeys.includes(s.key);
+                return (
+                  <TouchableOpacity
+                    key={s.key}
+                    onPress={() => togglePin(s.key)}
+                    style={[styles.editItem, { backgroundColor: pinned ? s.color + "18" : colors.secondary, borderColor: pinned ? s.color + "40" : colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={s.icon} size={16} color={pinned ? s.color : colors.mutedForeground} />
+                    <Text style={[styles.editItemLabel, { color: pinned ? s.color : colors.mutedForeground }]} numberOfLines={1}>{s.label}</Text>
+                    {pinned && <Ionicons name="checkmark-circle" size={12} color={s.color} style={styles.editCheck} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <View style={styles.quickAccessGrid}>
           {QUICK_ACCESS.map((item) => (
             <TouchableOpacity
@@ -300,7 +380,16 @@ const styles = StyleSheet.create({
   countDot: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   countDotText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
   quickAccessSection: { marginBottom: 20 },
-  quickAccessTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 10 },
+  quickAccessHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  quickAccessTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  editModeBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  editModeBtnText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  editPanel: { borderRadius: 16, borderWidth: 1, padding: 12, marginBottom: 12, gap: 10 },
+  editHint: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  editGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  editItem: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1, position: "relative" },
+  editItemLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  editCheck: { marginLeft: 2 },
   quickAccessGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   quickAccessItem: { width: "30.5%", borderRadius: 16, borderWidth: 1, padding: 12, alignItems: "center", gap: 6, position: "relative" },
   quickAccessIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },

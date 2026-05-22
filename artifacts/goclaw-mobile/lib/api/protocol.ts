@@ -100,6 +100,13 @@ export const Methods = {
   TENANTS_USERS_LIST: "tenants.users.list",
 
   SEND: "send",
+
+  MODELS_LIST: "models.list",
+
+  DEVICE_PAIR_LIST: "device.pair.list",
+  DEVICE_PAIR_INITIATE: "device.pair.initiate",
+  DEVICE_PAIR_UNPAIR: "device.pair.unpair",
+  DEVICE_PAIR_CANCEL: "device.pair.cancel",
 } as const;
 
 export const Events = {

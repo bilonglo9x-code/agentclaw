@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -60,7 +61,9 @@ export default function SessionsScreen() {
   const [search, setSearch] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { sessions: liveSessions, total, loading, error, refresh, deleteSession } = useSessionsHistory(agentFilter);
+  const { sessions: liveSessions, total, loading, error, refresh, deleteSession, labelSession } = useSessionsHistory(agentFilter);
+  const [renaming, setRenaming] = useState<{ key: string; current: string } | null>(null);
+  const [renameText, setRenameText] = useState("");
   const baseSessions = connected && liveSessions.length > 0
     ? liveSessions
     : MOCK_SESSIONS.filter((s) => !agentFilter || s.agentName?.toLowerCase().includes(agentFilter.toLowerCase()));
@@ -79,6 +82,17 @@ export default function SessionsScreen() {
     { id: undefined, label: "Tất cả" },
     ...agents.map((a) => ({ id: a.id, label: a.display_name ?? a.id })),
   ];
+
+  const handleRename = (session: SessionInfo) => {
+    setRenaming({ key: session.key, current: session.label ?? "" });
+    setRenameText(session.label ?? "");
+  };
+
+  const handleRenameConfirm = async () => {
+    if (!renaming) return;
+    await labelSession?.(renaming.key, renameText);
+    setRenaming(null);
+  };
 
   const handleDelete = (session: SessionInfo) => {
     Alert.alert(
@@ -165,6 +179,31 @@ export default function SessionsScreen() {
         </View>
       )}
 
+      {/* Rename Modal */}
+      <Modal visible={!!renaming} transparent animationType="fade" onRequestClose={() => setRenaming(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Đặt tên session</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Nhập tên session..."
+              placeholderTextColor={colors.mutedForeground}
+              autoFocus
+            />
+            <View style={styles.modalBtns}>
+              <TouchableOpacity onPress={() => setRenaming(null)} style={[styles.modalBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
+                <Text style={[styles.modalBtnText, { color: colors.mutedForeground }]}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleRenameConfirm} style={[styles.modalBtn, { backgroundColor: colors.primary }]} activeOpacity={0.7}>
+                <Text style={[styles.modalBtnText, { color: "#fff" }]}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <FlatList
         data={sessions}
         keyExtractor={(s) => s.key}
@@ -175,6 +214,8 @@ export default function SessionsScreen() {
             <TouchableOpacity
               style={[styles.sessionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => router.push(`/chat/${item.key}`)}
+              onLongPress={() => handleRename(item)}
+              delayLongPress={400}
               activeOpacity={0.8}
             >
               <View style={styles.cardTop}>
@@ -197,13 +238,22 @@ export default function SessionsScreen() {
                     )}
                   </View>
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleDelete(item)}
-                  style={styles.deleteBtn}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trash-outline" size={16} color={colors.destructive} />
-                </TouchableOpacity>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => handleRename(item)}
+                    style={styles.actionBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pencil-outline" size={15} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(item)}
+                    style={styles.actionBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={colors.destructive} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={[styles.cardStats, { borderTopColor: colors.border }]}>
@@ -272,7 +322,16 @@ const styles = StyleSheet.create({
   agentName: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   metaDot: { fontSize: 11 },
   modelName: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  actionBtn: { padding: 6 },
   deleteBtn: { padding: 6 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+  modalBox: { width: "100%", borderRadius: 20, borderWidth: 1, padding: 20, gap: 14 },
+  modalTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  modalInput: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular" },
+  modalBtns: { flexDirection: "row", gap: 10 },
+  modalBtn: { flex: 1, borderRadius: 12, paddingVertical: 11, alignItems: "center" },
+  modalBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   cardStats: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
   statPair: { flexDirection: "row", alignItems: "center", gap: 4 },
   statVal: { fontSize: 12, fontFamily: "Inter_600SemiBold" },

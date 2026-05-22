@@ -77,5 +77,16 @@ export function useSessionsHistory(agentFilter?: string, limit = 50) {
     [ws, load],
   );
 
-  return { sessions, total, loading, error, refresh: load, deleteSession, resetSession };
+  const labelSession = useCallback(
+    async (key: string, label: string) => {
+      if (!ws?.isConnected) return;
+      await ws.call(Methods.SESSIONS_PATCH, { key, label: label.trim() || null });
+      setSessions((prev) =>
+        prev.map((s) => (s.key === key ? { ...s, label: label.trim() || undefined } : s)),
+      );
+    },
+    [ws],
+  );
+
+  return { sessions, total, loading, error, refresh: load, deleteSession, resetSession, labelSession };
 }

@@ -1,9 +1,11 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Clipboard,
   FlatList,
   Platform,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -221,6 +223,7 @@ export default function ChatScreen() {
   const { conversations, getMessages, sendMessage } = useApp();
   const { connected } = useAuth();
   const [text, setText] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const conversation = conversations.find((c) => c.id === id);
@@ -237,6 +240,28 @@ export default function ChatScreen() {
 
   const agentName = conversation?.agentName ?? id?.split(":")[1] ?? "Agent";
   const model = conversation?.model ?? "";
+
+  const handleExport = useCallback(() => {
+    const msgs = displayMessages;
+    if (!msgs.length) {
+      Alert.alert("Không có tin nhắn", "Session này chưa có nội dung để xuất.");
+      return;
+    }
+    const lines: string[] = [
+      `# ${agentName}`,
+      `Xuất: ${new Date().toLocaleString("vi")} · ${msgs.length} tin nhắn`,
+      "",
+      "---",
+      "",
+    ];
+    msgs.forEach((m) => {
+      const roleLabel = m.role === "user" ? "Bạn" : m.role === "assistant" ? agentName : "[Tool]";
+      lines.push(`**${roleLabel}**: ${m.content}`);
+      lines.push("");
+    });
+    Share.share({ message: lines.join("\n"), title: `GoClaw — ${agentName}` }).catch(() => {});
+    setShowMenu(false);
+  }, [displayMessages, agentName]);
 
   const handleSend = useCallback(() => {
     if (!text.trim() || !id) return;
@@ -298,11 +323,29 @@ export default function ChatScreen() {
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
             <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
-            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: showMenu ? colors.primary + "22" : colors.secondary }]}
+            activeOpacity={0.7}
+            onPress={() => setShowMenu((v) => !v)}
+          >
+            <Ionicons name="ellipsis-horizontal" size={16} color={showMenu ? colors.primary : colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
+
+      {showMenu && (
+        <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleExport} activeOpacity={0.7}>
+            <Ionicons name="share-outline" size={16} color={colors.foreground} />
+            <Text style={[styles.menuItemText, { color: colors.foreground }]}>Xuất cuộc trò chuyện</Text>
+          </TouchableOpacity>
+          <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => setShowMenu(false)}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.foreground} />
+            <Text style={[styles.menuItemText, { color: colors.foreground }]}>Thông tin session</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={[...displayMessages].reverse()}
@@ -448,4 +491,22 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular", maxHeight: 120 },
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  menuDropdown: {
+    position: "absolute",
+    top: 0,
+    right: 14,
+    zIndex: 100,
+    borderRadius: 14,
+    borderWidth: 1,
+    minWidth: 210,
+    paddingVertical: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
+  menuItemText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  menuDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 10 },
 });
