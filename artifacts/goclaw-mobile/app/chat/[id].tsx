@@ -27,6 +27,32 @@ interface MsgBubbleProps {
   colors: ReturnType<typeof useColors>;
 }
 
+function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>, key: number) {
+  // Split by bold (**), italic (*), and inline code (`)
+  const tokenRegex = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let m;
+  let idx = 0;
+  while ((m = tokenRegex.exec(text)) !== null) {
+    if (m.index > last) {
+      nodes.push(<Text key={`t${key}${idx++}`} style={[styles.bubbleText, { color: colors.foreground }]}>{text.slice(last, m.index)}</Text>);
+    }
+    if (m[2]) {
+      nodes.push(<Text key={`t${key}${idx++}`} style={[styles.bubbleText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{m[2]}</Text>);
+    } else if (m[3]) {
+      nodes.push(<Text key={`t${key}${idx++}`} style={[styles.bubbleText, { color: colors.foreground, fontStyle: "italic" }]}>{m[3]}</Text>);
+    } else if (m[4]) {
+      nodes.push(<Text key={`t${key}${idx++}`} style={[styles.inlineCode, { backgroundColor: "#1e293b", color: "#e2e8f0" }]}>{m[4]}</Text>);
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) {
+    nodes.push(<Text key={`t${key}${idx++}`} style={[styles.bubbleText, { color: colors.foreground }]}>{text.slice(last)}</Text>);
+  }
+  return nodes.length > 0 ? nodes : [<Text key={`t${key}0`} style={[styles.bubbleText, { color: colors.foreground }]}>{text}</Text>];
+}
+
 function renderContent(content: string, colors: ReturnType<typeof useColors>) {
   const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
@@ -56,8 +82,44 @@ function renderContent(content: string, colors: ReturnType<typeof useColors>) {
         </View>
       );
     }
+    // Split text by lines to detect heading/list prefixes
+    const lines = p.text.split("\n");
     return (
-      <Text key={i} style={[styles.bubbleText, { color: colors.foreground }]}>{p.text}</Text>
+      <View key={i} style={styles.textBlock}>
+        {lines.map((line, li) => {
+          // Heading (# ## ###)
+          const h1 = line.match(/^# (.+)/);
+          const h2 = line.match(/^## (.+)/);
+          const h3 = line.match(/^### (.+)/);
+          if (h1) return <Text key={li} style={[styles.mdH1, { color: colors.foreground }]}>{h1[1]}</Text>;
+          if (h2) return <Text key={li} style={[styles.mdH2, { color: colors.foreground }]}>{h2[1]}</Text>;
+          if (h3) return <Text key={li} style={[styles.mdH3, { color: colors.foreground }]}>{h3[1]}</Text>;
+          // List item (- or *)
+          const listItem = line.match(/^[-*] (.+)/);
+          if (listItem) return (
+            <View key={li} style={styles.listItem}>
+              <View style={[styles.listDot, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{listItem[1]}</Text>
+            </View>
+          );
+          // Numbered list
+          const numItem = line.match(/^(\d+)\. (.+)/);
+          if (numItem) return (
+            <View key={li} style={styles.listItem}>
+              <Text style={[styles.numLabel, { color: colors.primary }]}>{numItem[1]}.</Text>
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{numItem[2]}</Text>
+            </View>
+          );
+          // Empty line → spacing
+          if (line.trim() === "") return <View key={li} style={{ height: 4 }} />;
+          // Normal line with inline markdown
+          return (
+            <Text key={li} style={styles.lineWrap}>
+              {renderInlineMarkdown(line, colors, li * 1000 + i)}
+            </Text>
+          );
+        })}
+      </View>
     );
   });
 }
@@ -341,6 +403,15 @@ const styles = StyleSheet.create({
   userBubble: { borderBottomRightRadius: 4 },
   assistantBubble: { borderBottomLeftRadius: 4, borderWidth: 1 },
   bubbleText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 21 },
+  textBlock: { gap: 2 },
+  lineWrap: { flexWrap: "wrap" },
+  inlineCode: { fontSize: 12, fontFamily: "monospace", borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
+  mdH1: { fontSize: 18, fontFamily: "Inter_700Bold", lineHeight: 26, marginVertical: 4 },
+  mdH2: { fontSize: 16, fontFamily: "Inter_700Bold", lineHeight: 23, marginVertical: 3 },
+  mdH3: { fontSize: 14, fontFamily: "Inter_600SemiBold", lineHeight: 21, marginVertical: 2 },
+  listItem: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginVertical: 1 },
+  listDot: { width: 5, height: 5, borderRadius: 3, marginTop: 8, flexShrink: 0 },
+  numLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", minWidth: 20 },
   bubbleTime: { fontSize: 10, fontFamily: "Inter_400Regular" },
   timeRight: { textAlign: "right" },
   thinkingDots: { flexDirection: "row", alignItems: "center", gap: 5 },

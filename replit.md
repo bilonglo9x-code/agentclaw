@@ -46,7 +46,7 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
   - `hooks/useMCP.ts` — HTTP `/v1/mcp/servers`; toggle enable/disable
   - `hooks/useAgentDetail.ts` — HTTP `/v1/agents/:id` + WS `agents.files.list` per agent
   - `hooks/useEvents.ts` — WS live event subscriber for agent/chat/cron/trace events
-  - `app/agent/[id].tsx` — Agent detail (3 tabs: overview/files/config); provider, model, memory status
+  - `app/agent/[id].tsx` — Agent detail (4 tabs: overview/files/sessions/config); Edit button → create.tsx; provider, model, memory status
   - `app/channels.tsx` — Channels list with status badges, toggle, credentials warning
   - `app/providers.tsx` — LLM provider list with type icons, toggle enable/disable
   - `app/cron.tsx` — Cron job list with schedule, next/last run, toggle, run-now alert
@@ -66,6 +66,17 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
   - `hooks/usePackages.ts` — HTTP `/v1/packages` + `/v1/packages/install`
   - `hooks/useSessionsHistory.ts` — WS `sessions.list` + `sessions.delete` + `sessions.reset`
   - `hooks/useHeartbeat.ts` — WS `heartbeat.get` + `heartbeat.targets` + test/toggle
+  - `hooks/useCreateAgent.ts` — POST `/v1/agents`, PUT `/v1/agents/:id`; create + update agent
+  - `hooks/useVoices.ts` — GET `/v1/voices`, POST `/v1/voices/refresh`, POST `/v1/tts/synthesize`
+  - `hooks/useBackup.ts` — GET `/v1/system/backup/preflight`, POST `/v1/system/backup`, POST `/v1/system/restore`
+  - `hooks/useEvolution.ts` — GET/PATCH `/v1/agents/:id/evolution/suggestions`, GET `/v1/agents/:id/evolution/metrics`
+  - `hooks/useKnowledgeGraph.ts` — GET `/v1/agents/:id/kg/entities`, GET `/v1/agents/:id/kg/stats`, DELETE entity
+  - `app/agent/create.tsx` — Create & Edit agent form; agent_key, name, provider, model, type, description, context_window
+  - `app/backup.tsx` — Backup & Restore; preflight disk info, trigger backup, download URL, restore upload
+  - `app/voice.tsx` — Voice/TTS browser; provider filter, gender, language, preview button
+  - `app/evolution.tsx` — Agent Evolution; per-agent suggestions list; approve/reject; tool metrics chart
+  - `app/knowledge-graph.tsx` — Knowledge Graph; entity list with type color-coding; stats; delete entity
+  - `app/search.tsx` — Global search; searches agents + sessions + vault + memory; category filter; quick links
   - `constants/colors.ts` — Dark zinc theme (amber #f97316 primary)
   - `components/` — Shared UI: ConversationItem, AgentCard, SearchBar, EmptyState
 - `artifacts/api-server/` — Express API server

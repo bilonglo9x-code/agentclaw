@@ -99,6 +99,13 @@ export default function AgentDetailScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
           {agent?.name ?? agent?.agent_key ?? (loading ? "Loading..." : "Agent")}
         </Text>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/agent/create", params: { id } })}
+          style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="create-outline" size={15} color={colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />

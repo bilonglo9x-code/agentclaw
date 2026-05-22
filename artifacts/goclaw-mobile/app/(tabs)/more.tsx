@@ -47,6 +47,7 @@ export default function MoreScreen() {
         { icon: "hardware-chip-outline", label: "Channels", color: "#60a5fa", onPress: () => router.push("/channels") },
         { icon: "time-outline", label: "Cron Jobs", color: "#22c55e", onPress: () => router.push("/cron") },
         { icon: "server-outline", label: "MCP Servers", color: "#a78bfa", onPress: () => router.push("/mcp") },
+        { icon: "volume-high-outline", label: "Voices & TTS", color: "#f97316", onPress: () => router.push("/voice") },
       ],
     },
     {
@@ -54,12 +55,14 @@ export default function MoreScreen() {
       items: [
         { icon: "search-outline", label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
         { icon: "radio-outline", label: "Events", color: "#a78bfa", onPress: () => router.push("/events") },
+        { icon: "bulb-outline", label: "Agent Evolution", color: "#f59e0b", onPress: () => router.push("/evolution") },
       ],
     },
     {
       title: "Dữ liệu",
       items: [
         { icon: "library-outline", label: "Memory & Knowledge", color: "#f97316", onPress: () => router.push("/memory") },
+        { icon: "git-network-outline", label: "Knowledge Graph", color: "#a78bfa", onPress: () => router.push("/knowledge-graph") },
         { icon: "archive-outline", label: "Vault", color: "#60a5fa", onPress: () => router.push("/vault") },
         { icon: "chatbubbles-outline", label: "Sessions History", color: "#a78bfa", onPress: () => router.push("/sessions") },
         { icon: "people-circle-outline", label: "Teams", color: "#22c55e", onPress: () => router.push("/teams") },
@@ -73,6 +76,7 @@ export default function MoreScreen() {
       items: [
         { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
         { icon: "cube-outline", label: "Packages", color: "#3b82f6", onPress: () => router.push("/packages") },
+        { icon: "cloud-upload-outline", label: "Backup & Restore", color: "#f97316", onPress: () => router.push("/backup") },
       ],
     },
     ...(role === "owner" || role === "admin"

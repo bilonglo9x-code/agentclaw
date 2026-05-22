@@ -78,6 +78,14 @@ export default function AgentsScreen() {
         <View style={styles.headerRight}>
           {loading && <ActivityIndicator color={colors.primary} size="small" />}
           <TouchableOpacity
+            onPress={() => router.push("/search")}
+            style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search-outline" size={17} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/agent/create")}
             style={[styles.fab, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
           >
@@ -154,6 +162,7 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   fab: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   searchWrap: { marginBottom: 4 },
   chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
