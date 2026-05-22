@@ -52,6 +52,12 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
   - `app/cron.tsx` — Cron job list with schedule, next/last run, toggle, run-now alert
   - `app/mcp.tsx` — MCP server list with transport badges, endpoint, agent count, toggle
   - `app/events.tsx` — Live WS event feed (agent/chat/cron/trace) with mock fallback
+  - `app/memory.tsx` — Memory docs + episodic summaries; tabs by type; agent filter; delete docs per agent
+  - `app/vault.tsx` — Vault document library; scope (personal/team/shared) + doc_type filters; color-coded types
+  - `app/teams.tsx` — Teams list with expandable task list per team; task status badges; member count
+  - `app/contacts.tsx` — Channel contacts list; search + channel type filter; avatar with channel badge
+  - `app/api-keys.tsx` — API key management; revoke; create modal with scope picker; new key copy flow
+  - `app/activity.tsx` — Audit activity log; action + entity filters; actor/IP display
   - `constants/colors.ts` — Dark zinc theme (amber #f97316 primary)
   - `components/` — Shared UI: ConversationItem, AgentCard, SearchBar, EmptyState
 - `artifacts/api-server/` — Express API server

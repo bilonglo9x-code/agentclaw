@@ -59,10 +59,11 @@ export default function MoreScreen() {
     {
       title: "Dữ liệu",
       items: [
-        { icon: "bulb-outline", label: "Memory & Knowledge", color: "#f97316" },
-        { icon: "archive-outline", label: "Vault", badge: "48 docs", color: "#60a5fa" },
-        { icon: "save-outline", label: "Storage", badge: "2.3 GB", color: "#22c55e" },
-        { icon: "folder-open-outline", label: "Sessions History", color: "#a1a1aa" },
+        { icon: "library-outline", label: "Memory & Knowledge", color: "#f97316", onPress: () => router.push("/memory") },
+        { icon: "archive-outline", label: "Vault", color: "#60a5fa", onPress: () => router.push("/vault") },
+        { icon: "people-circle-outline", label: "Teams", color: "#a78bfa", onPress: () => router.push("/teams") },
+        { icon: "person-outline", label: "Contacts", color: "#22c55e", onPress: () => router.push("/contacts") },
+        { icon: "pulse-outline", label: "Activity Log", color: "#a1a1aa", onPress: () => router.push("/activity") },
       ],
     },
     ...(role === "owner" || role === "admin"
@@ -74,7 +75,7 @@ export default function MoreScreen() {
               { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#f97316" },
               { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#60a5fa" },
               { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#a78bfa", onPress: () => router.push("/providers") },
-              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#f59e0b" },
+              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#f59e0b", onPress: () => router.push("/api-keys") },
               { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#22c55e" },
             ],
           },
