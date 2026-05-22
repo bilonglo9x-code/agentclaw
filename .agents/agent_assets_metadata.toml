@@ -18,3 +18,9 @@ id = "_l44Xq-BgnI3U9Oq1bBwV"
 uri = "file://UPGRADE_ANALYSIS.md"
 type = "text"
 title = "GoClaw — Phân tích 4 chủ đề nâng cấp"
+
+[[outputs]]
+id = "1JXOkeyh-U5FTR3DKaBT6"
+uri = "file://MOBILE_REDESIGN_PLAN.md"
+type = "text"
+title = "GoClaw — Mobile Redesign Plan (PWA + Expo)"
