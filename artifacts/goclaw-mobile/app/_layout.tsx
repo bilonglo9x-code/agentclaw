@@ -69,6 +69,54 @@ function RootLayoutNav() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen
+        name="agent/[id]"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="channels"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="providers"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="cron"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="mcp"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="events"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
     </Stack>
   );
 }

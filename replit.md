@@ -40,6 +40,18 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
   - `hooks/useTraces.ts` — HTTP `/v1/traces`; refreshes on agent events
   - `hooks/useApprovals.ts` — WS `exec.approval.list` + `exec.approval.requested/resolved` events; approve/deny
   - `hooks/useSkills.ts` — WS `skills.list` with HTTP fallback
+  - `hooks/useChannels.ts` — WS `channels.status` + `channels.instances.list`; toggle enable/disable
+  - `hooks/useProviders.ts` — HTTP `/v1/providers`; toggle enable/disable
+  - `hooks/useCron.ts` — WS `cron.list` + toggle/run/delete; subscribes to `cron` WS events
+  - `hooks/useMCP.ts` — HTTP `/v1/mcp/servers`; toggle enable/disable
+  - `hooks/useAgentDetail.ts` — HTTP `/v1/agents/:id` + WS `agents.files.list` per agent
+  - `hooks/useEvents.ts` — WS live event subscriber for agent/chat/cron/trace events
+  - `app/agent/[id].tsx` — Agent detail (3 tabs: overview/files/config); provider, model, memory status
+  - `app/channels.tsx` — Channels list with status badges, toggle, credentials warning
+  - `app/providers.tsx` — LLM provider list with type icons, toggle enable/disable
+  - `app/cron.tsx` — Cron job list with schedule, next/last run, toggle, run-now alert
+  - `app/mcp.tsx` — MCP server list with transport badges, endpoint, agent count, toggle
+  - `app/events.tsx` — Live WS event feed (agent/chat/cron/trace) with mock fallback
   - `constants/colors.ts` — Dark zinc theme (amber #f97316 primary)
   - `components/` — Shared UI: ConversationItem, AgentCard, SearchBar, EmptyState
 - `artifacts/api-server/` — Express API server

@@ -44,18 +44,16 @@ export default function MoreScreen() {
       items: [
         { icon: "flash-outline", label: "Skills", color: "#f59e0b", onPress: () => router.push("/skills") },
         { icon: "shield-outline", label: "Approvals", color: "#f97316", badgeCount: pendingCount, onPress: () => router.push("/approvals") },
-        { icon: "hardware-chip-outline", label: "Channels", badge: "Telegram, Slack +2", color: "#60a5fa" },
-        { icon: "time-outline", label: "Cron Jobs", badge: "3 active", color: "#22c55e" },
-        { icon: "link-outline", label: "Webhooks", color: "#a78bfa" },
-        { icon: "server-outline", label: "MCP Servers", badge: "2", color: "#f97316" },
+        { icon: "hardware-chip-outline", label: "Channels", color: "#60a5fa", onPress: () => router.push("/channels") },
+        { icon: "time-outline", label: "Cron Jobs", color: "#22c55e", onPress: () => router.push("/cron") },
+        { icon: "server-outline", label: "MCP Servers", color: "#a78bfa", onPress: () => router.push("/mcp") },
       ],
     },
     {
       title: "Observability",
       items: [
         { icon: "search-outline", label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
-        { icon: "document-text-outline", label: "Logs", color: "#a1a1aa", onPress: () => {} },
-        { icon: "radio-outline", label: "Events", color: "#a78bfa" },
+        { icon: "radio-outline", label: "Events", color: "#a78bfa", onPress: () => router.push("/events") },
       ],
     },
     {
@@ -75,8 +73,8 @@ export default function MoreScreen() {
             items: [
               { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#f97316" },
               { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#60a5fa" },
-              { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers & Config", color: "#a78bfa" },
-              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", badge: "5", color: "#f59e0b" },
+              { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#a78bfa", onPress: () => router.push("/providers") },
+              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#f59e0b" },
               { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#22c55e" },
             ],
           },

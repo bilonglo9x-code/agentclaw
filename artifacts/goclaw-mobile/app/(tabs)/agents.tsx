@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
@@ -30,6 +31,7 @@ const FILTERS = [
 export default function AgentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { agents: mockAgents } = useApp();
   const { connected } = useAuth();
   const { agents: realAgents, loading } = useRealAgents();
@@ -125,7 +127,10 @@ export default function AgentsScreen() {
           numColumns={2}
           renderItem={({ item }) => (
             <View style={styles.cardWrap}>
-              <AgentCard agent={item} onPress={() => {}} />
+              <AgentCard
+                agent={item}
+                onPress={() => router.push(`/agent/${item.id}`)}
+              />
             </View>
           )}
           contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 100 }]}
