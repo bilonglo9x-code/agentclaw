@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "GoClaw Mobile"
+version = "1.0.0"
+id = "artifacts/goclaw-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 21057
+
+[services.development]
+run = "pnpm --filter @workspace/goclaw-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/goclaw-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/goclaw-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "21057"
+BASE_PATH = "/mobile/"

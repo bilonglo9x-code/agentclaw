@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "AfDpM1vNBezGIFHsV_nJ0"
+uri = "file://artifacts/goclaw-mobile/assets/images/icon.png"
+type = "image"
+title = "goclaw mobile app icon"
 
 [[outputs]]
 id = "KttBJC567k5F-Fqmj_pE2"
