@@ -61,9 +61,18 @@ export default function MoreScreen() {
       items: [
         { icon: "library-outline", label: "Memory & Knowledge", color: "#f97316", onPress: () => router.push("/memory") },
         { icon: "archive-outline", label: "Vault", color: "#60a5fa", onPress: () => router.push("/vault") },
-        { icon: "people-circle-outline", label: "Teams", color: "#a78bfa", onPress: () => router.push("/teams") },
-        { icon: "person-outline", label: "Contacts", color: "#22c55e", onPress: () => router.push("/contacts") },
+        { icon: "chatbubbles-outline", label: "Sessions History", color: "#a78bfa", onPress: () => router.push("/sessions") },
+        { icon: "people-circle-outline", label: "Teams", color: "#22c55e", onPress: () => router.push("/teams") },
+        { icon: "person-outline", label: "Contacts", color: "#60a5fa", onPress: () => router.push("/contacts") },
+        { icon: "folder-open-outline", label: "Storage", color: "#f59e0b", onPress: () => router.push("/storage") },
         { icon: "pulse-outline", label: "Activity Log", color: "#a1a1aa", onPress: () => router.push("/activity") },
+      ],
+    },
+    {
+      title: "Sistema",
+      items: [
+        { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
+        { icon: "cube-outline", label: "Packages", color: "#3b82f6", onPress: () => router.push("/packages") },
       ],
     },
     ...(role === "owner" || role === "admin"

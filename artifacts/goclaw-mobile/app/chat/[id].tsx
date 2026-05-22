@@ -27,8 +27,44 @@ interface MsgBubbleProps {
   colors: ReturnType<typeof useColors>;
 }
 
+function renderContent(content: string, colors: ReturnType<typeof useColors>) {
+  const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
+  const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = codeRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", text: content.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: "code", lang: match[1] || "code", text: match[2].trim() });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", text: content.slice(lastIndex) });
+  }
+  if (parts.length === 0) parts.push({ type: "text", text: content });
+
+  return parts.map((p, i) => {
+    if (p.type === "code") {
+      return (
+        <View key={i} style={[styles.codeBlock, { backgroundColor: "#0f172a", borderColor: "#1e293b" }]}>
+          <View style={styles.codeHeader}>
+            <Ionicons name="code-slash-outline" size={11} color="#64748b" />
+            <Text style={styles.codeLang}>{p.lang}</Text>
+          </View>
+          <Text style={styles.codeText}>{p.text}</Text>
+        </View>
+      );
+    }
+    return (
+      <Text key={i} style={[styles.bubbleText, { color: colors.foreground }]}>{p.text}</Text>
+    );
+  });
+}
+
 function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubbleProps) {
   const isUser = role === "user";
+  const hasCode = !isUser && content.includes("```");
 
   if (isStreaming && !content) {
     return (
@@ -77,15 +113,16 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
             isUser
               ? [styles.userBubble, { backgroundColor: "#7c3400" }]
               : [styles.assistantBubble, { backgroundColor: colors.card, borderColor: colors.border }],
+            hasCode && styles.bubbleWide,
           ]}
         >
           {isStreaming && content ? (
             <>
-              <Text style={[styles.bubbleText, { color: colors.foreground }]}>{content}</Text>
+              {renderContent(content, colors)}
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
             </>
           ) : (
-            <Text style={[styles.bubbleText, { color: colors.foreground }]}>{content}</Text>
+            renderContent(content, colors)
           )}
         </View>
         <Text style={[styles.bubbleTime, { color: colors.mutedForeground }, isUser && styles.timeRight]}>
@@ -288,6 +325,7 @@ const styles = StyleSheet.create({
   assistantWrap: { justifyContent: "flex-start" },
   agentAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 16 },
   bubbleContent: { maxWidth: "80%", gap: 3 },
+  bubbleWide: { maxWidth: "100%" },
   userBubbleContent: { alignItems: "flex-end" },
   toolBadge: {
     flexDirection: "row",
@@ -308,6 +346,10 @@ const styles = StyleSheet.create({
   thinkingDots: { flexDirection: "row", alignItems: "center", gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   thinkingText: { fontSize: 12, fontFamily: "Inter_400Regular", marginLeft: 4 },
+  codeBlock: { borderRadius: 10, borderWidth: 1, overflow: "hidden", marginVertical: 4 },
+  codeHeader: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#1e293b" },
+  codeLang: { fontSize: 10, fontFamily: "Inter_500Medium", color: "#64748b", textTransform: "uppercase" },
+  codeText: { fontSize: 12, fontFamily: "monospace", color: "#e2e8f0", padding: 10, lineHeight: 18 },
   inputArea: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingTop: 10, gap: 8 },
   toolbar: { flexDirection: "row", alignItems: "center", gap: 8 },
   toolbarBtn: { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },

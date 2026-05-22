@@ -241,9 +241,11 @@ export default function DashboardScreen() {
       <View style={styles.quickActions}>
         {[
           { icon: "search-outline" as const, label: "Traces", onPress: () => router.push("/traces") },
-          { icon: "document-text-outline" as const, label: "Logs", onPress: () => {} },
+          { icon: "heart-outline" as const, label: "Health", onPress: () => router.push("/health") },
           { icon: "flash-outline" as const, label: "Skills", onPress: () => router.push("/skills") },
           { icon: "shield-checkmark-outline" as const, label: "Approvals", badge: pendingCount, onPress: () => router.push("/approvals") },
+          { icon: "chatbubbles-outline" as const, label: "Sessions", onPress: () => router.push("/sessions") },
+          { icon: "cube-outline" as const, label: "Packages", onPress: () => router.push("/packages") },
         ].map((a) => (
           <TouchableOpacity
             key={a.label}

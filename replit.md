@@ -58,6 +58,14 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
   - `app/contacts.tsx` — Channel contacts list; search + channel type filter; avatar with channel badge
   - `app/api-keys.tsx` — API key management; revoke; create modal with scope picker; new key copy flow
   - `app/activity.tsx` — Audit activity log; action + entity filters; actor/IP display
+  - `app/storage.tsx` — File browser tree; expand dirs; long-press to delete; lock badge for protected files
+  - `app/packages.tsx` — pip/npm/system/GitHub package list; install bar for pip & npm
+  - `app/sessions.tsx` — Sessions list with agent filter; msg/token stats; delete; channel badges
+  - `app/health.tsx` — Heartbeat targets; uptime %; status badge; test button; toggle enable
+  - `hooks/useStorage.ts` — HTTP `/v1/storage/files`; list + subtree + delete
+  - `hooks/usePackages.ts` — HTTP `/v1/packages` + `/v1/packages/install`
+  - `hooks/useSessionsHistory.ts` — WS `sessions.list` + `sessions.delete` + `sessions.reset`
+  - `hooks/useHeartbeat.ts` — WS `heartbeat.get` + `heartbeat.targets` + test/toggle
   - `constants/colors.ts` — Dark zinc theme (amber #f97316 primary)
   - `components/` — Shared UI: ConversationItem, AgentCard, SearchBar, EmptyState
 - `artifacts/api-server/` — Express API server

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,8 +14,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAgentDetail } from "@/hooks/useAgentDetail";
+import { useSessionsHistory } from "@/hooks/useSessionsHistory";
 
-type Tab = "overview" | "files" | "config";
+type Tab = "overview" | "files" | "sessions" | "config";
 
 const STATUS_CONFIG = {
   active: { color: "#22c55e", label: "Active" },
@@ -27,6 +29,14 @@ const AGENT_TYPE_ICONS: Record<string, keyof typeof Ionicons["glyphMap"]> = {
   personal: "person-outline",
   shared: "people-outline",
   assistant: "chatbubble-ellipses-outline",
+};
+
+const CHANNEL_ICONS: Record<string, keyof typeof Ionicons["glyphMap"]> = {
+  web: "globe-outline",
+  slack: "logo-slack",
+  telegram: "paper-plane-outline",
+  discord: "logo-discord",
+  api: "code-slash-outline",
 };
 
 function InfoRow({ label, value, mono = false, colors }: { label: string; value: string; mono?: boolean; colors: any }) {
@@ -46,20 +56,36 @@ const rowStyles = StyleSheet.create({
   value: { fontSize: 13, flex: 1, textAlign: "right" },
 });
 
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  if (diff < 60_000) return "vừa xong";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}p trước`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h trước`;
+  return d.toLocaleDateString("vi");
+}
+
 export default function AgentDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { agent, files, loading, error, refresh } = useAgentDetail(id);
+  const { sessions, loading: sessLoading, deleteSession } = useSessionsHistory();
   const [tab, setTab] = useState<Tab>("overview");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
 
+  const agentSessions = sessions.filter(
+    (s) => s.agentName === agent?.agent_key || s.agentName === agent?.name,
+  );
+
   const TABS: { value: Tab; label: string }[] = [
     { value: "overview", label: "Tổng quan" },
     { value: "files", label: "Files" },
+    { value: "sessions", label: `Sessions${agentSessions.length > 0 ? ` (${agentSessions.length})` : ""}` },
     { value: "config", label: "Config" },
   ];
 
@@ -135,7 +161,12 @@ export default function AgentDetailScreen() {
           </View>
 
           {/* Tabs */}
-          <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.tabRow, { borderBottomColor: colors.border }]}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+          >
             {TABS.map((t) => (
               <TouchableOpacity
                 key={t.value}
@@ -148,86 +179,163 @@ export default function AgentDetailScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
-          <ScrollView
-            style={styles.tabContent}
-            contentContainerStyle={[styles.tabContentInner, { paddingBottom: insets.bottom + 40 }]}
-            showsVerticalScrollIndicator={false}
-          >
-            {tab === "overview" && (
-              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                {agent.description ? (
-                  <Text style={[styles.description, { color: colors.mutedForeground }]}>{agent.description}</Text>
-                ) : null}
-                <InfoRow label="Provider" value={agent.provider || "—"} colors={colors} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <InfoRow label="Model" value={agent.model || "—"} colors={colors} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <InfoRow label="Agent type" value={agent.agent_type ?? "open"} colors={colors} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                {agent.context_window ? (
-                  <>
-                    <InfoRow label="Context window" value={`${(agent.context_window / 1000).toFixed(0)}K tokens`} colors={colors} />
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                  </>
-                ) : null}
-                {agent.max_tool_iterations ? (
-                  <>
-                    <InfoRow label="Max tool iters" value={String(agent.max_tool_iterations)} colors={colors} />
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                  </>
-                ) : null}
-                <InfoRow label="Workspace" value={agent.workspace || "—"} mono colors={colors} />
-              </View>
-            )}
+          {(tab === "overview" || tab === "files" || tab === "config") && (
+            <ScrollView
+              style={styles.tabContent}
+              contentContainerStyle={[styles.tabContentInner, { paddingBottom: insets.bottom + 40 }]}
+              showsVerticalScrollIndicator={false}
+            >
+              {tab === "overview" && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  {agent.description ? (
+                    <Text style={[styles.description, { color: colors.mutedForeground }]}>{agent.description}</Text>
+                  ) : null}
+                  <InfoRow label="Provider" value={agent.provider || "—"} colors={colors} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <InfoRow label="Model" value={agent.model || "—"} colors={colors} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <InfoRow label="Agent type" value={agent.agent_type ?? "open"} colors={colors} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  {agent.context_window ? (
+                    <>
+                      <InfoRow label="Context window" value={`${(agent.context_window / 1000).toFixed(0)}K tokens`} colors={colors} />
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    </>
+                  ) : null}
+                  {agent.max_tool_iterations ? (
+                    <>
+                      <InfoRow label="Max tool iters" value={String(agent.max_tool_iterations)} colors={colors} />
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    </>
+                  ) : null}
+                  <InfoRow label="Workspace" value={agent.workspace || "—"} mono colors={colors} />
+                </View>
+              )}
 
-            {tab === "overview" && agent.memory_enabled && (
-              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Memory</Text>
-                <InfoRow label="Embedding provider" value={agent.embedding_provider ?? "—"} colors={colors} />
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <InfoRow label="Embedding model" value={agent.embedding_model ?? "—"} colors={colors} />
-              </View>
-            )}
+              {tab === "overview" && agent.memory_enabled && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Memory</Text>
+                  <InfoRow label="Embedding provider" value={agent.embedding_provider ?? "—"} colors={colors} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <InfoRow label="Embedding model" value={agent.embedding_model ?? "—"} colors={colors} />
+                </View>
+              )}
 
-            {tab === "files" && (
-              <View>
-                {files.length === 0 ? (
+              {tab === "overview" && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Thao tác nhanh</Text>
+                  <View style={styles.actionsRow}>
+                    {[
+                      { icon: "chatbubble-outline" as const, label: "Chat", color: colors.primary, onPress: () => {} },
+                      { icon: "search-outline" as const, label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
+                      { icon: "library-outline" as const, label: "Memory", color: "#a78bfa", onPress: () => router.push("/memory") },
+                    ].map((a) => (
+                      <TouchableOpacity
+                        key={a.label}
+                        style={[styles.actionBtn, { backgroundColor: a.color + "15", borderColor: a.color + "30" }]}
+                        onPress={a.onPress}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name={a.icon} size={16} color={a.color} />
+                        <Text style={[styles.actionLabel, { color: a.color }]}>{a.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {tab === "files" && (
+                <View>
+                  {files.length === 0 ? (
+                    <View style={styles.emptyWrap}>
+                      <Ionicons name="document-text-outline" size={36} color={colors.mutedForeground} />
+                      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có bootstrap files</Text>
+                    </View>
+                  ) : (
+                    files.map((f, i) => (
+                      <View key={i} style={[styles.fileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={styles.fileHeader}>
+                          <Ionicons name="document-outline" size={16} color={colors.primary} />
+                          <Text style={[styles.filePath, { color: colors.foreground }]}>{f.path}</Text>
+                          {f.size != null && (
+                            <Text style={[styles.fileSize, { color: colors.mutedForeground }]}>
+                              {f.size > 1024 ? `${(f.size / 1024).toFixed(1)}KB` : `${f.size}B`}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={[styles.fileContent, { color: colors.mutedForeground, backgroundColor: colors.secondary }]} numberOfLines={6}>
+                          {f.content}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+
+              {tab === "config" && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Raw Config</Text>
+                  <Text style={[styles.rawJson, { color: colors.mutedForeground }]}>
+                    {JSON.stringify(agent, null, 2)}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
+
+          {tab === "sessions" && (
+            <FlatList
+              data={agentSessions}
+              keyExtractor={(s) => s.key}
+              contentContainerStyle={[styles.tabContentInner, { paddingBottom: insets.bottom + 40 }]}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={() =>
+                sessLoading ? (
                   <View style={styles.emptyWrap}>
-                    <Ionicons name="document-text-outline" size={36} color={colors.mutedForeground} />
-                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có bootstrap files</Text>
+                    <ActivityIndicator color={colors.primary} />
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Đang tải...</Text>
                   </View>
                 ) : (
-                  files.map((f, i) => (
-                    <View key={i} style={[styles.fileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      <View style={styles.fileHeader}>
-                        <Ionicons name="document-outline" size={16} color={colors.primary} />
-                        <Text style={[styles.filePath, { color: colors.foreground }]}>{f.path}</Text>
-                        {f.size != null && (
-                          <Text style={[styles.fileSize, { color: colors.mutedForeground }]}>
-                            {f.size > 1024 ? `${(f.size / 1024).toFixed(1)}KB` : `${f.size}B`}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={[styles.fileContent, { color: colors.mutedForeground, backgroundColor: colors.secondary }]} numberOfLines={6}>
-                        {f.content}
+                  <View style={styles.emptyWrap}>
+                    <Ionicons name="chatbubbles-outline" size={36} color={colors.mutedForeground} />
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa có phiên nào</Text>
+                  </View>
+                )
+              }
+              renderItem={({ item }) => {
+                const channelIcon = CHANNEL_ICONS[item.channel ?? ""] ?? "chatbubble-outline";
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/chat/${encodeURIComponent(item.key)}`)}
+                    style={[styles.sessionRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  >
+                    <View style={[styles.sessionAvatar, { backgroundColor: colors.primary + "18" }]}>
+                      <Ionicons name={channelIcon} size={16} color={colors.primary} />
+                    </View>
+                    <View style={styles.sessionInfo}>
+                      <Text style={[styles.sessionKey, { color: colors.foreground }]} numberOfLines={1}>
+                        {item.label ?? item.key}
+                      </Text>
+                      <Text style={[styles.sessionMeta, { color: colors.mutedForeground }]}>
+                        {item.messageCount} tin • {(item.inputTokens ?? 0) + (item.outputTokens ?? 0)} tokens
+                        {item.updated ? ` • ${formatRelative(item.updated)}` : ""}
                       </Text>
                     </View>
-                  ))
-                )}
-              </View>
-            )}
-
-            {tab === "config" && (
-              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Raw Config</Text>
-                <Text style={[styles.rawJson, { color: colors.mutedForeground }]}>
-                  {JSON.stringify(agent, null, 2)}
-                </Text>
-              </View>
-            )}
-          </ScrollView>
+                    <TouchableOpacity
+                      onPress={() => deleteSession(item.key)}
+                      style={[styles.deleteBtn, { backgroundColor: colors.destructive + "15" }]}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.destructive} />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          )}
         </>
       )}
     </View>
@@ -256,8 +364,8 @@ const styles = StyleSheet.create({
   quickRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, marginBottom: 14 },
   quickCard: { flex: 1, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
   quickLabel: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
-  tabRow: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth, marginHorizontal: 16 },
-  tab: { flex: 1, alignItems: "center", paddingVertical: 10 },
+  tabRow: { borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: 0 },
+  tab: { paddingHorizontal: 4, paddingVertical: 10, marginRight: 20 },
   tabText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   tabContent: { flex: 1 },
   tabContentInner: { padding: 16, gap: 14 },
@@ -273,4 +381,13 @@ const styles = StyleSheet.create({
   rawJson: { fontSize: 10, fontFamily: "monospace", lineHeight: 15 },
   emptyWrap: { alignItems: "center", paddingTop: 40, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  actionsRow: { flexDirection: "row", gap: 10 },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingVertical: 10 },
+  actionLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  sessionRow: { flexDirection: "row", alignItems: "center", borderRadius: 14, borderWidth: 1, padding: 12, gap: 10, marginBottom: 8 },
+  sessionAvatar: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  sessionInfo: { flex: 1 },
+  sessionKey: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  sessionMeta: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  deleteBtn: { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });
