@@ -24,6 +24,7 @@ export interface CronJob {
     lastRunAtMs?: number;
     lastStatus?: string;
     lastError?: string;
+    lastDurationMs?: number;
   };
   createdAtMs: number;
   updatedAtMs: number;

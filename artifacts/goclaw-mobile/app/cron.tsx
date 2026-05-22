@@ -22,21 +22,21 @@ const MOCK_JOBS: CronJob[] = [
     id: "cj1", name: "Daily Report", agentId: "reporter", enabled: true,
     schedule: { kind: "cron", expr: "0 8 * * *", tz: "Asia/Ho_Chi_Minh" },
     payload: { kind: "message", message: "Tạo báo cáo hàng ngày" },
-    state: { nextRunAtMs: Date.now() + 3600000 * 14, lastRunAtMs: Date.now() - 86400000, lastStatus: "ok" },
+    state: { nextRunAtMs: Date.now() + 3600000 * 14, lastRunAtMs: Date.now() - 86400000, lastStatus: "ok", lastDurationMs: 4200 },
     createdAtMs: Date.now() - 86400000 * 30, updatedAtMs: Date.now() - 86400000,
   },
   {
     id: "cj2", name: "Memory Consolidation", agentId: "assistant", enabled: true,
     schedule: { kind: "every", everyMs: 3600000 },
     payload: { kind: "command", message: "consolidate", command: "memory.consolidate" },
-    state: { nextRunAtMs: Date.now() + 1800000, lastRunAtMs: Date.now() - 1800000, lastStatus: "ok" },
+    state: { nextRunAtMs: Date.now() + 1800000, lastRunAtMs: Date.now() - 1800000, lastStatus: "ok", lastDurationMs: 1200 },
     createdAtMs: Date.now() - 86400000 * 60, updatedAtMs: Date.now() - 86400000 * 2,
   },
   {
     id: "cj3", name: "Weekly Sync", agentId: "sync-agent", enabled: false,
     schedule: { kind: "cron", expr: "0 9 * * 1" },
     payload: { kind: "message", message: "Đồng bộ dữ liệu tuần" },
-    state: { lastRunAtMs: Date.now() - 86400000 * 7, lastStatus: "ok" },
+    state: { lastRunAtMs: Date.now() - 86400000 * 7, lastStatus: "ok", lastDurationMs: 8500 },
     createdAtMs: Date.now() - 86400000 * 14, updatedAtMs: Date.now() - 86400000 * 7,
   },
   {
@@ -78,6 +78,25 @@ function fmtLastRun(ms?: number): string {
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m trước`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h trước`;
   return `${Math.floor(diff / 86400000)}d trước`;
+}
+
+function fmtDuration(ms?: number): string {
+  if (!ms) return "";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.floor(ms / 60000)}m${Math.floor((ms % 60000) / 1000)}s`;
+}
+
+function getIntervalMs(job: CronJob): number {
+  if (job.schedule.kind === "every") return job.schedule.everyMs ?? 0;
+  if (job.schedule.kind === "cron") {
+    const expr = job.schedule.expr ?? "";
+    if (expr.startsWith("0 * ")) return 3600000;
+    if (expr.startsWith("0 8 * * *")) return 86400000;
+    if (expr.includes("* * 1")) return 86400000 * 7;
+    return 86400000;
+  }
+  return 0;
 }
 
 export default function CronScreen() {
@@ -148,6 +167,12 @@ export default function CronScreen() {
         keyExtractor={(j) => j.id}
         renderItem={({ item }) => {
           const hasError = item.state?.lastStatus === "error";
+          const intervalMs = getIntervalMs(item);
+          const lastRunMs = item.state?.lastRunAtMs;
+          const nextRunMs = item.state?.nextRunAtMs;
+          const elapsed = lastRunMs ? Date.now() - lastRunMs : 0;
+          const progressPct = intervalMs > 0 && lastRunMs ? Math.min(elapsed / intervalMs, 1) : 0;
+
           return (
             <View style={[styles.jobCard, { backgroundColor: colors.card, borderColor: hasError ? "#ef444430" : colors.border }]}>
               <View style={styles.jobTop}>
@@ -160,19 +185,53 @@ export default function CronScreen() {
                     {fmtSchedule(item)}{item.schedule.tz ? ` (${item.schedule.tz})` : ""}
                   </Text>
                 </View>
-                <Switch
-                  value={item.enabled}
-                  onValueChange={(v) => toggle(item.id, v)}
-                  trackColor={{ true: colors.primary, false: colors.muted }}
-                  thumbColor="#fff"
-                  ios_backgroundColor={colors.muted}
-                />
+                <View style={styles.jobTopRight}>
+                  {/* Last run result badge */}
+                  {item.state?.lastStatus && (
+                    <View style={[styles.resultBadge, { backgroundColor: hasError ? "#ef444418" : "#22c55e18" }]}>
+                      <Ionicons
+                        name={hasError ? "close-circle" : "checkmark-circle"}
+                        size={11}
+                        color={hasError ? "#ef4444" : "#22c55e"}
+                      />
+                      <Text style={[styles.resultText, { color: hasError ? "#ef4444" : "#22c55e" }]}>
+                        {hasError ? "Error" : "OK"}
+                      </Text>
+                    </View>
+                  )}
+                  <Switch
+                    value={item.enabled}
+                    onValueChange={(v) => toggle(item.id, v)}
+                    trackColor={{ true: colors.primary, false: colors.muted }}
+                    thumbColor="#fff"
+                    ios_backgroundColor={colors.muted}
+                  />
+                </View>
               </View>
+
+              {/* Next run countdown bar */}
+              {item.enabled && intervalMs > 0 && progressPct > 0 && (
+                <View style={styles.countdownRow}>
+                  <View style={[styles.countdownTrack, { backgroundColor: colors.secondary }]}>
+                    <View style={[styles.countdownFill, { width: `${progressPct * 100}%`, backgroundColor: hasError ? "#ef4444" : colors.primary }]} />
+                  </View>
+                  <Text style={[styles.countdownLabel, { color: colors.mutedForeground }]}>
+                    {nextRunMs ? `lần tới: ${fmtNextRun(nextRunMs)}` : fmtLastRun(lastRunMs)}
+                  </Text>
+                </View>
+              )}
 
               {item.agentId && (
                 <View style={[styles.agentRow, { borderTopColor: colors.border }]}>
                   <Ionicons name="planet-outline" size={12} color={colors.mutedForeground} />
                   <Text style={[styles.agentText, { color: colors.mutedForeground }]}>{item.agentId}</Text>
+                  {item.state?.lastDurationMs != null && (
+                    <>
+                      <Text style={[styles.agentText, { color: colors.border }]}>·</Text>
+                      <Ionicons name="hourglass-outline" size={11} color={colors.mutedForeground} />
+                      <Text style={[styles.agentText, { color: colors.mutedForeground }]}>{fmtDuration(item.state.lastDurationMs)}</Text>
+                    </>
+                  )}
                 </View>
               )}
 
@@ -189,14 +248,6 @@ export default function CronScreen() {
                     {fmtLastRun(item.state?.lastRunAtMs)}
                   </Text>
                 </View>
-                {item.state?.lastStatus && (
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Status</Text>
-                    <Text style={[styles.statValue, { color: hasError ? "#ef4444" : "#22c55e" }]}>
-                      {hasError ? "Error" : "OK"}
-                    </Text>
-                  </View>
-                )}
                 <TouchableOpacity
                   style={[styles.runBtn, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}
                   onPress={() => handleRun(item)}
@@ -208,7 +259,7 @@ export default function CronScreen() {
               </View>
 
               {hasError && item.state?.lastError && (
-                <View style={[styles.errorRow, { borderTopColor: colors.border }]}>
+                <View style={[styles.errorRow, { borderTopColor: colors.border, backgroundColor: "#ef444408" }]}>
                   <Ionicons name="alert-circle-outline" size={12} color="#ef4444" />
                   <Text style={[styles.errorMsg, { color: "#ef4444" }]} numberOfLines={1}>
                     {item.state.lastError}
@@ -251,6 +302,13 @@ const styles = StyleSheet.create({
   jobInfo: { flex: 1 },
   jobName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   scheduleText: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  jobTopRight: { flexDirection: "column", alignItems: "flex-end", gap: 6 },
+  resultBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
+  resultText: { fontSize: 10, fontFamily: "Inter_700Bold" },
+  countdownRow: { paddingHorizontal: 14, paddingBottom: 8, gap: 4 },
+  countdownTrack: { height: 4, borderRadius: 2, overflow: "hidden" },
+  countdownFill: { height: 4, borderRadius: 2 },
+  countdownLabel: { fontSize: 9, fontFamily: "Inter_400Regular", textAlign: "right" },
   agentRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderTopWidth: StyleSheet.hairlineWidth },
   agentText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   statsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 14 },

@@ -26,6 +26,16 @@ const LANG_COLORS: Record<string, string> = {
   bash: "#22c55e",
 };
 
+const MOCK_CODE: Record<string, string> = {
+  data_query: `def run(query: str, db: str = "default") -> dict:\n    conn = get_db_connection(db)\n    result = conn.execute(query)\n    return {"rows": result.fetchall()}`,
+  web_search: `async def run(query: str, num_results: int = 5):\n    resp = await httpx.get(SERP_URL, params={"q": query})\n    return resp.json()["organic_results"][:num_results]`,
+  code_exec: `def run(code: str, timeout: int = 30) -> dict:\n    proc = subprocess.run(["python", "-c", code],\n        capture_output=True, timeout=timeout)\n    return {"stdout": proc.stdout, "stderr": proc.stderr}`,
+  email_send: `export async function run({to, subject, body}: EmailParams) {\n  const msg = await sgMail.send({ to, from: FROM, subject, text: body });\n  return { messageId: msg[0].headers["x-message-id"] };\n}`,
+  file_ops: `func Run(op, path, content string) (any, error) {\n  switch op {\n  case "read": return os.ReadFile(path)\n  case "write": return nil, os.WriteFile(path, []byte(content), 0644)\n  }\n}`,
+  slack_notify: `export async function run({channel, text}: SlackParams) {\n  return await slack.chat.postMessage({ channel, text });\n}`,
+  pdf_extract: `def run(file_path: str) -> dict:\n    doc = fitz.open(file_path)\n    text = "".join(p.get_text() for p in doc)\n    return {"text": text, "pages": len(doc)}`,
+};
+
 const MOCK_SKILLS: SkillInfo[] = [
   { id: "s1", slug: "data_query", name: "Data Query", description: "Query databases and data sources", version: 3, status: "active", language: "python", tags: ["database", "sql"] },
   { id: "s2", slug: "web_search", name: "Web Search", description: "Search the web using SerpAPI", version: 1, status: "active", language: "python", tags: ["search", "web"] },
@@ -50,6 +60,7 @@ export default function SkillsScreen() {
   const { skills: liveSkills, loading, error, refresh } = useSkills();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const rawSkills = connected && liveSkills.length > 0 ? liveSkills : MOCK_SKILLS;
@@ -70,6 +81,24 @@ export default function SkillsScreen() {
 
   const activeCount = rawSkills.filter((s) => s.status === "active").length;
   const depsIssues = rawSkills.filter((s) => s.has_deps_issues).length;
+
+  const langCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    rawSkills.forEach((s) => {
+      const l = s.language?.toLowerCase() ?? "other";
+      counts[l] = (counts[l] ?? 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [rawSkills]);
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -103,6 +132,33 @@ export default function SkillsScreen() {
           </View>
         )}
       </View>
+
+      {/* Language breakdown bar */}
+      {langCounts.length > 0 && (
+        <View style={[styles.langBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.langBarLabel, { color: colors.mutedForeground }]}>NGÔN NGỮ</Text>
+          <View style={styles.langBarTrack}>
+            {langCounts.map(([lang, count]) => {
+              const pct = (count / rawSkills.length) * 100;
+              const c = LANG_COLORS[lang] ?? colors.primary;
+              return (
+                <View key={lang} style={[styles.langBarSeg, { width: `${pct}%`, backgroundColor: c }]} />
+              );
+            })}
+          </View>
+          <View style={styles.langLegend}>
+            {langCounts.map(([lang, count]) => {
+              const c = LANG_COLORS[lang] ?? colors.primary;
+              return (
+                <View key={lang} style={styles.langLegendItem}>
+                  <View style={[styles.langDot, { backgroundColor: c }]} />
+                  <Text style={[styles.langLegendText, { color: colors.mutedForeground }]}>{lang} {count}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       <View style={styles.searchWrap}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm skill..." />
@@ -146,10 +202,13 @@ export default function SkillsScreen() {
         renderItem={({ item }) => {
           const stCfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.active;
           const langColor = LANG_COLORS[item.language?.toLowerCase() ?? ""] ?? colors.primary;
+          const isExpanded = expanded.has(item.id);
+          const mockCode = MOCK_CODE[item.slug] ?? `# ${item.name}\ndef run(**kwargs):\n    pass`;
           return (
             <TouchableOpacity
-              style={[styles.skillCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={[styles.skillCard, { backgroundColor: colors.card, borderColor: isExpanded ? langColor + "40" : colors.border }]}
               activeOpacity={0.8}
+              onPress={() => toggleExpand(item.id)}
             >
               <View style={styles.skillTop}>
                 <View style={[styles.skillIcon, { backgroundColor: langColor + "20" }]}>
@@ -169,13 +228,25 @@ export default function SkillsScreen() {
                   {item.version != null && (
                     <Text style={[styles.versionText, { color: colors.mutedForeground }]}>v{item.version}</Text>
                   )}
+                  <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
                 </View>
               </View>
 
               {item.description && (
-                <Text style={[styles.skillDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
+                <Text style={[styles.skillDesc, { color: colors.mutedForeground }]} numberOfLines={isExpanded ? undefined : 2}>
                   {item.description}
                 </Text>
+              )}
+
+              {isExpanded && (
+                <View style={[styles.codeBlock, { backgroundColor: colors.background, borderColor: langColor + "30" }]}>
+                  <View style={styles.codeHeader}>
+                    <View style={[styles.langDot, { backgroundColor: langColor }]} />
+                    <Text style={[styles.codeLang, { color: langColor }]}>{item.language}</Text>
+                    <Text style={[styles.codeLabel, { color: colors.mutedForeground }]}>entry point</Text>
+                  </View>
+                  <Text style={[styles.codeText, { color: "#e2e8f0" }]}>{mockCode}</Text>
+                </View>
               )}
 
               <View style={styles.skillFooter}>
@@ -217,6 +288,14 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   summaryCount: { fontSize: 20, fontFamily: "Inter_700Bold" },
   summaryLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
+  langBar: { marginHorizontal: 16, marginBottom: 10, borderRadius: 14, borderWidth: 1, padding: 12, gap: 8 },
+  langBarLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  langBarTrack: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden", gap: 1 },
+  langBarSeg: { height: 8 },
+  langLegend: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  langLegendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  langDot: { width: 6, height: 6, borderRadius: 3 },
+  langLegendText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   searchWrap: { marginBottom: 4 },
   chips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
@@ -235,6 +314,11 @@ const styles = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   versionText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   skillDesc: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  codeBlock: { borderRadius: 10, borderWidth: 1, padding: 10, gap: 6 },
+  codeHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  codeLang: { fontSize: 10, fontFamily: "Inter_700Bold" },
+  codeLabel: { fontSize: 10, fontFamily: "Inter_400Regular", marginLeft: "auto" },
+  codeText: { fontSize: 11, fontFamily: "monospace", lineHeight: 17 },
   skillFooter: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   langBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   langText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },

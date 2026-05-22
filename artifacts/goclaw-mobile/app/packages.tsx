@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -42,6 +42,12 @@ const MOCK_SYSTEM: PackageInfo[] = [
   { name: "curl", version: "8.8.0" },
 ];
 
+const OUTDATED: Record<string, string> = {
+  langchain: "0.3.0",
+  numpy: "2.0.0",
+  axios: "1.7.5",
+};
+
 type Tab = "pip" | "npm" | "system" | "github";
 
 const MANAGER_CONFIG: Record<Tab, { color: string; icon: keyof typeof Ionicons["glyphMap"]; label: string }> = {
@@ -59,6 +65,7 @@ export default function PackagesScreen() {
   const { packages, loading, installing, error, refresh, installPackage } = usePackages();
   const [tab, setTab] = useState<Tab>("pip");
   const [installInput, setInstallInput] = useState("");
+  const [search, setSearch] = useState("");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const pip = connected && packages.pip ? packages.pip : MOCK_PIP;
@@ -66,8 +73,16 @@ export default function PackagesScreen() {
   const system = connected && packages.system ? packages.system : MOCK_SYSTEM;
   const github = packages.github ?? [];
 
-  const currentList: (PackageInfo | GitHubPackageInfo)[] = tab === "pip" ? pip : tab === "npm" ? npm : tab === "system" ? system : github;
+  const rawList: (PackageInfo | GitHubPackageInfo)[] = tab === "pip" ? pip : tab === "npm" ? npm : tab === "system" ? system : github;
   const cfg = MANAGER_CONFIG[tab];
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rawList;
+    const q = search.toLowerCase();
+    return rawList.filter((p) => p.name.toLowerCase().includes(q));
+  }, [rawList, search]);
+
+  const outdatedCount = rawList.filter((p) => "version" in p && OUTDATED[p.name]).length;
 
   const handleInstall = async () => {
     if (!installInput.trim()) return;
@@ -100,7 +115,7 @@ export default function PackagesScreen() {
           return (
             <TouchableOpacity
               key={t}
-              onPress={() => setTab(t)}
+              onPress={() => { setTab(t); setSearch(""); }}
               style={[styles.tabChip, { backgroundColor: active ? c.color + "25" : colors.muted, borderColor: active ? c.color + "60" : colors.border }]}
               activeOpacity={0.7}
             >
@@ -113,6 +128,35 @@ export default function PackagesScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Search + summary bar */}
+      <View style={[styles.searchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Ionicons name="search-outline" size={14} color={colors.mutedForeground} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder={`Tìm trong ${cfg.label}...`}
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.searchInput, { color: colors.foreground }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
+        <View style={[styles.totalBadge, { backgroundColor: cfg.color + "18" }]}>
+          <Text style={[styles.totalText, { color: cfg.color }]}>{filtered.length}</Text>
+        </View>
+      </View>
+
+      {outdatedCount > 0 && (tab === "pip" || tab === "npm") && (
+        <View style={[styles.outdatedBanner, { backgroundColor: "#f59e0b15", borderColor: "#f59e0b30" }]}>
+          <Ionicons name="arrow-up-circle-outline" size={14} color="#f59e0b" />
+          <Text style={[styles.outdatedText, { color: "#f59e0b" }]}>{outdatedCount} package có bản cập nhật mới</Text>
+        </View>
+      )}
 
       {/* Install bar (only for pip/npm) */}
       {(tab === "pip" || tab === "npm") && (
@@ -151,10 +195,11 @@ export default function PackagesScreen() {
       )}
 
       <FlatList
-        data={currentList}
+        data={filtered}
         keyExtractor={(item) => item.name}
         renderItem={({ item }) => {
           const isGH = "repo" in item;
+          const latestVersion = "version" in item ? OUTDATED[item.name] : undefined;
           return (
             <View style={[styles.pkgRow, { borderBottomColor: colors.border }]}>
               <View style={[styles.pkgIcon, { backgroundColor: cfg.color + "15" }]}>
@@ -168,10 +213,18 @@ export default function PackagesScreen() {
                   </Text>
                 )}
               </View>
-              <View style={[styles.versionBadge, { backgroundColor: cfg.color + "15" }]}>
-                <Text style={[styles.versionText, { color: cfg.color }]}>
-                  {"version" in item ? `v${item.version}` : (item as GitHubPackageInfo).tag}
-                </Text>
+              <View style={styles.pkgRight}>
+                <View style={[styles.versionBadge, { backgroundColor: cfg.color + "15" }]}>
+                  <Text style={[styles.versionText, { color: cfg.color }]}>
+                    {"version" in item ? `v${item.version}` : (item as GitHubPackageInfo).tag}
+                  </Text>
+                </View>
+                {latestVersion && (
+                  <View style={[styles.updateBadge, { backgroundColor: "#f59e0b15" }]}>
+                    <Ionicons name="arrow-up" size={9} color="#f59e0b" />
+                    <Text style={[styles.updateText, { color: "#f59e0b" }]}>v{latestVersion}</Text>
+                  </View>
+                )}
               </View>
             </View>
           );
@@ -181,7 +234,9 @@ export default function PackagesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="cube-outline" size={36} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có packages</Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {search ? "Không tìm thấy package" : "Không có packages"}
+            </Text>
           </View>
         }
       />
@@ -200,7 +255,13 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   countBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, minWidth: 20, alignItems: "center" },
   countText: { fontSize: 11, fontFamily: "Inter_700Bold" },
-  installBar: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginVertical: 8, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 38 },
+  searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  totalBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
+  totalText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  outdatedBanner: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
+  outdatedText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  installBar: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginBottom: 6, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
   installInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
   installBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12 },
   installBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
@@ -212,8 +273,11 @@ const styles = StyleSheet.create({
   pkgInfo: { flex: 1 },
   pkgName: { fontSize: 14, fontFamily: "Inter_500Medium" },
   pkgRepo: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  pkgRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   versionBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   versionText: { fontSize: 11, fontFamily: "monospace" },
+  updateBadge: { flexDirection: "row", alignItems: "center", gap: 2, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7 },
+  updateText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

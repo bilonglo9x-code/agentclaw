@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -72,15 +73,39 @@ export default function VaultScreen() {
   const { connected } = useAuth();
   const [scope, setScope] = useState<VaultScope>("all");
   const [docType, setDocType] = useState<VaultDocType>("all");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { documents: liveDocs, total: liveTotal, loading, error, refresh } = useVault(scope, docType);
-  const documents = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS.filter((d) => {
+  const rawDocs = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS.filter((d) => {
     if (scope !== "all" && d.scope !== scope) return false;
     if (docType !== "all" && d.doc_type !== docType) return false;
     return true;
   });
-  const total = connected ? liveTotal : documents.length;
+
+  const documents = search.trim()
+    ? rawDocs.filter((d) => {
+        const q = search.toLowerCase();
+        return d.title.toLowerCase().includes(q) || d.path.toLowerCase().includes(q) || (d.summary ?? "").toLowerCase().includes(q);
+      })
+    : rawDocs;
+
+  const total = connected ? liveTotal : rawDocs.length;
+
+  const typeCounts = MOCK_DOCS.reduce<Record<string, number>>((acc, d) => {
+    acc[d.doc_type] = (acc[d.doc_type] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -95,6 +120,60 @@ export default function VaultScreen() {
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
+      </View>
+
+      {/* Doc type distribution bar */}
+      {MOCK_DOCS.length > 0 && (
+        <View style={[styles.distBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.distLabel, { color: colors.mutedForeground }]}>PHÂN BỐ</Text>
+          <View style={styles.distTrack}>
+            {Object.entries(typeCounts).map(([type, count]) => {
+              const cfg = DOC_TYPE_ICONS[type] ?? DOC_TYPE_ICONS.document;
+              const pct = (count / MOCK_DOCS.length) * 100;
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.distSeg, { width: `${pct}%`, backgroundColor: cfg.color }]}
+                  onPress={() => setDocType(docType === type ? "all" : type as VaultDocType)}
+                  activeOpacity={0.8}
+                />
+              );
+            })}
+          </View>
+          <View style={styles.distLegend}>
+            {Object.entries(typeCounts).map(([type, count]) => {
+              const cfg = DOC_TYPE_ICONS[type] ?? DOC_TYPE_ICONS.document;
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.distLegendItem}
+                  onPress={() => setDocType(docType === type ? "all" : type as VaultDocType)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.distDot, { backgroundColor: cfg.color }]} />
+                  <Text style={[styles.distText, { color: docType === type ? cfg.color : colors.mutedForeground }]}>{type} {count}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Search bar */}
+      <View style={[styles.searchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Ionicons name="search-outline" size={14} color={colors.mutedForeground} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Tìm tài liệu..."
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.searchInput, { color: colors.foreground }]}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Scope filter */}
@@ -141,28 +220,58 @@ export default function VaultScreen() {
         renderItem={({ item }) => {
           const typeCfg = DOC_TYPE_ICONS[item.doc_type] ?? DOC_TYPE_ICONS.document;
           const scopeColor = SCOPE_COLORS[item.scope] ?? colors.mutedForeground;
+          const isExpanded = expanded.has(item.id);
           return (
-            <View style={[styles.docCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.docIcon, { backgroundColor: typeCfg.color + "20" }]}>
-                <Ionicons name={typeCfg.icon} size={20} color={typeCfg.color} />
-              </View>
-              <View style={styles.docInfo}>
-                <Text style={[styles.docTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.docPath, { color: colors.mutedForeground }]} numberOfLines={1}>{item.path}</Text>
-                {item.summary && (
-                  <Text style={[styles.docSummary, { color: colors.mutedForeground }]} numberOfLines={2}>{item.summary}</Text>
-                )}
-                <View style={styles.docMeta}>
-                  <View style={[styles.scopeBadge, { backgroundColor: scopeColor + "18" }]}>
-                    <Text style={[styles.scopeText, { color: scopeColor }]}>{item.scope}</Text>
-                  </View>
-                  <View style={[styles.typeBadge, { backgroundColor: typeCfg.color + "15" }]}>
-                    <Text style={[styles.typeText, { color: typeCfg.color }]}>{item.doc_type}</Text>
-                  </View>
-                  <Text style={[styles.dateText, { color: colors.mutedForeground }]}>{fmtDate(item.updated_at)}</Text>
+            <TouchableOpacity
+              style={[styles.docCard, { backgroundColor: colors.card, borderColor: isExpanded ? typeCfg.color + "40" : colors.border }]}
+              onPress={() => toggleExpand(item.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.docRow}>
+                <View style={[styles.docIcon, { backgroundColor: typeCfg.color + "20" }]}>
+                  <Ionicons name={typeCfg.icon} size={20} color={typeCfg.color} />
                 </View>
+                <View style={styles.docInfo}>
+                  <Text style={[styles.docTitle, { color: colors.foreground }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.docPath, { color: colors.mutedForeground }]} numberOfLines={1}>{item.path}</Text>
+                  {item.summary && !isExpanded && (
+                    <Text style={[styles.docSummary, { color: colors.mutedForeground }]} numberOfLines={1}>{item.summary}</Text>
+                  )}
+                  <View style={styles.docMeta}>
+                    <View style={[styles.scopeBadge, { backgroundColor: scopeColor + "18" }]}>
+                      <Text style={[styles.scopeText, { color: scopeColor }]}>{item.scope}</Text>
+                    </View>
+                    <View style={[styles.typeBadge, { backgroundColor: typeCfg.color + "15" }]}>
+                      <Text style={[styles.typeText, { color: typeCfg.color }]}>{item.doc_type}</Text>
+                    </View>
+                    <Text style={[styles.dateText, { color: colors.mutedForeground }]}>{fmtDate(item.updated_at)}</Text>
+                  </View>
+                </View>
+                <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
               </View>
-            </View>
+
+              {isExpanded && (
+                <View style={[styles.expandedBox, { backgroundColor: colors.background, borderColor: typeCfg.color + "25" }]}>
+                  {item.summary && (
+                    <Text style={[styles.expandedSummary, { color: colors.foreground }]}>{item.summary}</Text>
+                  )}
+                  <View style={[styles.expandedMeta, { borderTopColor: colors.border }]}>
+                    <View style={styles.expandedMetaItem}>
+                      <Text style={[styles.expandedMetaLabel, { color: colors.mutedForeground }]}>Tạo lúc</Text>
+                      <Text style={[styles.expandedMetaValue, { color: colors.foreground }]}>{fmtDate(item.created_at)}</Text>
+                    </View>
+                    <View style={styles.expandedMetaItem}>
+                      <Text style={[styles.expandedMetaLabel, { color: colors.mutedForeground }]}>Cập nhật</Text>
+                      <Text style={[styles.expandedMetaValue, { color: colors.foreground }]}>{fmtDate(item.updated_at)}</Text>
+                    </View>
+                    <View style={styles.expandedMetaItem}>
+                      <Text style={[styles.expandedMetaLabel, { color: colors.mutedForeground }]}>Scope</Text>
+                      <Text style={[styles.expandedMetaValue, { color: scopeColor }]}>{item.scope}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
           );
         }}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
@@ -171,7 +280,9 @@ export default function VaultScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="archive-outline" size={36} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có tài liệu</Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {search ? "Không tìm thấy tài liệu" : "Không có tài liệu"}
+            </Text>
           </View>
         }
       />
@@ -187,6 +298,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   totalBadge: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  distBar: { marginHorizontal: 16, marginBottom: 8, borderRadius: 14, borderWidth: 1, padding: 12, gap: 8 },
+  distLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  distTrack: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden", gap: 1 },
+  distSeg: { height: 8 },
+  distLegend: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  distLegendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  distDot: { width: 6, height: 6, borderRadius: 3 },
+  distText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 36 },
+  searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
@@ -195,7 +316,8 @@ const styles = StyleSheet.create({
   errorBanner: { marginHorizontal: 16, marginBottom: 6, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   list: { paddingHorizontal: 14, paddingTop: 6 },
-  docCard: { flexDirection: "row", gap: 12, borderRadius: 18, borderWidth: 1, padding: 14 },
+  docCard: { borderRadius: 18, borderWidth: 1, padding: 14, gap: 10 },
+  docRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   docIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   docInfo: { flex: 1, gap: 4 },
   docTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
@@ -207,6 +329,12 @@ const styles = StyleSheet.create({
   typeBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
   typeText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
   dateText: { fontSize: 11, fontFamily: "Inter_400Regular", marginLeft: "auto" },
+  expandedBox: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 10 },
+  expandedSummary: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  expandedMeta: { flexDirection: "row", gap: 16, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
+  expandedMetaItem: { gap: 2 },
+  expandedMetaLabel: { fontSize: 9, fontFamily: "Inter_500Medium", textTransform: "uppercase" },
+  expandedMetaValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

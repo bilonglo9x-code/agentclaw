@@ -32,6 +32,13 @@ const STATUS_CONFIG: Record<string, { color: string; icon: keyof typeof Ionicons
   unknown: { color: "#71717a", icon: "help-circle", label: "Unknown", bg: "#71717a18" },
 };
 
+function getResponseColor(ms: number): string {
+  if (ms <= 0) return "#71717a";
+  if (ms < 200) return "#22c55e";
+  if (ms < 500) return "#f59e0b";
+  return "#ef4444";
+}
+
 function fmtLastCheck(iso?: string): string {
   if (!iso) return "Never";
   const diff = Date.now() - new Date(iso).getTime();
@@ -132,6 +139,12 @@ export default function HealthScreen() {
           <Text style={[styles.sumCount, { color: colors.foreground }]}>{enabledCount}/{targets.length}</Text>
           <Text style={[styles.sumLabel, { color: colors.mutedForeground }]}>Active</Text>
         </View>
+        {avgUptime > 0 && (
+          <View style={[styles.sumCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sumCount, { color: avgUptime > 95 ? "#22c55e" : "#f59e0b" }]}>{avgUptime.toFixed(1)}%</Text>
+            <Text style={[styles.sumLabel, { color: colors.mutedForeground }]}>Avg Uptime</Text>
+          </View>
+        )}
       </View>
 
       {error && (
@@ -146,6 +159,10 @@ export default function HealthScreen() {
         renderItem={({ item }) => {
           const stCfg = STATUS_CONFIG[item.last_status ?? "unknown"] ?? STATUS_CONFIG.unknown;
           const isTesting = testing === item.id;
+          const rtColor = getResponseColor(item.response_time_ms ?? 0);
+          const uptime = item.uptime_pct ?? 0;
+          const uptimeColor = uptime >= 99 ? "#22c55e" : uptime >= 90 ? "#f59e0b" : "#ef4444";
+
           return (
             <View style={[styles.targetCard, { backgroundColor: colors.card, borderColor: item.last_status === "error" && item.enabled ? "#ef444430" : colors.border }]}>
               <View style={styles.targetTop}>
@@ -165,6 +182,17 @@ export default function HealthScreen() {
                 />
               </View>
 
+              {/* Uptime progress bar */}
+              {item.enabled && uptime > 0 && (
+                <View style={styles.uptimeRow}>
+                  <Text style={[styles.uptimeLabel, { color: colors.mutedForeground }]}>Uptime</Text>
+                  <View style={[styles.uptimeTrack, { backgroundColor: colors.secondary }]}>
+                    <View style={[styles.uptimeFill, { width: `${Math.min(uptime, 100)}%`, backgroundColor: uptimeColor }]} />
+                  </View>
+                  <Text style={[styles.uptimePct, { color: uptimeColor }]}>{uptime.toFixed(1)}%</Text>
+                </View>
+              )}
+
               {item.last_status === "error" && item.last_error && (
                 <View style={[styles.errorMsg, { backgroundColor: "#ef444412" }]}>
                   <Ionicons name="alert-circle-outline" size={12} color="#ef4444" />
@@ -178,21 +206,15 @@ export default function HealthScreen() {
                   <Text style={[styles.statText, { color: colors.mutedForeground }]}>{fmtLastCheck(item.last_checked_at)}</Text>
                 </View>
                 {(item.response_time_ms ?? 0) > 0 && (
-                  <View style={styles.statPair}>
-                    <Ionicons name="speedometer-outline" size={11} color={colors.mutedForeground} />
-                    <Text style={[styles.statText, { color: colors.mutedForeground }]}>{item.response_time_ms}ms</Text>
+                  <View style={[styles.rtBadge, { backgroundColor: rtColor + "18" }]}>
+                    <Ionicons name="speedometer-outline" size={11} color={rtColor} />
+                    <Text style={[styles.rtText, { color: rtColor }]}>{item.response_time_ms}ms</Text>
                   </View>
                 )}
                 <View style={styles.statPair}>
                   <Ionicons name="repeat-outline" size={11} color={colors.mutedForeground} />
                   <Text style={[styles.statText, { color: colors.mutedForeground }]}>{fmtInterval(item.interval_seconds)}</Text>
                 </View>
-                {(item.uptime_pct ?? 0) > 0 && (
-                  <View style={styles.statPair}>
-                    <Ionicons name="trending-up-outline" size={11} color={colors.mutedForeground} />
-                    <Text style={[styles.statText, { color: item.uptime_pct! > 95 ? "#22c55e" : "#f59e0b" }]}>{item.uptime_pct?.toFixed(1)}%</Text>
-                  </View>
-                )}
                 <TouchableOpacity
                   onPress={() => handleTest(item)}
                   disabled={isTesting}
@@ -245,11 +267,18 @@ const styles = StyleSheet.create({
   targetInfo: { flex: 1 },
   targetName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   targetUrl: { fontSize: 11, fontFamily: "monospace", marginTop: 3 },
+  uptimeRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingBottom: 8 },
+  uptimeLabel: { fontSize: 10, fontFamily: "Inter_500Medium", width: 44 },
+  uptimeTrack: { flex: 1, height: 5, borderRadius: 3, overflow: "hidden" },
+  uptimeFill: { height: 5, borderRadius: 3 },
+  uptimePct: { fontSize: 11, fontFamily: "Inter_700Bold", width: 44, textAlign: "right" },
   errorMsg: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 7 },
   errorMsgText: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
   targetStats: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, flexWrap: "wrap" },
   statPair: { flexDirection: "row", alignItems: "center", gap: 4 },
   statText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  rtBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
+  rtText: { fontSize: 11, fontFamily: "Inter_700Bold" },
   testBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, marginLeft: "auto" },
   testBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },

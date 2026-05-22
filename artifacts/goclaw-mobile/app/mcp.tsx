@@ -28,6 +28,21 @@ const MOCK_SERVERS: MCPServerData[] = [
   { id: "m4", name: "web_search", display_name: "Web Search MCP", transport: "streamable-http", url: "https://api.example.com/mcp", tool_prefix: "web_", timeout_sec: 45, enabled: true, agent_count: 4, created_at: new Date(Date.now() - 86400000 * 2).toISOString(), updated_at: new Date().toISOString() },
 ];
 
+const MOCK_TOOL_COUNTS: Record<string, number> = {
+  m1: 8, m2: 12, m3: 5, m4: 7,
+};
+
+const MOCK_LATENCY: Record<string, number> = {
+  m1: 45, m2: 120, m3: 0, m4: 280,
+};
+
+function getLatencyColor(ms: number, enabled: boolean): string {
+  if (!enabled || ms === 0) return "#71717a";
+  if (ms < 100) return "#22c55e";
+  if (ms < 300) return "#f59e0b";
+  return "#ef4444";
+}
+
 export default function MCPScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -38,6 +53,7 @@ export default function MCPScreen() {
   const servers = liveServers.length > 0 ? liveServers : MOCK_SERVERS;
   const enabledCount = servers.filter((s) => s.enabled).length;
   const totalAgents = servers.reduce((sum, s) => sum + (s.agent_count ?? 0), 0);
+  const totalTools = Object.values(MOCK_TOOL_COUNTS).reduce((a, b) => a + b, 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -64,6 +80,10 @@ export default function MCPScreen() {
           <Text style={[styles.sumCount, { color: colors.primary }]}>{totalAgents}</Text>
           <Text style={[styles.sumLabel, { color: colors.mutedForeground }]}>Agents</Text>
         </View>
+        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sumCount, { color: "#f59e0b" }]}>{totalTools}</Text>
+          <Text style={[styles.sumLabel, { color: colors.mutedForeground }]}>Tools</Text>
+        </View>
       </View>
 
       {error && (
@@ -78,6 +98,10 @@ export default function MCPScreen() {
         renderItem={({ item }) => {
           const tCfg = TRANSPORT_CONFIG[item.transport] ?? TRANSPORT_CONFIG.stdio;
           const endpoint = item.transport === "stdio" ? [item.command, ...(item.args ?? [])].join(" ") : item.url ?? "—";
+          const toolCount = MOCK_TOOL_COUNTS[item.id] ?? 0;
+          const latency = MOCK_LATENCY[item.id] ?? 0;
+          const latencyColor = getLatencyColor(latency, item.enabled);
+
           return (
             <View style={[styles.serverCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.cardTop}>
@@ -116,10 +140,22 @@ export default function MCPScreen() {
                     <Text style={[styles.statText, { color: colors.mutedForeground }]}>{item.agent_count} agents</Text>
                   </View>
                 )}
+                {toolCount > 0 && (
+                  <View style={[styles.toolBadge, { backgroundColor: "#f59e0b18" }]}>
+                    <Ionicons name="hammer-outline" size={11} color="#f59e0b" />
+                    <Text style={[styles.toolText, { color: "#f59e0b" }]}>{toolCount} tools</Text>
+                  </View>
+                )}
                 {item.timeout_sec != null && (
                   <View style={styles.statItem}>
                     <Ionicons name="timer-outline" size={11} color={colors.mutedForeground} />
-                    <Text style={[styles.statText, { color: colors.mutedForeground }]}>{item.timeout_sec}s timeout</Text>
+                    <Text style={[styles.statText, { color: colors.mutedForeground }]}>{item.timeout_sec}s</Text>
+                  </View>
+                )}
+                {item.enabled && latency > 0 && (
+                  <View style={[styles.latencyBadge, { backgroundColor: latencyColor + "18" }]}>
+                    <Ionicons name="speedometer-outline" size={11} color={latencyColor} />
+                    <Text style={[styles.latencyText, { color: latencyColor }]}>{latency}ms</Text>
                   </View>
                 )}
               </View>
@@ -147,9 +183,9 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   summaryRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 12 },
-  summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
-  sumCount: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  sumLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
+  summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 10, alignItems: "center" },
+  sumCount: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  sumLabel: { fontSize: 10, fontFamily: "Inter_500Medium", marginTop: 2 },
   errorBanner: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   list: { paddingHorizontal: 14, paddingTop: 4 },
@@ -164,9 +200,13 @@ const styles = StyleSheet.create({
   prefix: { fontSize: 11, fontFamily: "monospace" },
   endpointRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
   endpointText: { fontSize: 11, fontFamily: "monospace", flex: 1 },
-  statsRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  statsRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, flexWrap: "wrap" },
   statItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   statText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  toolBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
+  toolText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  latencyBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, marginLeft: "auto" },
+  latencyText: { fontSize: 11, fontFamily: "Inter_700Bold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

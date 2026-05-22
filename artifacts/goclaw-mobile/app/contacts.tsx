@@ -31,31 +31,32 @@ const CONTACT_TYPE_COLORS: Record<string, string> = {
 };
 
 const MOCK_CONTACTS: ChannelContact[] = [
-  { id: "c1", channel_type: "telegram", sender_id: "123456789", display_name: "Nguyen Van An", username: "nguyenvanan", contact_type: "user", peer_kind: "user", first_seen_at: new Date(Date.now() - 86400000 * 30).toISOString(), last_seen_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: "c1", channel_type: "telegram", sender_id: "123456789", display_name: "Nguyen Van An", username: "nguyenvanan", contact_type: "user", peer_kind: "user", first_seen_at: new Date(Date.now() - 86400000 * 30).toISOString(), last_seen_at: new Date(Date.now() - 120000).toISOString() },
   { id: "c2", channel_type: "telegram", sender_id: "-1001234567890", display_name: "Dev Team Group", contact_type: "group", peer_kind: "group", first_seen_at: new Date(Date.now() - 86400000 * 60).toISOString(), last_seen_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: "c3", channel_type: "slack", sender_id: "U012AB3CD", display_name: "Tran Thi Bich", username: "ttbich", contact_type: "user", peer_kind: "user", first_seen_at: new Date(Date.now() - 86400000 * 14).toISOString(), last_seen_at: new Date(Date.now() - 7200000).toISOString() },
+  { id: "c3", channel_type: "slack", sender_id: "U012AB3CD", display_name: "Tran Thi Bich", username: "ttbich", contact_type: "user", peer_kind: "user", first_seen_at: new Date(Date.now() - 86400000 * 14).toISOString(), last_seen_at: new Date(Date.now() - 240000).toISOString() },
   { id: "c4", channel_type: "email", sender_id: "support@company.com", display_name: "Support Team", contact_type: "user", first_seen_at: new Date(Date.now() - 86400000 * 45).toISOString(), last_seen_at: new Date(Date.now() - 86400000 * 2).toISOString() },
-  { id: "c5", channel_type: "whatsapp", sender_id: "+84901234567", display_name: "Le Minh Duc", contact_type: "user", first_seen_at: new Date(Date.now() - 86400000 * 7).toISOString(), last_seen_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: "c5", channel_type: "whatsapp", sender_id: "+84901234567", display_name: "Le Minh Duc", contact_type: "user", first_seen_at: new Date(Date.now() - 86400000 * 7).toISOString(), last_seen_at: new Date(Date.now() - 60000).toISOString() },
   { id: "c6", channel_type: "telegram", sender_id: "-1009876543210", display_name: "Product Updates Channel", contact_type: "topic", peer_kind: "channel", first_seen_at: new Date(Date.now() - 86400000 * 20).toISOString(), last_seen_at: new Date(Date.now() - 86400000 * 3).toISOString() },
 ];
 
+const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+
 function fmtLastSeen(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60000) return "Vừa xong";
+  if (diff < 60000) return "Đang online";
+  if (diff < ONLINE_THRESHOLD_MS) return `${Math.floor(diff / 60000)}m trước`;
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
-  return `${Math.floor(diff / 86400000)}d trước`;
+  return `${Math.floor(diff / 86400000)}d`;
+}
+
+function isOnline(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < ONLINE_THRESHOLD_MS;
 }
 
 function getInitials(name?: string): string {
   if (!name) return "?";
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
 export default function ContactsScreen() {
@@ -81,6 +82,7 @@ export default function ContactsScreen() {
         return true;
       });
   const total = connected ? liveTotal : contacts.length;
+  const onlineCount = contacts.filter((c) => isOnline(c.last_seen_at)).length;
 
   const channels = [...new Set(MOCK_CONTACTS.map((c) => c.channel_type))];
 
@@ -93,6 +95,12 @@ export default function ContactsScreen() {
         <View style={styles.titleArea}>
           <Text style={[styles.title, { color: colors.foreground }]}>Contacts</Text>
           <Text style={[styles.totalBadge, { color: colors.mutedForeground }]}>{total}</Text>
+          {onlineCount > 0 && (
+            <View style={styles.onlineRow}>
+              <View style={[styles.onlineDot, { backgroundColor: "#22c55e" }]} />
+              <Text style={[styles.onlineCount, { color: "#22c55e" }]}>{onlineCount} online</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
@@ -144,15 +152,19 @@ export default function ContactsScreen() {
           const chCfg = CHANNEL_ICONS[item.channel_type] ?? { color: colors.primary, icon: "chatbubble-outline" as const };
           const typeColor = CONTACT_TYPE_COLORS[item.contact_type] ?? colors.mutedForeground;
           const initials = getInitials(item.display_name);
+          const online = isOnline(item.last_seen_at);
 
           return (
             <View style={[styles.contactRow, { borderBottomColor: colors.border }]}>
-              {/* Avatar */}
-              <View style={[styles.avatar, { backgroundColor: chCfg.color + "20" }]}>
-                <Text style={[styles.initials, { color: chCfg.color }]}>{initials}</Text>
-                <View style={[styles.channelBadge, { backgroundColor: chCfg.color }]}>
-                  <Ionicons name={chCfg.icon} size={8} color="#fff" />
+              {/* Avatar with online ring */}
+              <View style={[styles.avatarWrap, online && { borderColor: "#22c55e33", borderWidth: 2 }]}>
+                <View style={[styles.avatar, { backgroundColor: chCfg.color + "20" }]}>
+                  <Text style={[styles.initials, { color: chCfg.color }]}>{initials}</Text>
+                  <View style={[styles.channelBadge, { backgroundColor: chCfg.color }]}>
+                    <Ionicons name={chCfg.icon} size={8} color="#fff" />
+                  </View>
                 </View>
+                {online && <View style={[styles.onlineStatus, { backgroundColor: "#22c55e", borderColor: colors.background }]} />}
               </View>
 
               <View style={styles.contactInfo}>
@@ -169,9 +181,20 @@ export default function ContactsScreen() {
                 </Text>
               </View>
 
-              <Text style={[styles.lastSeen, { color: colors.mutedForeground }]}>
-                {fmtLastSeen(item.last_seen_at)}
-              </Text>
+              <View style={styles.contactRight}>
+                <Text style={[styles.lastSeen, { color: online ? "#22c55e" : colors.mutedForeground }]}>
+                  {fmtLastSeen(item.last_seen_at)}
+                </Text>
+                {item.contact_type === "user" && (
+                  <TouchableOpacity
+                    style={[styles.msgBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "30" }]}
+                    onPress={() => router.push(`/chat/new_contact_${item.id}_${Date.now()}`)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chatbubble-outline" size={12} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           );
         }}
@@ -192,9 +215,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingBottom: 6, gap: 8 },
   backBtn: { padding: 4 },
-  titleArea: { flex: 1, flexDirection: "row", alignItems: "baseline", gap: 8 },
+  titleArea: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   totalBadge: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  onlineRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  onlineDot: { width: 5, height: 5, borderRadius: 3 },
+  onlineCount: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   searchWrap: { paddingHorizontal: 14, marginBottom: 4 },
   filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 14, paddingBottom: 8 },
@@ -203,17 +229,21 @@ const styles = StyleSheet.create({
   errorBanner: { marginHorizontal: 16, marginBottom: 6, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   list: {},
-  contactRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  contactRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
+  avatarWrap: { position: "relative", borderRadius: 24, padding: 2 },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   initials: { fontSize: 16, fontFamily: "Inter_700Bold" },
   channelBadge: { position: "absolute", bottom: 0, right: 0, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  onlineStatus: { position: "absolute", bottom: 3, right: 3, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   contactInfo: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   displayName: { fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1 },
   typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   typeText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
   username: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  lastSeen: { fontSize: 11, fontFamily: "Inter_400Regular", flexShrink: 0 },
+  contactRight: { alignItems: "flex-end", gap: 6 },
+  lastSeen: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  msgBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

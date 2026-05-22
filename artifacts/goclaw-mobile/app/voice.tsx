@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -37,14 +39,27 @@ const MOCK_VOICES: Voice[] = [
   { id: "vi-male-1", name: "Vietnamese Male", provider: "minimax", language: "vi", gender: "male" },
 ];
 
+type GenderFilter = "all" | "female" | "male" | "neutral";
+
+const GENDER_CONFIG: Record<GenderFilter, { icon: keyof typeof Ionicons["glyphMap"]; label: string; color: string }> = {
+  all: { icon: "people-outline", label: "Tất cả", color: "#a1a1aa" },
+  female: { icon: "woman-outline", label: "Female", color: "#ec4899" },
+  male: { icon: "man-outline", label: "Male", color: "#60a5fa" },
+  neutral: { icon: "person-outline", label: "Neutral", color: "#a78bfa" },
+};
+
 export default function VoiceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { voices: liveVoices, loading, error, refresh } = useVoices();
+  const { voices: liveVoices, loading, error, refresh, synthesize } = useVoices();
   const [search, setSearch] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>("all");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [demoText, setDemoText] = useState("Xin chào! Đây là bản thử giọng nói.");
+  const [showDemo, setShowDemo] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const allVoices = liveVoices.length > 0 ? liveVoices : MOCK_VOICES;
@@ -52,13 +67,29 @@ export default function VoiceScreen() {
 
   const filtered = allVoices.filter((v) => {
     if (selectedProvider && v.provider !== selectedProvider) return false;
+    if (genderFilter !== "all" && v.gender !== genderFilter) return false;
     if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.language?.includes(search.toLowerCase())) return false;
     return true;
   });
 
+  const handlePreview = async (voiceId: string) => {
+    if (playingVoice === voiceId) {
+      setPlayingVoice(null);
+      return;
+    }
+    setPlayingVoice(voiceId);
+    try {
+      await synthesize(voiceId, demoText);
+    } finally {
+      setPlayingVoice(null);
+    }
+  };
+
   const renderVoice = ({ item }: { item: Voice }) => {
     const isSelected = selectedVoice === item.id;
+    const isPlaying = playingVoice === item.id;
     const provColor = PROVIDER_COLORS[item.provider] ?? colors.primary;
+    const genderCfg = GENDER_CONFIG[item.gender as GenderFilter] ?? GENDER_CONFIG.neutral;
 
     return (
       <TouchableOpacity
@@ -67,11 +98,7 @@ export default function VoiceScreen() {
         activeOpacity={0.7}
       >
         <View style={[styles.voiceAvatar, { backgroundColor: provColor + "18" }]}>
-          <Ionicons
-            name={item.gender === "female" ? "woman-outline" : item.gender === "male" ? "man-outline" : "person-outline"}
-            size={18}
-            color={provColor}
-          />
+          <Ionicons name={genderCfg.icon} size={18} color={provColor} />
         </View>
         <View style={styles.voiceInfo}>
           <View style={styles.voiceNameRow}>
@@ -88,7 +115,9 @@ export default function VoiceScreen() {
               </View>
             )}
             {item.gender && (
-              <Text style={[styles.genderText, { color: colors.mutedForeground }]}>{item.gender}</Text>
+              <View style={[styles.genderBadge, { backgroundColor: genderCfg.color + "15" }]}>
+                <Text style={[styles.genderText, { color: genderCfg.color }]}>{item.gender}</Text>
+              </View>
             )}
           </View>
           {item.tags && item.tags.length > 0 && (
@@ -102,10 +131,18 @@ export default function VoiceScreen() {
           )}
         </View>
         <TouchableOpacity
-          style={[styles.previewBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+          style={[styles.previewBtn, {
+            backgroundColor: isPlaying ? colors.primary + "20" : colors.secondary,
+            borderColor: isPlaying ? colors.primary + "50" : colors.border,
+          }]}
+          onPress={() => handlePreview(item.id)}
           activeOpacity={0.7}
         >
-          <Ionicons name="play-outline" size={14} color={colors.mutedForeground} />
+          {isPlaying ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="play-outline" size={14} color={colors.mutedForeground} />
+          )}
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -121,36 +158,76 @@ export default function VoiceScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Voices</Text>
           <Text style={[styles.count, { color: colors.mutedForeground }]}>{allVoices.length} giọng</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => setShowDemo(!showDemo)}
+          style={[styles.iconBtn, { backgroundColor: showDemo ? colors.primary + "20" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mic-outline" size={15} color={showDemo ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
 
+      {/* TTS demo input */}
+      {showDemo && (
+        <View style={[styles.demoBox, { backgroundColor: colors.card, borderColor: colors.primary + "30" }]}>
+          <View style={styles.demoLabelRow}>
+            <Ionicons name="mic-outline" size={13} color={colors.primary} />
+            <Text style={[styles.demoLabel, { color: colors.primary }]}>VĂN BẢN THỬ GIỌNG</Text>
+            {selectedVoice && (
+              <Text style={[styles.demoVoice, { color: colors.mutedForeground }]}>
+                · {allVoices.find((v) => v.id === selectedVoice)?.name ?? selectedVoice}
+              </Text>
+            )}
+          </View>
+          <TextInput
+            value={demoText}
+            onChangeText={setDemoText}
+            style={[styles.demoInput, { color: colors.foreground, borderColor: colors.border }]}
+            placeholder="Nhập văn bản..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+          />
+        </View>
+      )}
+
       <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm giọng..." />
 
       {/* Provider filter */}
-      <View style={styles.filterWrap}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={["Tất cả", ...providers]}
-          keyExtractor={(p) => p}
-          contentContainerStyle={styles.filterRow}
-          renderItem={({ item: p }) => {
-            const active = p === "Tất cả" ? !selectedProvider : selectedProvider === p;
-            const pColor = PROVIDER_COLORS[p] ?? colors.primary;
-            return (
-              <TouchableOpacity
-                onPress={() => setSelectedProvider(p === "Tất cả" ? null : p)}
-                style={[styles.filterChip, { backgroundColor: active ? pColor + "20" : colors.muted, borderColor: active ? pColor + "50" : colors.border }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterText, { color: active ? pColor : colors.mutedForeground }]}>{p}</Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {["Tất cả", ...providers].map((p) => {
+          const active = p === "Tất cả" ? !selectedProvider : selectedProvider === p;
+          const pColor = PROVIDER_COLORS[p] ?? colors.primary;
+          return (
+            <TouchableOpacity
+              key={p}
+              onPress={() => setSelectedProvider(p === "Tất cả" ? null : p)}
+              style={[styles.filterChip, { backgroundColor: active ? pColor + "20" : colors.muted, borderColor: active ? pColor + "50" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterText, { color: active ? pColor : colors.mutedForeground }]}>{p}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        {(["all", "female", "male", "neutral"] as GenderFilter[]).map((g) => {
+          const active = genderFilter === g;
+          const cfg = GENDER_CONFIG[g];
+          return (
+            <TouchableOpacity
+              key={g}
+              onPress={() => setGenderFilter(g)}
+              style={[styles.filterChip, { backgroundColor: active ? cfg.color + "20" : colors.muted, borderColor: active ? cfg.color + "50" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={cfg.icon} size={11} color={active ? cfg.color : colors.mutedForeground} />
+              <Text style={[styles.filterText, { color: active ? cfg.color : colors.mutedForeground }]}>{cfg.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {selectedVoice && (
         <View style={[styles.selectedBanner, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
@@ -197,10 +274,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   count: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  filterWrap: {},
+  demoBox: { marginHorizontal: 14, marginBottom: 6, borderRadius: 14, borderWidth: 1, padding: 12, gap: 8 },
+  demoLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  demoLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  demoVoice: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  demoInput: { borderWidth: 1, borderRadius: 10, padding: 8, fontSize: 13, fontFamily: "Inter_400Regular", minHeight: 52 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  divider: { width: 1, height: 18, marginHorizontal: 2 },
   selectedBanner: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 14, marginBottom: 4, borderRadius: 12, borderWidth: 1, padding: 10 },
   selectedText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium" },
   errorBanner: { marginHorizontal: 14, marginBottom: 6, borderRadius: 10, padding: 10 },
@@ -216,11 +298,12 @@ const styles = StyleSheet.create({
   provText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   langBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5, borderWidth: 1 },
   langText: { fontSize: 9, fontFamily: "Inter_700Bold" },
-  genderText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  genderBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 },
+  genderText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
   tagsRow: { flexDirection: "row", gap: 5, flexWrap: "wrap" },
   tag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
   tagText: { fontSize: 10, fontFamily: "Inter_400Regular" },
-  previewBtn: { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  previewBtn: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
 });
