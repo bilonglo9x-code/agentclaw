@@ -12,3 +12,9 @@ id = "YFmTk8hV8anD_6gctFaHv"
 uri = "file://MASTER_SPEC.md"
 type = "text"
 title = "GoClaw — Master Spec (merged)"
+
+[[outputs]]
+id = "_l44Xq-BgnI3U9Oq1bBwV"
+uri = "file://UPGRADE_ANALYSIS.md"
+type = "text"
+title = "GoClaw — Phân tích 4 chủ đề nâng cấp"
