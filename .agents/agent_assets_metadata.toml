@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "KttBJC567k5F-Fqmj_pE2"
+uri = "file://agentclaw-spec.md"
+type = "text"
+title = "AgentClaw — App Spec & Feature Development Plan"
