@@ -237,7 +237,7 @@ export default function TracesScreen() {
       </View>
 
       {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.chips}>
         {FILTERS.map((f) => {
           const active = filter === f.value;
           const cfg = f.value !== "all" ? STATUS_CONFIG[f.value] : null;
@@ -405,7 +405,8 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   summaryCount: { fontSize: 22, fontFamily: "Inter_700Bold" },
   summaryLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2, textTransform: "capitalize" },
-  chips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
+  chips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   errorBanner: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, borderWidth: 1, padding: 10 },

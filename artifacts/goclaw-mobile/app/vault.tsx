@@ -177,7 +177,7 @@ export default function VaultScreen() {
       </View>
 
       {/* Scope filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {SCOPE_FILTERS.map((f) => {
           const active = scope === f.value;
           return (
@@ -308,6 +308,7 @@ const styles = StyleSheet.create({
   distText: { fontSize: 10, fontFamily: "Inter_400Regular" },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 36 },
   searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },

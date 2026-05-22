@@ -161,7 +161,7 @@ export default function ActivityScreen() {
       </View>
 
       {/* Action filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {ACTION_FILTERS.map((f) => {
           const active = actionFilter === f;
           const cfg = ACTION_ICONS[f];
@@ -186,7 +186,7 @@ export default function ActivityScreen() {
       </ScrollView>
 
       {/* Entity filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow2}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow2}>
         {ENTITY_FILTERS.map((f) => {
           const active = entityFilter === f;
           const cfg = ENTITY_ICONS[f];
@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
   timeChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   timeRight: { flex: 1, alignItems: "flex-end", paddingRight: 8 },
   timeCount: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 4, gap: 7 },
   filterRow2: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 4, gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },

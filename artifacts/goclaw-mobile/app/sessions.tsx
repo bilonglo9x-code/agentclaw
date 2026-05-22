@@ -143,7 +143,7 @@ export default function SessionsScreen() {
       </View>
 
       {/* Agent filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {agentOptions.map((opt) => {
           const active = agentFilter === opt.id;
           return (
@@ -254,6 +254,7 @@ const styles = StyleSheet.create({
   sumCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   sumCount: { fontSize: 20, fontFamily: "Inter_700Bold" },
   sumLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },

@@ -218,7 +218,7 @@ export default function AgentCreateScreen() {
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Model & Provider</Text>
 
             <FormField label="Provider">
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.providerRow}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.providerRow}>
                 {PROVIDERS.map((p) => {
                   const active = form.provider === p;
                   return (
@@ -321,6 +321,7 @@ const styles = StyleSheet.create({
   typeCard: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 12, gap: 4 },
   typeLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   typeDesc: { fontSize: 11, fontFamily: "Inter_400Regular", lineHeight: 15 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   providerRow: { flexDirection: "row", gap: 8, paddingVertical: 2, alignItems: "center" },
   providerChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   providerText: { fontSize: 12, fontFamily: "Inter_500Medium" },

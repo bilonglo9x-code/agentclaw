@@ -196,7 +196,7 @@ export default function VoiceScreen() {
       <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm giọng..." />
 
       {/* Provider filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {["Tất cả", ...providers].map((p) => {
           const active = p === "Tất cả" ? !selectedProvider : selectedProvider === p;
           const pColor = PROVIDER_COLORS[p] ?? colors.primary;
@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
   demoLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
   demoVoice: { fontSize: 10, fontFamily: "Inter_400Regular" },
   demoInput: { borderWidth: 1, borderRadius: 10, padding: 8, fontSize: 13, fontFamily: "Inter_400Regular", minHeight: 52 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium" },

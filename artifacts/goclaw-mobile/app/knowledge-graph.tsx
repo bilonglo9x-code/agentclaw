@@ -330,7 +330,7 @@ export default function KnowledgeGraphScreen() {
 
       {/* Agent selector */}
       {agents.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.agentRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.agentRow}>
           {agents.slice(0, 10).map((a) => {
             const active = selectedAgent === a.id;
             return (
@@ -353,7 +353,7 @@ export default function KnowledgeGraphScreen() {
 
       {/* Stats row */}
       {stats && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: colors.primary }]}>{stats.entity_count}</Text>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Entities</Text>
@@ -378,7 +378,7 @@ export default function KnowledgeGraphScreen() {
 
       {/* Type filter */}
       {entityTypes.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
           <TouchableOpacity
             onPress={() => setSelectedType(null)}
             style={[styles.filterChip, { backgroundColor: !selectedType ? colors.primary + "20" : colors.muted, borderColor: !selectedType ? colors.primary + "50" : colors.border }]}
@@ -483,6 +483,7 @@ const styles = StyleSheet.create({
   viewToggle: { flexDirection: "row", borderRadius: 10, padding: 3, gap: 2 },
   toggleBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   agentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   agentChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   agentChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },

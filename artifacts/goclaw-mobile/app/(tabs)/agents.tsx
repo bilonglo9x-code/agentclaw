@@ -101,6 +101,7 @@ export default function AgentsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
         contentContainerStyle={styles.chips}
       >
         {FILTERS.map((f) => {
@@ -164,6 +165,7 @@ const styles = StyleSheet.create({
   fab: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   searchWrap: { marginBottom: 4 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, alignItems: "center" },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 13, fontFamily: "Inter_500Medium" },

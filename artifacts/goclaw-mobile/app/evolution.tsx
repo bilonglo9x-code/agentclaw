@@ -164,7 +164,7 @@ export default function EvolutionScreen() {
 
       {/* Agent selector */}
       {agents.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.agentRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.agentRow}>
           {agents.map((a) => {
             const active = selectedAgent === a.id;
             return (
@@ -212,7 +212,7 @@ export default function EvolutionScreen() {
       )}
 
       {/* Status filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {STATUS_FILTERS.map((s) => {
           const active = statusFilter === s;
           const sColor = STATUS_COLORS[s] ?? colors.primary;
@@ -285,6 +285,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   agentTag: { fontSize: 12, fontFamily: "Inter_500Medium" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   agentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 5, gap: 7 },
   agentChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   agentChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },

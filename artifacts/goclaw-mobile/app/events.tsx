@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
   FlatList,
   Platform,
@@ -55,7 +55,7 @@ const MOCK_EVENTS: LiveEvent[] = [
   { id: "e5", timestamp: Date.now() - 120000, source: "agent", type: "run.failed", agentName: "Monitor Agent", summary: "Monitor Agent gặp lỗi: Provider timeout", status: "error" },
   { id: "e6", timestamp: Date.now() - 180000, source: "trace", type: "trace.status", agentName: "Writer", summary: "Trace ab12cd34 → completed", status: "success" },
   { id: "e7", timestamp: Date.now() - 300000, source: "agent", type: "run.started", agentName: "Researcher", sessionKey: "sess_def", summary: "Researcher bắt đầu chạy", status: "running" },
-  { id: "e8", timestamp: Date.now() - 600000, source: "chat", type: "chunk", summary: "Tin nhắn mới: Kết quả phân tích cho thấy..." },
+  { id: "e8", timestamp: Date.now() - 600000, source: "chat", type: "chunk", agentName: "Sales Assistant", summary: "Tin nhắn mới: Kết quả phân tích cho thấy..." },
 ];
 
 type SourceFilter = "all" | "agent" | "chat" | "cron" | "trace" | "system";
@@ -68,10 +68,22 @@ export default function EventsScreen() {
   const listRef = useRef<FlatList>(null);
   const [paused, setPaused] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [agentFilter, setAgentFilter] = useState<string>("all");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const allEvents = connected && liveEvents.length > 0 ? liveEvents : MOCK_EVENTS;
-  const events = sourceFilter === "all" ? allEvents : allEvents.filter((e) => e.source === sourceFilter);
+
+  const agentNames = useMemo(() => {
+    const names = new Set<string>();
+    allEvents.forEach((e) => { if (e.agentName) names.add(e.agentName); });
+    return Array.from(names);
+  }, [allEvents]);
+
+  const filtered = useMemo(() => {
+    let evts = sourceFilter === "all" ? allEvents : allEvents.filter((e) => e.source === sourceFilter);
+    if (agentFilter !== "all") evts = evts.filter((e) => e.agentName === agentFilter);
+    return evts;
+  }, [allEvents, sourceFilter, agentFilter]);
 
   const countBySource = allEvents.reduce<Record<string, number>>((acc, e) => {
     acc[e.source] = (acc[e.source] ?? 0) + 1;
@@ -114,6 +126,11 @@ export default function EventsScreen() {
       {/* Stats bar */}
       <View style={styles.statsBar}>
         <View style={styles.statItem}>
+          <Text style={[styles.statCount, { color: colors.foreground }]}>{filtered.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>hiển thị</Text>
+        </View>
+        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+        <View style={styles.statItem}>
           <Text style={[styles.statCount, { color: colors.foreground }]}>{allEvents.length}</Text>
           <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>total</Text>
         </View>
@@ -138,8 +155,8 @@ export default function EventsScreen() {
         )}
       </View>
 
-      {/* Source filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      {/* Row 1: Source filter chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         <TouchableOpacity
           onPress={() => setSourceFilter("all")}
           style={[styles.filterChip, {
@@ -177,9 +194,46 @@ export default function EventsScreen() {
         })}
       </ScrollView>
 
+      {/* Row 2: Agent filter chips */}
+      {agentNames.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.agentRow}>
+          <TouchableOpacity
+            onPress={() => setAgentFilter("all")}
+            style={[styles.agentChip, {
+              backgroundColor: agentFilter === "all" ? "#60a5fa20" : colors.muted,
+              borderColor: agentFilter === "all" ? "#60a5fa50" : colors.border,
+            }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="apps-outline" size={10} color={agentFilter === "all" ? "#60a5fa" : colors.mutedForeground} />
+            <Text style={[styles.agentChipText, { color: agentFilter === "all" ? "#60a5fa" : colors.mutedForeground }]}>Mọi agent</Text>
+          </TouchableOpacity>
+          {agentNames.map((name) => {
+            const active = agentFilter === name;
+            const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            return (
+              <TouchableOpacity
+                key={name}
+                onPress={() => setAgentFilter(name)}
+                style={[styles.agentChip, {
+                  backgroundColor: active ? colors.primary + "20" : colors.muted,
+                  borderColor: active ? colors.primary + "50" : colors.border,
+                }]}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.agentInitial, { backgroundColor: active ? colors.primary + "30" : colors.border }]}>
+                  <Text style={[styles.agentInitialText, { color: active ? colors.primary : colors.mutedForeground }]}>{initials}</Text>
+                </View>
+                <Text style={[styles.agentChipText, { color: active ? colors.primary : colors.mutedForeground }]} numberOfLines={1}>{name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <FlatList
         ref={listRef}
-        data={events}
+        data={filtered}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => {
           const srcCfg = SOURCE_CONFIG[item.source] ?? SOURCE_CONFIG.system;
@@ -194,7 +248,6 @@ export default function EventsScreen() {
               <View style={styles.eventContent}>
                 <View style={styles.eventTop}>
                   <View style={styles.eventMeta}>
-                    {/* Event type bubble */}
                     <View style={[styles.typeBubble, { backgroundColor: typeColor + "20" }]}>
                       <Text style={[styles.typeText, { color: typeColor }]}>{item.type}</Text>
                     </View>
@@ -254,11 +307,17 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 12 },
   demoBadge: { marginLeft: "auto", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   demoText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 7 },
   filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   filterText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   filterCount: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, minWidth: 16, alignItems: "center" },
   filterCountText: { fontSize: 9, fontFamily: "Inter_700Bold" },
+  agentRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 6, paddingTop: 0, gap: 6 },
+  agentChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 16, borderWidth: 1, alignSelf: "flex-start", maxWidth: 140 },
+  agentChipText: { fontSize: 11, fontFamily: "Inter_500Medium", flexShrink: 1 },
+  agentInitial: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  agentInitialText: { fontSize: 8, fontFamily: "Inter_700Bold" },
   list: { paddingTop: 4 },
   eventRow: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
   sourceIcon: { width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 },

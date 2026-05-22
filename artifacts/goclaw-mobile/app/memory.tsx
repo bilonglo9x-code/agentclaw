@@ -141,7 +141,7 @@ export default function MemoryScreen() {
       )}
 
       {/* Agent filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.agentChips}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.agentChips}>
         {agentOptions.map((opt) => {
           const active = selectedAgent === opt.id;
           const agentColor = opt.id ? (AGENT_COLORS[opt.id] ?? colors.primary) : colors.primary;
@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
   distItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   distDot: { width: 6, height: 6, borderRadius: 3 },
   distText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
   agentChips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   agentDot: { width: 6, height: 6, borderRadius: 3 },
