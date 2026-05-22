@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Clipboard,
   FlatList,
   Platform,
   StyleSheet,
@@ -25,6 +26,11 @@ interface MsgBubbleProps {
   isStreaming?: boolean;
   toolName?: string;
   colors: ReturnType<typeof useColors>;
+}
+
+function copyToClipboard(text: string) {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  Clipboard.setString(text);
 }
 
 function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>, key: number) {
@@ -187,10 +193,21 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
             renderContent(content, colors)
           )}
         </View>
-        <Text style={[styles.bubbleTime, { color: colors.mutedForeground }, isUser && styles.timeRight]}>
-          {new Date().toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
-          {isUser ? " ✓✓" : ""}
-        </Text>
+        <View style={[styles.bubbleFooter, isUser && { justifyContent: "flex-end" }]}>
+          <Text style={[styles.bubbleTime, { color: colors.mutedForeground }]}>
+            {new Date().toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
+            {isUser ? " ✓✓" : ""}
+          </Text>
+          {!isUser && !isStreaming && content && (
+            <TouchableOpacity
+              onPress={() => copyToClipboard(content)}
+              style={styles.copyBtn}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="copy-outline" size={12} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -412,8 +429,10 @@ const styles = StyleSheet.create({
   listItem: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginVertical: 1 },
   listDot: { width: 5, height: 5, borderRadius: 3, marginTop: 8, flexShrink: 0 },
   numLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", minWidth: 20 },
+  bubbleFooter: { flexDirection: "row", alignItems: "center", gap: 6 },
   bubbleTime: { fontSize: 10, fontFamily: "Inter_400Regular" },
   timeRight: { textAlign: "right" },
+  copyBtn: { padding: 2 },
   thinkingDots: { flexDirection: "row", alignItems: "center", gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   thinkingText: { fontSize: 12, fontFamily: "Inter_400Regular", marginLeft: 4 },

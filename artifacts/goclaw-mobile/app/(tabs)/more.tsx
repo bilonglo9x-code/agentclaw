@@ -113,12 +113,46 @@ export default function MoreScreen() {
     },
   ];
 
+  const QUICK_ACCESS = [
+    { icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Tìm kiếm", color: "#60a5fa", onPress: () => router.push("/search") },
+    { icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Traces", color: "#a78bfa", onPress: () => router.push("/traces") },
+    { icon: "shield-outline" as keyof typeof Ionicons["glyphMap"], label: "Approvals", color: "#f97316", badge: pendingCount, onPress: () => router.push("/approvals") },
+    { icon: "flash-outline" as keyof typeof Ionicons["glyphMap"], label: "Skills", color: "#f59e0b", onPress: () => router.push("/skills") },
+    { icon: "library-outline" as keyof typeof Ionicons["glyphMap"], label: "Memory", color: "#22c55e", onPress: () => router.push("/memory") },
+    { icon: "git-network-outline" as keyof typeof Ionicons["glyphMap"], label: "KG", color: "#a78bfa", onPress: () => router.push("/knowledge-graph") },
+  ];
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 8, paddingBottom: insets.bottom + 110 }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Quick Access Grid */}
+      <View style={styles.quickAccessSection}>
+        <Text style={[styles.quickAccessTitle, { color: colors.mutedForeground }]}>TRUY CẬP NHANH</Text>
+        <View style={styles.quickAccessGrid}>
+          {QUICK_ACCESS.map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              style={[styles.quickAccessItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={item.onPress}
+            >
+              <View style={[styles.quickAccessIcon, { backgroundColor: item.color + "18" }]}>
+                <Ionicons name={item.icon} size={18} color={item.color} />
+              </View>
+              <Text style={[styles.quickAccessLabel, { color: colors.foreground }]}>{item.label}</Text>
+              {!!item.badge && item.badge > 0 && (
+                <View style={[styles.quickAccessBadge, { backgroundColor: item.color }]}>
+                  <Text style={styles.quickAccessBadgeText}>{item.badge}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {/* Profile header */}
       <View style={[styles.profile, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={[styles.avatar, { backgroundColor: colors.primary + "25" }]}>
@@ -265,4 +299,12 @@ const styles = StyleSheet.create({
   menuBadge: { fontSize: 12, fontFamily: "Inter_400Regular", maxWidth: 110 },
   countDot: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   countDotText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  quickAccessSection: { marginBottom: 20 },
+  quickAccessTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, marginBottom: 10 },
+  quickAccessGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  quickAccessItem: { width: "30.5%", borderRadius: 16, borderWidth: 1, padding: 12, alignItems: "center", gap: 6, position: "relative" },
+  quickAccessIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  quickAccessLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  quickAccessBadge: { position: "absolute", top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
+  quickAccessBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
 });

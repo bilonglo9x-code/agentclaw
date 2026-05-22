@@ -97,6 +97,45 @@ Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw G
 - **Connection status**: Cloud icon in Chat/More header shows live/offline state
 - **Login**: Modal slide-up screen for entering server URL + API token
 
+## AgentClaw-App Spec Upgrades (P0+P1 implemented)
+
+### Dashboard 2.0 (F2.3)
+- **Agent Health Grid**: mini status card per agent (active/idle/error) with tap → agent detail
+- **Alert Banners**: auto-show when pendingApprovals > 0 or errorAgents > 0 with actionable "View →"
+- **Cost Trend Sparkline**: 7-day cost bar chart below requests chart
+- **Recent Activity Feed**: merged events feed (agent/cron/channel) with "Xem tất cả →" to /events
+- **Actionable Stat Cards**: each card has icon + chevron, tapping navigates to relevant screen
+- **Quick Actions**: labeled TRUY CẬP NHANH section with 6 shortcuts
+
+### Traces Waterfall View (F2.2)
+- Toggle button **List | Waterfall** in header
+- Waterfall view: each trace as horizontal gantt bar (width ∝ duration vs longest trace)
+- Segmented bars: LLM (blue) / Tool (amber) / Memory (purple) / Other (gray)
+- Running traces show animated stripe; failed traces highlighted with red border
+- Duration bars visible in list view too (progress bar under agent name)
+- Summary cards clickable to filter
+
+### Monitor Logs Enhanced (F1.4)
+- **Search bar**: toggleable via 🔍 button, full-text search across message + source
+- **Auto-scroll toggle**: 🔽 button to lock/unlock auto-scroll to bottom
+- **Export button**: 📤 shares filtered logs as plain text via native Share sheet
+- Play/Pause tailing button
+- Search result count hint shown when searching
+
+### Approvals Bulk + Timeout (F1.5)
+- **Per-card countdown timer**: 5-minute timeout countdown, turns amber when < 60s remaining
+- **Urgent banner**: shows warning when approaching timeout
+- **Checkbox multi-select**: long-press to enter bulk mode, tap checkbox to select/deselect
+- **Bulk action bar**: floats above list when items selected; "Từ chối" / "Cho phép" selected
+- Quick "approve all / deny all" still available when no selection
+
+### Chat Enhancements (F1.3)
+- **Copy button** on assistant messages: tap 📋 icon below bubble → copies to clipboard + haptic
+
+### More Screen Quick Access (F1.1)
+- **TRUY CẬP NHANH** grid at very top: 6 icon shortcuts (Search, Traces, Approvals, Skills, Memory, KG)
+- Badge on Approvals shortcut shows pending count
+
 ## User preferences
 
 - Language: Vietnamese UI labels (`Chats` → "Chats", buttons in Vietnamese)

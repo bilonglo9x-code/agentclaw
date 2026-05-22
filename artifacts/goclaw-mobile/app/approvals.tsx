@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -6,7 +6,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,13 +22,42 @@ const RISK_CONFIG = {
   high: { color: "#ef4444", label: "High risk" },
 };
 
+function useCountdown(requestedAt: string, timeoutMinutes = 5): { remaining: number; urgent: boolean } {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    const calc = () => {
+      const elapsed = (Date.now() - new Date(requestedAt).getTime()) / 1000;
+      const total = timeoutMinutes * 60;
+      return Math.max(0, total - elapsed);
+    };
+
+    setRemaining(calc());
+    const interval = setInterval(() => setRemaining(calc()), 1000);
+    return () => clearInterval(interval);
+  }, [requestedAt, timeoutMinutes]);
+
+  return { remaining, urgent: remaining < 60 && remaining > 0 };
+}
+
+function fmtCountdown(secs: number): string {
+  if (secs <= 0) return "Hết hạn";
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function ApprovalCard({
   item,
+  selected,
+  onSelect,
   onApprove,
   onDeny,
   colors,
 }: {
   item: ApprovalItem;
+  selected: boolean;
+  onSelect: () => void;
   onApprove: () => void;
   onDeny: () => void;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
@@ -37,10 +65,30 @@ function ApprovalCard({
   const isPending = item.status === "pending";
   const risk = item.risk_level ?? "medium";
   const riskCfg = RISK_CONFIG[risk];
+  const { remaining, urgent } = useCountdown(item.requested_at);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <TouchableOpacity
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: selected ? colors.primary + "70" : urgent ? "#f59e0b50" : colors.border,
+        },
+      ]}
+      activeOpacity={0.95}
+      onLongPress={isPending ? onSelect : undefined}
+    >
       <View style={styles.cardHeader}>
+        {/* Checkbox for bulk select */}
+        {isPending && (
+          <TouchableOpacity onPress={onSelect} style={styles.checkboxWrap} activeOpacity={0.7}>
+            <View style={[styles.checkbox, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : "transparent" }]}>
+              {selected && <Ionicons name="checkmark" size={12} color="#fff" />}
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={[styles.toolIcon, { backgroundColor: "#60a5fa20" }]}>
           <Ionicons name="settings-outline" size={18} color="#60a5fa" />
         </View>
@@ -50,10 +98,28 @@ function ApprovalCard({
             {item.agent_name ?? item.agent_id ?? "Agent"} · {new Date(item.requested_at).toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
           </Text>
         </View>
-        <View style={[styles.riskBadge, { backgroundColor: riskCfg.color + "20", borderColor: riskCfg.color + "40" }]}>
-          <Text style={[styles.riskText, { color: riskCfg.color }]}>{riskCfg.label}</Text>
+
+        <View style={styles.rightBadges}>
+          <View style={[styles.riskBadge, { backgroundColor: riskCfg.color + "20", borderColor: riskCfg.color + "40" }]}>
+            <Text style={[styles.riskText, { color: riskCfg.color }]}>{riskCfg.label}</Text>
+          </View>
+          {isPending && (
+            <View style={[styles.countdownBadge, { backgroundColor: urgent ? "#f59e0b20" : colors.secondary, borderColor: urgent ? "#f59e0b60" : colors.border }]}>
+              <Ionicons name="time-outline" size={10} color={urgent ? "#f59e0b" : colors.mutedForeground} />
+              <Text style={[styles.countdownText, { color: urgent ? "#f59e0b" : colors.mutedForeground }]}>
+                {fmtCountdown(remaining)}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
+
+      {urgent && isPending && (
+        <View style={[styles.urgentBanner, { backgroundColor: "#f59e0b15", borderColor: "#f59e0b40" }]}>
+          <Ionicons name="warning-outline" size={12} color="#f59e0b" />
+          <Text style={[styles.urgentText, { color: "#f59e0b" }]}>Sắp hết hạn — cần xử lý ngay</Text>
+        </View>
+      )}
 
       {item.description && (
         <Text style={[styles.description, { color: colors.mutedForeground }]}>{item.description}</Text>
@@ -104,7 +170,7 @@ function ApprovalCard({
           </Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -113,12 +179,13 @@ export default function ApprovalsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { approvals, loading, pendingCount, approve, deny, refresh } = useApprovals();
-  const [denyingId, setDenyingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const handleApprove = async (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await approve(id);
+    setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
   };
 
   const handleDeny = (id: string) => {
@@ -133,14 +200,51 @@ export default function ApprovalsScreen() {
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             await deny(id, "Denied by user");
+            setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
           },
         },
       ],
     );
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  };
+
   const pending = approvals.filter((a) => a.status === "pending");
   const resolved = approvals.filter((a) => a.status !== "pending");
+  const selectedPending = pending.filter((a) => selectedIds.has(a.id));
+  const hasSelection = selectedIds.size > 0;
+
+  const bulkApprove = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    selectedPending.forEach((a) => approve(a.id));
+    setSelectedIds(new Set());
+  };
+
+  const bulkDeny = () => {
+    Alert.alert(
+      `Từ chối ${selectedPending.length} requests`,
+      "Tất cả các requests đã chọn sẽ bị từ chối.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Từ chối",
+          style: "destructive",
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            selectedPending.forEach((a) => deny(a.id, "Bulk denied by user"));
+            setSelectedIds(new Set());
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -175,12 +279,42 @@ export default function ApprovalsScreen() {
         </View>
       )}
 
+      {/* Bulk action bar */}
+      {hasSelection && (
+        <View style={[styles.bulkBar, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "40" }]}>
+          <Text style={[styles.bulkBarLabel, { color: colors.primary }]}>
+            Đã chọn {selectedIds.size} requests
+          </Text>
+          <View style={styles.bulkBarActions}>
+            <TouchableOpacity
+              style={[styles.bulkBarBtn, { borderColor: colors.destructive + "50" }]}
+              onPress={bulkDeny}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.bulkBarBtnText, { color: colors.destructive }]}>Từ chối</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkBarBtn, { borderColor: "#22c55e50", backgroundColor: "#22c55e15" }]}
+              onPress={bulkApprove}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.bulkBarBtnText, { color: "#22c55e" }]}>Cho phép</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSelectedIds(new Set())} activeOpacity={0.7} style={styles.clearBtn}>
+              <Ionicons name="close" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <FlatList
         data={[...pending, ...resolved]}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ApprovalCard
             item={item}
+            selected={selectedIds.has(item.id)}
+            onSelect={() => toggleSelect(item.id)}
             colors={colors}
             onApprove={() => handleApprove(item.id)}
             onDeny={() => handleDeny(item.id)}
@@ -190,25 +324,25 @@ export default function ApprovalsScreen() {
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
-          pending.length > 1 ? (
-            <View style={styles.bulkRow}>
-              <Text style={[styles.bulkLabel, { color: colors.mutedForeground }]}>
+          pending.length > 1 && !hasSelection ? (
+            <View style={styles.quickBulkRow}>
+              <Text style={[styles.quickBulkLabel, { color: colors.mutedForeground }]}>
                 {pending.length} yêu cầu đang chờ
               </Text>
-              <View style={styles.bulkBtns}>
+              <View style={styles.quickBulkBtns}>
                 <TouchableOpacity
-                  style={[styles.bulkBtn, { borderColor: colors.destructive + "50" }]}
+                  style={[styles.quickBulkBtn, { borderColor: colors.destructive + "50" }]}
                   onPress={() => pending.forEach((a) => handleDeny(a.id))}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.bulkBtnText, { color: colors.destructive }]}>Từ chối tất cả</Text>
+                  <Text style={[styles.quickBulkBtnText, { color: colors.destructive }]}>Từ chối tất cả</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.bulkBtn, { borderColor: "#22c55e50", backgroundColor: "#22c55e15" }]}
+                  style={[styles.quickBulkBtn, { borderColor: "#22c55e50", backgroundColor: "#22c55e15" }]}
                   onPress={() => pending.forEach((a) => handleApprove(a.id))}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.bulkBtnText, { color: "#22c55e" }]}>Cho phép tất cả</Text>
+                  <Text style={[styles.quickBulkBtnText, { color: "#22c55e" }]}>Cho phép tất cả</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -237,20 +371,43 @@ const styles = StyleSheet.create({
   emptyBanner: { margin: 16, borderRadius: 20, borderWidth: 1, padding: 28, alignItems: "center", gap: 8 },
   emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   emptySubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
-  bulkRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 2 },
-  bulkLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  bulkBtns: { flexDirection: "row", gap: 8 },
-  bulkBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
-  bulkBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  bulkBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    paddingHorizontal: 14,
+  },
+  bulkBarLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  bulkBarActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bulkBarBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  bulkBarBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  clearBtn: { padding: 4 },
+  quickBulkRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 2 },
+  quickBulkLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  quickBulkBtns: { flexDirection: "row", gap: 8 },
+  quickBulkBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  quickBulkBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   list: { paddingHorizontal: 14, paddingTop: 8 },
   card: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 12 },
-  cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  checkboxWrap: { paddingTop: 2 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   toolIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   cardTitleArea: { flex: 1 },
   toolName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   agentName: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  rightBadges: { gap: 4, alignItems: "flex-end" },
   riskBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   riskText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  countdownBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  countdownText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  urgentBanner: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 10, borderWidth: 1, padding: 8 },
+  urgentText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   description: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
   argsBox: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 6 },
   argsLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5, marginBottom: 2 },

@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Platform,
-  ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,7 +34,7 @@ const LEVEL_CONFIG: Record<LogLevel, { color: string; bg: string; icon: keyof ty
 };
 
 const MOCK_LOGS: LogEntry[] = [
-  { id: "1", timestamp: Date.now() - 120000, level: "info", message: "Agent 'Sales Assistant' completed task successfully", source: "agent" },
+  { id: "1", timestamp: Date.now() - 120000, level: "info", message: "Agent 'Sales Bot' completed task successfully", source: "agent" },
   { id: "2", timestamp: Date.now() - 180000, level: "warn", message: "Rate limit approaching: 85% of hourly quota used", source: "api" },
   { id: "3", timestamp: Date.now() - 240000, level: "error", message: "Embedding provider timeout after 30s", source: "provider" },
   { id: "4", timestamp: Date.now() - 300000, level: "info", message: "Memory consolidation job started (scheduled)", source: "scheduler" },
@@ -44,6 +44,11 @@ const MOCK_LOGS: LogEntry[] = [
   { id: "8", timestamp: Date.now() - 540000, level: "error", message: "Webhook delivery failed: 3 retries exhausted", source: "webhook" },
   { id: "9", timestamp: Date.now() - 600000, level: "info", message: "Cron job 'daily_report' completed in 2.3s", source: "scheduler" },
   { id: "10", timestamp: Date.now() - 660000, level: "debug", message: "Cache hit: embedding vector for document #4821", source: "cache" },
+  { id: "11", timestamp: Date.now() - 720000, level: "error", message: "KG embedding failed: vector dimension mismatch", source: "kg" },
+  { id: "12", timestamp: Date.now() - 780000, level: "info", message: "Provider OpenAI authenticated, model: gpt-4o", source: "provider" },
+  { id: "13", timestamp: Date.now() - 840000, level: "debug", message: "BM25 index rebuilt: 1,247 documents processed", source: "vault" },
+  { id: "14", timestamp: Date.now() - 900000, level: "warn", message: "Channel Telegram slow response (1.8s avg)", source: "channel" },
+  { id: "15", timestamp: Date.now() - 960000, level: "info", message: "Backup completed: 24.3MB to /backups/2026-05-22.tar.gz", source: "backup" },
 ];
 
 function formatTs(ts: number): string {
@@ -57,14 +62,19 @@ export default function MonitorScreen() {
   const { logs, tailing, level, error: tailError, startTail, stopTail, clearLogs, setLevel } = useLogs();
   const { pendingCount } = useApprovals();
   const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
   const listRef = useRef<FlatList>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const displayLogs = connected && logs.length > 0 ? logs : MOCK_LOGS;
 
-  const filtered = filter === "all"
-    ? displayLogs
-    : displayLogs.filter((l) => l.level === filter);
+  const filtered = displayLogs.filter((l) => {
+    const matchLevel = filter === "all" || l.level === filter;
+    const matchSearch = !search || l.message.toLowerCase().includes(search.toLowerCase()) || (l.source ?? "").toLowerCase().includes(search.toLowerCase());
+    return matchLevel && matchSearch;
+  });
 
   const counts = displayLogs.reduce((acc, l) => {
     acc[l.level as LogLevel] = (acc[l.level as LogLevel] ?? 0) + 1;
@@ -72,176 +82,197 @@ export default function MonitorScreen() {
   }, {} as Record<LogLevel, number>);
 
   useEffect(() => {
-    if (filtered.length > 0) {
+    if (autoScroll && filtered.length > 0) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     }
-  }, [filtered.length]);
+  }, [filtered.length, autoScroll]);
 
   const toggleTail = () => {
     if (tailing) stopTail();
     else startTail(level as LogLevel);
   };
 
+  const handleExport = async () => {
+    const text = filtered
+      .map((l) => `[${formatTs(l.timestamp)}] [${l.level.toUpperCase()}]${l.source ? ` (${l.source})` : ""} ${l.message}`)
+      .join("\n");
+    await Share.share({ message: text, title: "GoClaw Logs" });
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={[styles.title, { color: colors.foreground }]}>Monitor</Text>
-          <View style={styles.statsRow}>
-            <View style={[styles.dot, { backgroundColor: "#ef4444" }]} />
-            <Text style={[styles.statsText, { color: "#ef4444" }]}>{counts.error ?? 0} errors</Text>
-            <Text style={[styles.sep, { color: colors.border }]}>·</Text>
-            <View style={[styles.dot, { backgroundColor: "#f59e0b" }]} />
-            <Text style={[styles.statsText, { color: "#f59e0b" }]}>{counts.warn ?? 0} warns</Text>
-            {pendingCount > 0 && (
-              <>
-                <Text style={[styles.sep, { color: colors.border }]}>·</Text>
-                <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-                <Text style={[styles.statsText, { color: colors.primary }]}>{pendingCount} approvals</Text>
-              </>
-            )}
-          </View>
+          {tailing && (
+            <View style={[styles.tailingBadge, { backgroundColor: "#22c55e15" }]}>
+              <View style={[styles.tailingDot, { backgroundColor: "#22c55e" }]} />
+              <Text style={[styles.tailingText, { color: "#22c55e" }]}>Live</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.headerRight}>
-          {tailError && (
-            <Ionicons name="alert-circle-outline" size={16} color={colors.destructive} />
-          )}
+        <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[
-              styles.liveBtn,
-              {
-                borderColor: tailing ? colors.success + "50" : colors.border,
-                backgroundColor: tailing ? colors.success + "15" : colors.muted,
-              },
-            ]}
-            onPress={connected ? toggleTail : undefined}
+            style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "25" : colors.muted }]}
+            onPress={() => { setShowSearch((v) => !v); if (showSearch) setSearch(""); }}
             activeOpacity={0.7}
           >
-            {tailing ? (
-              <>
-                <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
-                <Text style={[styles.liveBtnText, { color: colors.success }]}>Live</Text>
-              </>
+            <Ionicons name="search-outline" size={16} color={showSearch ? colors.primary : colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: autoScroll ? colors.primary + "25" : colors.muted }]}
+            onPress={() => setAutoScroll((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-down-circle-outline" size={16} color={autoScroll ? colors.primary : colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: tailing ? "#22c55e20" : colors.muted }]}
+            onPress={toggleTail}
+            activeOpacity={0.7}
+          >
+            {tailError ? (
+              <Ionicons name="alert-circle-outline" size={16} color={colors.destructive} />
             ) : (
-              <>
-                <Ionicons name="play-outline" size={12} color={colors.mutedForeground} />
-                <Text style={[styles.liveBtnText, { color: colors.mutedForeground }]}>Tail</Text>
-              </>
+              <Ionicons name={tailing ? "pause-circle-outline" : "play-circle-outline"} size={16} color={tailing ? "#22c55e" : colors.mutedForeground} />
             )}
           </TouchableOpacity>
-
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+            onPress={handleExport}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="share-outline" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: colors.muted }]}
             onPress={clearLogs}
             activeOpacity={0.7}
           >
-            <Ionicons name="trash-outline" size={15} color={colors.mutedForeground} />
+            <Ionicons name="trash-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Alert bar for pending approvals */}
-      {pendingCount > 0 && (
-        <View style={[styles.approvalAlert, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "40" }]}>
-          <Ionicons name="shield-outline" size={14} color={colors.primary} />
-          <Text style={[styles.approvalText, { color: colors.primary }]}>
-            {pendingCount} tool execution{pendingCount > 1 ? "s" : ""} chờ duyệt
-          </Text>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={[styles.approvalAction, { color: colors.primary }]}>Review →</Text>
-          </TouchableOpacity>
+      {/* Search bar */}
+      {showSearch && (
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Ionicons name="search-outline" size={14} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Tìm kiếm logs..."
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            autoFocus
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      {/* Level filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        {FILTER_TABS.map((f) => {
-          const active = filter === f.value;
-          const cfg = f.value !== "all" ? LEVEL_CONFIG[f.value as LogLevel] : null;
+      {/* Search result hint */}
+      {search.length > 0 && (
+        <View style={styles.searchHint}>
+          <Text style={[styles.searchHintText, { color: colors.mutedForeground }]}>
+            {filtered.length} kết quả cho "{search}"
+          </Text>
+        </View>
+      )}
+
+      {/* Level filter tabs */}
+      <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
+        {FILTER_TABS.map((tab) => {
+          const active = filter === tab.value;
+          const cfg = tab.value !== "all" ? LEVEL_CONFIG[tab.value as LogLevel] : null;
+          const count = tab.value === "all" ? displayLogs.length : (counts[tab.value as LogLevel] ?? 0);
           return (
             <TouchableOpacity
-              key={f.value}
-              onPress={() => setFilter(f.value)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: active ? (cfg?.bg ?? colors.muted) : colors.muted,
-                  borderColor: active ? ((cfg?.color ?? colors.primary) + "60") : colors.border,
-                },
-              ]}
+              key={tab.value}
+              style={[styles.filterTab, active && { borderBottomColor: cfg?.color ?? colors.primary, borderBottomWidth: 2 }]}
+              onPress={() => setFilter(tab.value)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.chipText, { color: active ? (cfg?.color ?? colors.primary) : colors.mutedForeground }]}>
-                {f.label}
+              <Text style={[styles.filterTabText, { color: active ? (cfg?.color ?? colors.primary) : colors.mutedForeground }]}>
+                {tab.label}
               </Text>
-              {f.value !== "all" && (counts[f.value as LogLevel] ?? 0) > 0 && (
-                <View style={[styles.countBadge, { backgroundColor: cfg!.color + "25" }]}>
-                  <Text style={[styles.countText, { color: cfg!.color }]}>{counts[f.value as LogLevel]}</Text>
+              {count > 0 && (
+                <View style={[styles.filterCount, { backgroundColor: cfg?.bg ?? colors.primary + "20" }]}>
+                  <Text style={[styles.filterCountText, { color: cfg?.color ?? colors.primary }]}>{count}</Text>
                 </View>
               )}
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
       {/* Log list */}
-      {filtered.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Ionicons name="receipt-outline" size={36} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Không có logs</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-            {connected ? "Nhấn Tail để bắt đầu nhận logs realtime" : "Kết nối server để xem logs"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          ref={listRef}
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const lvl = (item.level as LogLevel) in LEVEL_CONFIG ? item.level as LogLevel : "info";
-            const cfg = LEVEL_CONFIG[lvl];
-            return (
-              <View style={[styles.logRow, { borderBottomColor: colors.border }]}>
-                <View style={[styles.levelDot, { backgroundColor: cfg.color }]} />
-                <View style={styles.logContent}>
-                  <View style={styles.logTop}>
-                    {item.source && (
-                      <View style={[styles.sourceBadge, { backgroundColor: colors.muted }]}>
-                        <Text style={[styles.sourceText, { color: colors.mutedForeground }]}>{item.source}</Text>
-                      </View>
-                    )}
-                    <Text style={[styles.logTime, { color: colors.mutedForeground }]}>
-                      {formatTs(item.timestamp)}
-                    </Text>
+      <FlatList
+        ref={listRef}
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          const cfg = LEVEL_CONFIG[item.level as LogLevel] ?? LEVEL_CONFIG.info;
+          const isError = item.level === "error";
+          return (
+            <View style={[styles.logRow, isError && { backgroundColor: "#ef444408" }]}>
+              <View style={[styles.levelDot, { backgroundColor: cfg.color }]} />
+              <View style={styles.logBody}>
+                <View style={styles.logMeta}>
+                  <Text style={[styles.logTs, { color: colors.mutedForeground }]}>{formatTs(item.timestamp)}</Text>
+                  <View style={[styles.levelTag, { backgroundColor: cfg.bg }]}>
+                    <Text style={[styles.levelTagText, { color: cfg.color }]}>{item.level.toUpperCase()}</Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.logMessage,
-                      { color: lvl === "error" ? cfg.color : lvl === "warn" ? cfg.color : colors.foreground },
-                    ]}
-                  >
-                    {item.message}
-                  </Text>
-                  {item.attrs && Object.keys(item.attrs).length > 0 && (
-                    <Text style={[styles.logAttrs, { color: colors.mutedForeground }]}>
-                      {Object.entries(item.attrs).map(([k, v]) => `${k}=${v}`).join(" ")}
-                    </Text>
+                  {item.source && (
+                    <View style={[styles.sourceTag, { backgroundColor: colors.muted }]}>
+                      <Text style={[styles.sourceTagText, { color: colors.mutedForeground }]}>{item.source}</Text>
+                    </View>
                   )}
                 </View>
+                <Text
+                  style={[
+                    styles.logMsg,
+                    { color: isError ? "#ef4444" : item.level === "warn" ? "#f59e0b" : item.level === "debug" ? colors.mutedForeground : colors.foreground },
+                  ]}
+                  selectable
+                >
+                  {item.message}
+                </Text>
               </View>
-            );
-          }}
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 110 }]}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+            </View>
+          );
+        }}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <Ionicons name="terminal-outline" size={36} color={colors.mutedForeground} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {search ? "Không tìm thấy log phù hợp" : "Chưa có logs"}
+            </Text>
+          </View>
+        }
+      />
+
+      {/* Status bar */}
+      <View style={[styles.statusBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 80 }]}>
+        <View style={styles.statusLeft}>
+          <View style={[styles.statusDot, { backgroundColor: connected ? "#22c55e" : colors.mutedForeground }]} />
+          <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
+            {connected ? (tailing ? `Streaming` : `Connected`) : "Demo"} · {filtered.length}/{displayLogs.length} logs
+          </Text>
+        </View>
+        {pendingCount > 0 && (
+          <View style={[styles.pendingBadge, { backgroundColor: colors.primary + "20" }]}>
+            <Text style={[styles.pendingText, { color: colors.primary }]}>{pendingCount} approvals</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -250,78 +281,66 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  statsRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  statsText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  sep: { fontSize: 12 },
-  liveBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  iconBtn: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
-  approvalAlert: {
-    flexDirection: "row",
-    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
     gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  },
+  headerLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  headerActions: { flexDirection: "row", gap: 5 },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  tailingBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  tailingDot: { width: 6, height: 6, borderRadius: 3 },
+  tailingText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  iconBtn: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 14,
+    marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
-  },
-  approvalText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium" },
-  approvalAction: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  chips: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
+    height: 40,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
+    gap: 8,
   },
-  chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  countBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 },
-  countText: { fontSize: 10, fontFamily: "Inter_700Bold" },
-  list: { paddingTop: 4 },
-  logRow: {
+  searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  searchHint: { paddingHorizontal: 14, paddingBottom: 4 },
+  searchHintText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  filterRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    marginBottom: 4,
   },
-  levelDot: { width: 7, height: 7, borderRadius: 4, marginTop: 5, flexShrink: 0 },
-  logContent: { flex: 1 },
-  logTop: {
+  filterTab: { flex: 1, alignItems: "center", paddingVertical: 8, gap: 3, borderBottomWidth: 2, borderBottomColor: "transparent" },
+  filterTabText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  filterCount: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, minWidth: 18, alignItems: "center" },
+  filterCountText: { fontSize: 9, fontFamily: "Inter_700Bold" },
+  list: { paddingTop: 4 },
+  logRow: { flexDirection: "row", paddingHorizontal: 14, paddingVertical: 7, gap: 10, alignItems: "flex-start" },
+  levelDot: { width: 5, height: 5, borderRadius: 3, marginTop: 5, flexShrink: 0 },
+  logBody: { flex: 1, gap: 3 },
+  logMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 5 },
+  logTs: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  levelTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5 },
+  levelTagText: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 0.3 },
+  sourceTag: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5 },
+  sourceTagText: { fontSize: 9, fontFamily: "Inter_400Regular" },
+  logMsg: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
+  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  statusBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 3,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  sourceBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  sourceText: { fontSize: 10, fontFamily: "Inter_500Medium" },
-  logTime: { fontSize: 10, fontFamily: "Inter_400Regular" },
-  logMessage: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  logAttrs: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: 2 },
-  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 40 },
-  emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", textAlign: "center" },
-  emptySubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 },
+  statusLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  pendingBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  pendingText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
 });
