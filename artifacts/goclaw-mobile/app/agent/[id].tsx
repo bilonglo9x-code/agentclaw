@@ -23,7 +23,8 @@ import { useShares } from "@/hooks/useShares";
 import { useAuth } from "@/context/AuthContext";
 import { useModels } from "@/hooks/useModels";
 import { useCreateAgent } from "@/hooks/useCreateAgent";
-import { useAgentLinks, AgentLink } from "@/hooks/useAgentLinks";
+import { useAgentLinks } from "@/hooks/useAgentLinks";
+import { useAgentIdentity } from "@/hooks/useAgentIdentity";
 
 type Tab = "overview" | "files" | "sessions" | "config" | "shares" | "links";
 
@@ -85,6 +86,7 @@ export default function AgentDetailScreen() {
   const { sessions, loading: sessLoading, deleteSession } = useSessionsHistory();
   const { shares, loading: sharesLoading, grantShare, revokeShare } = useShares(id);
   const { links, loading: linksLoading, createLink, deleteLink, updateLink } = useAgentLinks(id);
+  const { identity } = useAgentIdentity(id);
   const { models: allModels } = useModels();
   const { updateAgent, saving: savingModel } = useCreateAgent();
   const [tab, setTab] = useState<Tab>("overview");
@@ -285,6 +287,41 @@ export default function AgentDetailScreen() {
                     </>
                   ) : null}
                   <InfoRow label="Workspace" value={agent.workspace || "—"} mono colors={colors} />
+                </View>
+              )}
+
+              {tab === "overview" && identity && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Identity</Text>
+                  {identity.bio ? (
+                    <Text style={[styles.description, { color: colors.mutedForeground }]}>{identity.bio}</Text>
+                  ) : null}
+                  {identity.capabilities && identity.capabilities.length > 0 && (
+                    <>
+                      <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontSize: 11, letterSpacing: 0.5 }]}>CAPABILITIES</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4, marginBottom: 8 }}>
+                        {identity.capabilities.map((cap) => (
+                          <View key={cap} style={[{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.primary + "18", borderWidth: 1, borderColor: colors.primary + "30" }]}>
+                            <Text style={{ fontSize: 11, color: colors.primary, fontFamily: "Inter_500Medium" }}>{cap}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                  {identity.version && (
+                    <InfoRow label="Version" value={identity.version} mono colors={colors} />
+                  )}
+                  {identity.public_info && Object.keys(identity.public_info).length > 0 && (
+                    <>
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                      {Object.entries(identity.public_info).map(([k, v]) => (
+                        <React.Fragment key={k}>
+                          <InfoRow label={k} value={v} colors={colors} />
+                          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        </React.Fragment>
+                      ))}
+                    </>
+                  )}
                 </View>
               )}
 

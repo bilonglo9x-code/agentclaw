@@ -160,8 +160,9 @@ export default function MoreScreen() {
     {
       title: "Tài khoản",
       items: [
-        { icon: "moon-outline", label: "Giao diện & Theme", badge: "Dark", color: "#a78bfa" },
-        { icon: "language-outline", label: "Ngôn ngữ", badge: "Tiếng Việt", color: "#60a5fa" },
+        { icon: "person-circle-outline" as keyof typeof Ionicons["glyphMap"], label: "Hồ sơ của tôi", color: "#60a5fa", onPress: () => router.push("/profile") },
+        { icon: "moon-outline", label: "Giao diện & Theme", badge: "Dark", color: "#a78bfa", onPress: () => router.push("/theme") },
+        { icon: "language-outline", label: "Ngôn ngữ", badge: "Tiếng Việt", color: "#60a5fa", onPress: () => router.push("/language") },
         { icon: "help-circle-outline", label: "Trợ giúp", color: "#a1a1aa", onPress: () => router.push("/help") },
         {
           icon: "log-out-outline",
@@ -249,7 +250,11 @@ export default function MoreScreen() {
       </View>
 
       {/* Profile header */}
-      <View style={[styles.profile, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <TouchableOpacity
+        style={[styles.profile, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => router.push("/profile")}
+        activeOpacity={0.8}
+      >
         <View style={[styles.avatar, { backgroundColor: colors.primary + "25" }]}>
           <Ionicons name="person" size={28} color={colors.primary} />
           <View
@@ -286,7 +291,7 @@ export default function MoreScreen() {
         >
           <Ionicons name={connected ? "cloud-done-outline" : "cloud-offline-outline"} size={16} color={connected ? colors.success : colors.mutedForeground} />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       {SECTIONS.map((section) => (
         <View key={section.title} style={styles.section}>
