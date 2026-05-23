@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   goclaw:
-    image: ghcr.io/nextlevelbuilder/goclaw:latest
+    image: ghcr.io/bilonglo9x-code/agentclaw-goclaw:dev
     depends_on:
       postgres:
         condition: service_healthy
