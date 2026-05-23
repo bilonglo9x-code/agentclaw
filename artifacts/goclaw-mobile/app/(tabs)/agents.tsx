@@ -139,6 +139,11 @@ export default function AgentsScreen() {
               <AgentCard
                 agent={item}
                 onPress={() => router.push(`/agent/${item.id}`)}
+                onChatPress={() => {
+                  const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                  const key = `agent:${item.key}:ws:direct:${uid}`;
+                  router.push(`/chat/${encodeURIComponent(key)}`);
+                }}
               />
             </View>
           )}

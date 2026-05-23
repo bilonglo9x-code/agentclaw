@@ -28,9 +28,10 @@ const EMOJI_MAP: Record<string, string> = {
 interface AgentCardProps {
   agent: Agent;
   onPress: () => void;
+  onChatPress?: () => void;
 }
 
-export function AgentCard({ agent, onPress }: AgentCardProps) {
+export function AgentCard({ agent, onPress, onChatPress }: AgentCardProps) {
   const colors = useColors();
   const statusCfg = STATUS_CONFIG[agent.status];
   const typeCfg = TYPE_CONFIG[agent.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.open;
@@ -69,7 +70,7 @@ export function AgentCard({ agent, onPress }: AgentCardProps) {
       {/* Chat button */}
       <TouchableOpacity
         style={[styles.chatBtn, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "35" }]}
-        onPress={onPress}
+        onPress={onChatPress ?? onPress}
         activeOpacity={0.7}
       >
         <Text style={[styles.chatBtnText, { color: colors.primary }]}>Chat ngay →</Text>
