@@ -1,21 +1,38 @@
-# GoClaw Mobile
+# GoClaw Platform
 
-Mobile AI agent platform app (React Native / Expo) that connects to the GoClaw Go backend. Lets users chat with AI agents, manage sessions, monitor logs, and browse agent configurations from their phone.
+Full-stack AI agent platform: Go backend + React web dashboard + React Native mobile app. Deploys on Coolify with Docker.
+
+## Architecture
+
+```
+GoClaw Go Backend (port 18790)
+  ├── REST API + WebSocket (/v1/*, /ws)
+  ├── Embedded React Web UI (served at /)
+  └── PostgreSQL + pgvector (production) / SQLite (dev)
+
+Mobile App (Expo) → connects to Go backend via WS + HTTP
+```
 
 ## Run & Operate
 
+### GoClaw Web Dashboard + Backend (Docker)
+- `docker compose -f goclaw-server/docker-compose.dev.yml up` — run full GoClaw stack locally (port 18790)
+- Or: start the **GoClaw Web Dashboard** workflow in Replit → opens in preview pane
+
+### Mobile App
 - `pnpm --filter @workspace/goclaw-mobile run dev` — run Expo dev server
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
+
+### TypeScript workspace packages
+- `pnpm run typecheck` — full typecheck across all TS packages
 - `pnpm run build` — typecheck + build all packages
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- Mobile: React Native + Expo ~54 + expo-router ~6
-- API: Express 5 (api-server artifact)
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`)
+- **Backend**: Go 1.26, net/http, gorilla/websocket, PostgreSQL 18 + pgvector, golang-migrate
+- **Web UI**: React 19 + Vite + Tailwind CSS v4 + shadcn/radix — at `goclaw-server/ui/web/`
+- **Mobile**: React Native + Expo ~54 + expo-router ~6
+- **Workspace**: pnpm workspaces, Node.js 24, TypeScript 5.9
+- **Deploy**: Docker, Coolify (`deploy/docker-compose.coolify.yml`)
 
 ## Where things live
 

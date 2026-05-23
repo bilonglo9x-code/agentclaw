@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    network_mode: host
+    environment:
+      POSTGRES_USER: goclaw
+      POSTGRES_PASSWORD: goclawdev
+      POSTGRES_DB: goclaw
+    volumes:
+      - goclaw-dev-postgres:/var/lib/postgresql
+    restart: unless-stopped
+
+  goclaw:
+    image: ghcr.io/nextlevelbuilder/goclaw:latest
+    network_mode: host
+    depends_on:
+      - postgres
+    environment:
+      - GOCLAW_HOST=0.0.0.0
+      - GOCLAW_PORT=18790
+      - GOCLAW_CONFIG=/app/data/config.json
+      - GOCLAW_POSTGRES_DSN=postgres://goclaw:goclawdev@127.0.0.1:5432/goclaw?sslmode=disable
+      - GOCLAW_GATEWAY_TOKEN=${GOCLAW_GATEWAY_TOKEN:-}
+      - GOCLAW_ENCRYPTION_KEY=${GOCLAW_ENCRYPTION_KEY:-}
+      - GOCLAW_SKILLS_DIR=/app/data/skills
+      - GOCLAW_ALLOW_INSECURE_NO_AUTH=1
+    volumes:
+      - goclaw-dev-data:/app/data
+      - goclaw-dev-workspace:/app/workspace
+      - /home/runner/workspace/goclaw-server/wait-for-postgres.sh:/wait-for-postgres.sh:ro
+    entrypoint: ["/bin/sh", "/wait-for-postgres.sh"]
+    restart: on-failure
+
+volumes:
+  goclaw-dev-postgres:
+  goclaw-dev-data:
+  goclaw-dev-workspace:

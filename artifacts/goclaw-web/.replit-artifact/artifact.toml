@@ -1,0 +1,18 @@
+kind = "web"
+previewPath = "/"
+title = "GoClaw Web Dashboard"
+version = "1.0.0"
+id = "artifacts/goclaw-web"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = ["/"]
+localPort = 18790
+
+[services.development]
+run = "sh -c 'docker compose -f /home/runner/workspace/goclaw-server/docker-compose.dev.yml down 2>/dev/null; exec docker compose -f /home/runner/workspace/goclaw-server/docker-compose.dev.yml up'"
