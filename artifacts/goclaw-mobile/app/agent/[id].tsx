@@ -312,74 +312,6 @@ export default function AgentDetailScreen() {
                     ))}
                   </View>
 
-                  {/* Model Picker Modal */}
-                  <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
-                    <View style={styles.modalOverlay}>
-                      <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <View style={styles.modalHeader}>
-                          <View>
-                            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Đổi Model AI</Text>
-                            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
-                              Hiện tại: {agent?.provider} / <Text style={{ color: colors.primary }}>{agent?.model || "—"}</Text>
-                            </Text>
-                          </View>
-                          <TouchableOpacity onPress={() => setShowModelPicker(false)}>
-                            <Ionicons name="close" size={20} color={colors.mutedForeground} />
-                          </TouchableOpacity>
-                        </View>
-                        <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-                          {allModels.filter((m) => m.provider === agent?.provider).length === 0 ? (
-                            <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
-                              <Ionicons name="cloud-offline-outline" size={32} color={colors.mutedForeground} />
-                              <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
-                                {connected ? `Không có model nào cho ${agent?.provider}` : "Kết nối server để xem danh sách model"}
-                              </Text>
-                            </View>
-                          ) : (
-                            allModels
-                              .filter((m) => m.provider === agent?.provider)
-                              .map((m) => {
-                                const active = agent?.model === m.name;
-                                return (
-                                  <TouchableOpacity
-                                    key={m.name}
-                                    onPress={() => handleChangeModel(m.name)}
-                                    style={[styles.modelItem, { borderColor: active ? colors.primary + "50" : colors.border, backgroundColor: active ? colors.primary + "10" : "transparent" }]}
-                                    activeOpacity={0.7}
-                                    disabled={savingModel}
-                                  >
-                                    <View style={{ flex: 1, gap: 2 }}>
-                                      <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: active ? colors.primary : colors.foreground }}>
-                                        {m.display_name || m.name}
-                                      </Text>
-                                      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
-                                        {m.name}{m.context_window ? ` · ${(m.context_window / 1000).toFixed(0)}k ctx` : ""}
-                                      </Text>
-                                      {m.capabilities && m.capabilities.length > 0 && (
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
-                                          {m.capabilities.map((c) => (
-                                            <View key={c} style={[styles.capBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                                              <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>{c}</Text>
-                                            </View>
-                                          ))}
-                                        </View>
-                                      )}
-                                    </View>
-                                    {savingModel && active
-                                      ? <ActivityIndicator size="small" color={colors.primary} />
-                                      : active
-                                        ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                                        : m.is_default
-                                          ? <View style={[styles.capBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}><Text style={{ fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" }}>default</Text></View>
-                                          : null}
-                                  </TouchableOpacity>
-                                );
-                              })
-                          )}
-                        </ScrollView>
-                      </View>
-                    </View>
-                  </Modal>
                 </View>
               )}
 
@@ -531,6 +463,77 @@ export default function AgentDetailScreen() {
           )}
         </>
       )}
+
+      {/* Change Model Modal */}
+      <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Đổi Model AI</Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
+                  Hiện tại: {agent?.provider} / <Text style={{ color: colors.primary }}>{agent?.model || "—"}</Text>
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                <Ionicons name="close" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {allModels.filter((m) => m.provider === agent?.provider).length === 0 ? (
+                <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
+                  <Ionicons name="cloud-offline-outline" size={32} color={colors.mutedForeground} />
+                  <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                    {connected ? `Không có model nào cho ${agent?.provider}` : "Kết nối server để xem danh sách model"}
+                  </Text>
+                </View>
+              ) : (
+                allModels
+                  .filter((m) => m.provider === agent?.provider)
+                  .map((m) => {
+                    const active = agent?.model === m.name;
+                    return (
+                      <TouchableOpacity
+                        key={m.name}
+                        onPress={() => handleChangeModel(m.name)}
+                        style={[styles.modelItem, { borderColor: active ? colors.primary + "50" : colors.border, backgroundColor: active ? colors.primary + "10" : "transparent" }]}
+                        activeOpacity={0.7}
+                        disabled={savingModel}
+                      >
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: active ? colors.primary : colors.foreground }}>
+                            {m.display_name || m.name}
+                          </Text>
+                          <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+                            {m.name}{m.context_window ? ` · ${(m.context_window / 1000).toFixed(0)}k ctx` : ""}
+                          </Text>
+                          {m.capabilities && m.capabilities.length > 0 && (
+                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
+                              {m.capabilities.map((c) => (
+                                <View key={c} style={[styles.capBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                                  <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>{c}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                        {savingModel && active
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : active
+                            ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                            : m.is_default
+                              ? <View style={[styles.capBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
+                                  <Text style={{ fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" }}>default</Text>
+                                </View>
+                              : null}
+                      </TouchableOpacity>
+                    );
+                  })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Add Share Modal */}
       <Modal visible={showShareModal} transparent animationType="slide" onRequestClose={() => setShowShareModal(false)}>
