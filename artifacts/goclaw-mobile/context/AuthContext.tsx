@@ -21,6 +21,7 @@ interface AuthContextValue {
   role: string;
   tenantName: string;
   isOwner: boolean;
+  isMasterScope: boolean;
   ws: WsClient | null;
   http: HttpClient | null;
   login: (serverUrl: string, token: string) => Promise<void>;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState("");
   const [tenantName, setTenantName] = useState("");
   const [isOwner, setIsOwner] = useState(false);
+  const [isMasterScope, setIsMasterScope] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   const wsRef = useRef<WsClient | null>(null);
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(ws.role);
           setTenantName(ws.tenantName);
           setIsOwner(ws.isOwner);
+          setIsMasterScope(ws.isMasterScope);
         }
       },
     );
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole("");
     setTenantName("");
     setIsOwner(false);
+    setIsMasterScope(false);
   }, []);
 
   const login = useCallback(async (url: string, tok: string) => {
@@ -130,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role,
         tenantName,
         isOwner,
+        isMasterScope,
         ws: wsRef.current,
         http: httpRef.current,
         login,
