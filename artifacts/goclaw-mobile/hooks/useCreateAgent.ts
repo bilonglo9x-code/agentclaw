@@ -10,6 +10,13 @@ export interface AgentFormData {
   agent_type?: "predefined" | "personal" | "shared" | "assistant";
   context_window?: number;
   max_tool_iterations?: number;
+  temperature?: number;
+  max_tokens?: number;
+  memory_enabled?: boolean;
+  embedding_provider?: string;
+  embedding_model?: string;
+  is_default?: boolean;
+  workspace?: string;
   status?: "active" | "inactive";
 }
 

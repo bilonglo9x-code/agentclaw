@@ -394,12 +394,122 @@ export default function AgentDetailScreen() {
               )}
 
               {tab === "config" && (
-                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Raw Config</Text>
-                  <Text style={[styles.rawJson, { color: colors.mutedForeground }]}>
-                    {JSON.stringify(agent, null, 2)}
-                  </Text>
-                </View>
+                <>
+                  {/* Model settings */}
+                  <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Model & Inference</Text>
+                      <TouchableOpacity
+                        onPress={() => router.push({ pathname: "/agent/create", params: { id } })}
+                        style={[styles.editChip, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "35" }]}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="create-outline" size={12} color={colors.primary} />
+                        <Text style={[styles.editChipText, { color: colors.primary }]}>Sửa</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <InfoRow label="Provider" value={agent.provider || "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Model" value={agent.model || "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Context window" value={agent.context_window ? `${(agent.context_window / 1000).toFixed(0)}K tokens` : "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Max tool iterations" value={agent.max_tool_iterations != null ? String(agent.max_tool_iterations) : "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Temperature" value={(agent as any).temperature != null ? String((agent as any).temperature) : "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Max output tokens" value={(agent as any).max_tokens != null ? String((agent as any).max_tokens) : "default"} colors={colors} />
+                  </View>
+
+                  {/* Runtime settings */}
+                  <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Runtime</Text>
+                    <InfoRow label="Agent type" value={agent.agent_type ?? "open"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Workspace" value={agent.workspace || "—"} mono colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Is default" value={agent.is_default ? "✓ Yes" : "No"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Status" value={agent.status} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Owner" value={agent.owner_id || "—"} mono colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Created" value={agent.created_at ? new Date(agent.created_at).toLocaleString("vi") : "—"} colors={colors} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <InfoRow label="Updated" value={agent.updated_at ? new Date(agent.updated_at).toLocaleString("vi") : "—"} colors={colors} />
+                  </View>
+
+                  {/* Memory settings */}
+                  <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Memory</Text>
+                    <View style={styles.memoryToggleRow}>
+                      <Ionicons
+                        name={agent.memory_enabled ? "library-outline" : "close-circle-outline"}
+                        size={16}
+                        color={agent.memory_enabled ? "#22c55e" : colors.mutedForeground}
+                      />
+                      <Text style={[styles.memoryStatusText, { color: agent.memory_enabled ? "#22c55e" : colors.mutedForeground }]}>
+                        {agent.memory_enabled ? "Memory bật" : "Memory tắt"}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => updateAgent(agent.id, { memory_enabled: !agent.memory_enabled } as any).then(() => refresh())}
+                        style={[styles.toggleChip, { backgroundColor: agent.memory_enabled ? "#22c55e20" : colors.muted, borderColor: agent.memory_enabled ? "#22c55e50" : colors.border }]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: agent.memory_enabled ? "#22c55e" : colors.mutedForeground }}>
+                          {agent.memory_enabled ? "Tắt" : "Bật"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    {agent.memory_enabled && (
+                      <>
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <InfoRow label="Embedding provider" value={agent.embedding_provider ?? "—"} colors={colors} />
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <InfoRow label="Embedding model" value={agent.embedding_model ?? "—"} colors={colors} />
+                      </>
+                    )}
+                  </View>
+
+                  {/* Skills & channels */}
+                  {((agent.skills && agent.skills.length > 0) || (agent.channels && agent.channels.length > 0)) && (
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Skills & Channels</Text>
+                      {agent.skills && agent.skills.length > 0 && (
+                        <>
+                          <Text style={[styles.configSubLabel, { color: colors.mutedForeground }]}>SKILLS</Text>
+                          <View style={styles.tagWrap}>
+                            {agent.skills.map((s) => (
+                              <View key={s} style={[styles.configTag, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "30" }]}>
+                                <Text style={{ fontSize: 11, color: colors.primary, fontFamily: "Inter_500Medium" }}>{s}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </>
+                      )}
+                      {agent.channels && agent.channels.length > 0 && (
+                        <>
+                          <Text style={[styles.configSubLabel, { color: colors.mutedForeground, marginTop: 8 }]}>CHANNELS</Text>
+                          <View style={styles.tagWrap}>
+                            {agent.channels.map((c) => (
+                              <View key={c} style={[styles.configTag, { backgroundColor: "#60a5fa18", borderColor: "#60a5fa30" }]}>
+                                <Text style={{ fontSize: 11, color: "#60a5fa", fontFamily: "Inter_500Medium" }}>{c}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Raw JSON collapsible */}
+                  <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Raw JSON</Text>
+                    <Text style={[styles.rawJson, { color: colors.mutedForeground }]}>
+                      {JSON.stringify(agent, null, 2)}
+                    </Text>
+                  </View>
+                </>
               )}
             </ScrollView>
           )}
@@ -838,4 +948,13 @@ const styles = StyleSheet.create({
   roleBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   grantBtn: { borderRadius: 14, paddingVertical: 13, alignItems: "center" },
   grantBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  editChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
+  editChipText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  memoryToggleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  memoryStatusText: { fontSize: 13, fontFamily: "Inter_500Medium", flex: 1 },
+  toggleChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
+  configSubLabel: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 6 },
+  tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  configTag: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
 });

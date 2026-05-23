@@ -70,6 +70,13 @@ export default function AgentCreateScreen() {
     agent_type: "predefined",
     context_window: 128000,
     max_tool_iterations: 10,
+    temperature: 0.7,
+    max_tokens: undefined,
+    memory_enabled: false,
+    embedding_provider: "",
+    embedding_model: "",
+    is_default: false,
+    workspace: "",
     status: "active",
   });
 
@@ -84,6 +91,13 @@ export default function AgentCreateScreen() {
         agent_type: (agent.agent_type as AgentFormData["agent_type"]) ?? "predefined",
         context_window: agent.context_window ?? 128000,
         max_tool_iterations: agent.max_tool_iterations ?? 10,
+        temperature: (agent as any).temperature ?? 0.7,
+        max_tokens: (agent as any).max_tokens ?? undefined,
+        memory_enabled: agent.memory_enabled ?? false,
+        embedding_provider: agent.embedding_provider ?? "",
+        embedding_model: agent.embedding_model ?? "",
+        is_default: agent.is_default ?? false,
+        workspace: agent.workspace ?? "",
         status: (agent.status as AgentFormData["status"]) ?? "active",
       });
     }
@@ -388,6 +402,59 @@ export default function AgentCreateScreen() {
               />
             </FormField>
 
+            <FormField label="Temperature (0.0 – 2.0)">
+              <View style={styles.numRow}>
+                <TextInput
+                  style={[styles.input, styles.numInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+                  value={String(form.temperature ?? 0.7)}
+                  onChangeText={(v) => {
+                    const n = parseFloat(v);
+                    setForm((f) => ({ ...f, temperature: isNaN(n) ? 0.7 : Math.min(2, Math.max(0, n)) }));
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.mutedForeground}
+                />
+                <View style={styles.tempPresets}>
+                  {([0.0, 0.3, 0.7, 1.0, 1.5] as const).map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      onPress={() => setForm((f) => ({ ...f, temperature: t }))}
+                      style={[styles.presetBtn, { backgroundColor: form.temperature === t ? colors.primary + "20" : colors.secondary, borderColor: form.temperature === t ? colors.primary : colors.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.presetText, { color: form.temperature === t ? colors.primary : colors.mutedForeground }]}>{t}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+                {(form.temperature ?? 0.7) <= 0.3 ? "Xác định, ít sáng tạo" : (form.temperature ?? 0.7) <= 0.7 ? "Cân bằng (khuyến nghị)" : (form.temperature ?? 0.7) <= 1.2 ? "Sáng tạo hơn" : "Rất sáng tạo / random"}
+              </Text>
+            </FormField>
+
+            <FormField label="Max Output Tokens">
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+                value={form.max_tokens != null ? String(form.max_tokens) : ""}
+                onChangeText={(v) => setForm((f) => ({ ...f, max_tokens: v ? parseInt(v) || undefined : undefined }))}
+                keyboardType="numeric"
+                placeholder="Để trống = dùng default của model"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </FormField>
+
+            <FormField label="Workspace Path">
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground, fontFamily: "monospace" }]}
+                value={form.workspace ?? ""}
+                onChangeText={set("workspace")}
+                placeholder="vd: /agents/my-agent"
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </FormField>
+
             {isEdit && (
               <FormField label="Trạng thái">
                 <View style={styles.statusRow}>
@@ -410,6 +477,73 @@ export default function AgentCreateScreen() {
                   })}
                 </View>
               </FormField>
+            )}
+
+            {/* is_default toggle */}
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleInfo}>
+                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Agent mặc định</Text>
+                <Text style={[styles.toggleDesc, { color: colors.mutedForeground }]}>Agent này sẽ là default khi không chỉ định</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setForm((f) => ({ ...f, is_default: !f.is_default }))}
+                style={[styles.toggleTrack, { backgroundColor: form.is_default ? colors.primary : colors.muted }]}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.toggleThumb, { transform: [{ translateX: form.is_default ? 18 : 2 }] }]} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Memory */}
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Memory</Text>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleInfo}>
+                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Bật Memory</Text>
+                <Text style={[styles.toggleDesc, { color: colors.mutedForeground }]}>Agent ghi nhớ ngữ cảnh giữa các phiên</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setForm((f) => ({ ...f, memory_enabled: !f.memory_enabled }))}
+                style={[styles.toggleTrack, { backgroundColor: form.memory_enabled ? "#22c55e" : colors.muted }]}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.toggleThumb, { transform: [{ translateX: form.memory_enabled ? 18 : 2 }] }]} />
+              </TouchableOpacity>
+            </View>
+
+            {form.memory_enabled && (
+              <>
+                <FormField label="Embedding Provider">
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.providerRow}>
+                    {["openai", "ollama", "cohere", "huggingface"].map((p) => {
+                      const active = form.embedding_provider === p;
+                      return (
+                        <TouchableOpacity
+                          key={p}
+                          onPress={() => setForm((f) => ({ ...f, embedding_provider: p }))}
+                          style={[styles.providerChip, { backgroundColor: active ? "#22c55e18" : colors.secondary, borderColor: active ? "#22c55e" : colors.border }]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.providerText, { color: active ? "#22c55e" : colors.mutedForeground }]}>{p}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </FormField>
+
+                <FormField label="Embedding Model">
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+                    value={form.embedding_model ?? ""}
+                    onChangeText={set("embedding_model")}
+                    placeholder={form.embedding_provider === "openai" ? "text-embedding-3-small" : form.embedding_provider === "ollama" ? "nomic-embed-text" : "Nhập model ID..."}
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="none"
+                  />
+                </FormField>
+              </>
             )}
           </View>
         </ScrollView>
@@ -501,4 +635,15 @@ const styles = StyleSheet.create({
   modalSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
   modelItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
   capBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+  numRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  numInput: { width: 80 },
+  tempPresets: { flexDirection: "row", gap: 6, flex: 1 },
+  presetBtn: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
+  presetText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  toggleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  toggleInfo: { flex: 1 },
+  toggleLabel: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  toggleDesc: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  toggleTrack: { width: 42, height: 24, borderRadius: 12, justifyContent: "center", paddingHorizontal: 2 },
+  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
 });
