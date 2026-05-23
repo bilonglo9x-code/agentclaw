@@ -23,8 +23,9 @@ import { useShares } from "@/hooks/useShares";
 import { useAuth } from "@/context/AuthContext";
 import { useModels } from "@/hooks/useModels";
 import { useCreateAgent } from "@/hooks/useCreateAgent";
+import { useAgentLinks, AgentLink } from "@/hooks/useAgentLinks";
 
-type Tab = "overview" | "files" | "sessions" | "config" | "shares";
+type Tab = "overview" | "files" | "sessions" | "config" | "shares" | "links";
 
 const STATUS_CONFIG = {
   active: { color: "#22c55e", label: "Active" },
@@ -83,6 +84,7 @@ export default function AgentDetailScreen() {
   const { agent, files, loading, error, refresh } = useAgentDetail(id);
   const { sessions, loading: sessLoading, deleteSession } = useSessionsHistory();
   const { shares, loading: sharesLoading, grantShare, revokeShare } = useShares(id);
+  const { links, loading: linksLoading, createLink, deleteLink, updateLink } = useAgentLinks(id);
   const { models: allModels } = useModels();
   const { updateAgent, saving: savingModel } = useCreateAgent();
   const [tab, setTab] = useState<Tab>("overview");
@@ -91,6 +93,11 @@ export default function AgentDetailScreen() {
   const [newRole, setNewRole] = useState<"user" | "admin">("user");
   const [granting, setGranting] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [newLinkTarget, setNewLinkTarget] = useState("");
+  const [newLinkEvent, setNewLinkEvent] = useState("run.completed");
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [creatingLink, setCreatingLink] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
@@ -146,6 +153,7 @@ export default function AgentDetailScreen() {
     { value: "sessions", label: `Sessions${agentSessions.length > 0 ? ` (${agentSessions.length})` : ""}` },
     { value: "config", label: "Config" },
     { value: "shares", label: `Shares${shares.length > 0 ? ` (${shares.length})` : ""}` },
+    { value: "links", label: `Links${links.length > 0 ? ` (${links.length})` : ""}` },
   ];
 
   return (
@@ -411,6 +419,73 @@ export default function AgentDetailScreen() {
             />
           )}
 
+          {tab === "links" && (
+            <FlatList
+              data={links}
+              keyExtractor={(l) => l.id}
+              contentContainerStyle={[styles.tabContentInner, { paddingBottom: insets.bottom + 40 }]}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={connected ? (
+                <TouchableOpacity
+                  onPress={() => setShowLinkModal(true)}
+                  style={[styles.addShareBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="git-branch-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.addShareText, { color: colors.primary }]}>Thêm Agent Link</Text>
+                </TouchableOpacity>
+              ) : null}
+              ListEmptyComponent={() =>
+                linksLoading ? (
+                  <View style={styles.emptyWrap}><ActivityIndicator color={colors.primary} /></View>
+                ) : (
+                  <View style={styles.emptyWrap}>
+                    <Ionicons name="git-network-outline" size={36} color={colors.mutedForeground} />
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa có agent link nào</Text>
+                    <Text style={[{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center", paddingHorizontal: 20 }]}>
+                      Agent links cho phép agent này trigger agent khác khi có sự kiện xảy ra
+                    </Text>
+                  </View>
+                )
+              }
+              renderItem={({ item: lnk }) => (
+                <View style={[styles.sessionRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={[styles.sessionAvatar, { backgroundColor: lnk.enabled ? colors.primary + "18" : colors.secondary }]}>
+                    <Ionicons name="git-branch-outline" size={16} color={lnk.enabled ? colors.primary : colors.mutedForeground} />
+                  </View>
+                  <View style={styles.sessionInfo}>
+                    <Text style={[styles.sessionKey, { color: colors.foreground }]} numberOfLines={1}>
+                      {lnk.label ?? `→ ${lnk.to_agent_key ?? lnk.to_agent_id}`}
+                    </Text>
+                    <Text style={[styles.sessionMeta, { color: colors.mutedForeground }]}>
+                      Trigger: <Text style={{ color: colors.primary }}>{lnk.trigger_event}</Text>
+                      {lnk.condition ? ` · if ${lnk.condition}` : ""}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 6 }}>
+                    <TouchableOpacity
+                      onPress={() => updateLink(lnk.id, { enabled: !lnk.enabled })}
+                      style={[styles.deleteBtn, { backgroundColor: (lnk.enabled ? "#22c55e" : "#71717a") + "18" }]}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={lnk.enabled ? "pause-outline" : "play-outline"} size={13} color={lnk.enabled ? "#22c55e" : "#71717a"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => Alert.alert("Xóa link", `Xóa link "${lnk.label ?? lnk.to_agent_key}"?`, [
+                        { text: "Hủy", style: "cancel" },
+                        { text: "Xóa", style: "destructive", onPress: () => deleteLink(lnk.id) },
+                      ])}
+                      style={[styles.deleteBtn, { backgroundColor: colors.destructive + "15" }]}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={13} color={colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+
           {tab === "shares" && (
             <FlatList
               data={shares}
@@ -536,6 +611,77 @@ export default function AgentDetailScreen() {
                   })
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Link Modal */}
+      <Modal visible={showLinkModal} transparent animationType="slide" onRequestClose={() => setShowLinkModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Thêm Agent Link</Text>
+              <TouchableOpacity onPress={() => setShowLinkModal(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+              Target Agent ID hoặc agent_key
+            </Text>
+            <TextInput
+              style={[styles.shareInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={newLinkTarget}
+              onChangeText={setNewLinkTarget}
+              placeholder="agent_key hoặc agent ID..."
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 8, marginBottom: 4 }}>
+              Trigger event
+            </Text>
+            <View style={styles.roleRow}>
+              {["run.completed", "run.failed", "tool.result"].map((ev) => (
+                <TouchableOpacity
+                  key={ev}
+                  onPress={() => setNewLinkEvent(ev)}
+                  style={[styles.roleBtn, { flex: 0, paddingHorizontal: 10, backgroundColor: newLinkEvent === ev ? colors.primary + "20" : colors.secondary, borderColor: newLinkEvent === ev ? colors.primary + "60" : colors.border }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.roleBtnText, { fontSize: 11, color: newLinkEvent === ev ? colors.primary : colors.mutedForeground }]}>{ev}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 8, marginBottom: 4 }}>
+              Nhãn (tuỳ chọn)
+            </Text>
+            <TextInput
+              style={[styles.shareInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={newLinkLabel}
+              onChangeText={setNewLinkLabel}
+              placeholder="Mô tả link này..."
+              placeholderTextColor={colors.mutedForeground}
+            />
+            <TouchableOpacity
+              style={[styles.grantBtn, { backgroundColor: colors.primary, opacity: creatingLink || !newLinkTarget.trim() ? 0.6 : 1 }]}
+              onPress={async () => {
+                if (!newLinkTarget.trim()) return;
+                setCreatingLink(true);
+                try {
+                  await createLink({ toAgentId: newLinkTarget.trim(), triggerEvent: newLinkEvent, label: newLinkLabel.trim() || undefined });
+                  setShowLinkModal(false);
+                  setNewLinkTarget(""); setNewLinkLabel("");
+                } catch (e) {
+                  Alert.alert("Lỗi", e instanceof Error ? e.message : "Tạo link thất bại");
+                } finally {
+                  setCreatingLink(false);
+                }
+              }}
+              disabled={creatingLink || !newLinkTarget.trim()}
+              activeOpacity={0.7}
+            >
+              {creatingLink ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.grantBtnText}>Tạo Link</Text>}
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

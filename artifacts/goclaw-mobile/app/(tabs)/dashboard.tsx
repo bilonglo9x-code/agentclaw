@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUsage } from "@/hooks/useUsage";
 import { useApprovals } from "@/hooks/useApprovals";
 import { useAgents } from "@/hooks/useAgents";
+import { useQuota } from "@/hooks/useQuota";
 
 type Period = "today" | "7d" | "30d";
 
@@ -59,6 +60,7 @@ export default function DashboardScreen() {
   const { summary, timeseries, loading } = useUsage(period);
   const { pendingCount } = useApprovals();
   const { agents } = useAgents();
+  const { quota, usagePercent, isNearLimit, isOverLimit } = useQuota();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -247,6 +249,60 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Quota Usage Widget */}
+      {(connected && quota) || !connected ? (
+        <TouchableOpacity
+          style={[styles.quotaCard, {
+            backgroundColor: colors.card,
+            borderColor: isOverLimit ? "#ef444440" : isNearLimit ? "#f59e0b40" : colors.border,
+          }]}
+          onPress={() => router.push("/(tabs)/more" as Parameters<typeof router.push>[0])}
+          activeOpacity={0.8}
+        >
+          <View style={styles.quotaHeader}>
+            <View style={styles.quotaLeft}>
+              <Ionicons name="speedometer-outline" size={14} color={isOverLimit ? "#ef4444" : isNearLimit ? "#f59e0b" : colors.primary} />
+              <Text style={[styles.quotaTitle, { color: colors.foreground }]}>Quota Tháng Này</Text>
+            </View>
+            <Text style={[styles.quotaPct, { color: isOverLimit ? "#ef4444" : isNearLimit ? "#f59e0b" : colors.primary }]}>
+              {quota ? `${usagePercent}%` : "—"}
+            </Text>
+          </View>
+          <View style={[styles.quotaTrack, { backgroundColor: colors.secondary }]}>
+            <View style={[styles.quotaFill, {
+              width: `${Math.min(usagePercent, 100)}%` as unknown as number,
+              backgroundColor: isOverLimit ? "#ef4444" : isNearLimit ? "#f59e0b" : colors.primary,
+            }]} />
+          </View>
+          <View style={styles.quotaMeta}>
+            <Text style={[styles.quotaMetaText, { color: colors.mutedForeground }]}>
+              {quota ? `${fmt(quota.total_used)} / ${fmt(quota.total_limit)} requests` : "Kết nối để xem quota"}
+            </Text>
+            {quota?.reset_at && (
+              <Text style={[styles.quotaMetaText, { color: colors.mutedForeground }]}>
+                Reset: {new Date(quota.reset_at).toLocaleDateString("vi")}
+              </Text>
+            )}
+          </View>
+          {isNearLimit && !isOverLimit && (
+            <View style={[styles.quotaWarn, { backgroundColor: "#f59e0b15" }]}>
+              <Ionicons name="warning-outline" size={11} color="#f59e0b" />
+              <Text style={{ fontSize: 11, color: "#f59e0b", fontFamily: "Inter_400Regular" }}>
+                Sắp đạt giới hạn — liên hệ admin để nâng quota
+              </Text>
+            </View>
+          )}
+          {isOverLimit && (
+            <View style={[styles.quotaWarn, { backgroundColor: "#ef444415" }]}>
+              <Ionicons name="alert-circle-outline" size={11} color="#ef4444" />
+              <Text style={{ fontSize: 11, color: "#ef4444", fontFamily: "Inter_400Regular" }}>
+                Đã vượt giới hạn — requests có thể bị từ chối
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ) : null}
 
       {/* Agent Health Grid */}
       <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -469,6 +525,16 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   statChangeRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   statChange: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  quotaCard: { borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 14, gap: 8 },
+  quotaHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  quotaLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  quotaTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  quotaPct: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  quotaTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  quotaFill: { height: 6, borderRadius: 3 },
+  quotaMeta: { flexDirection: "row", justifyContent: "space-between" },
+  quotaMetaText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  quotaWarn: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   sectionCard: { borderRadius: 18, borderWidth: 1, padding: 16, marginBottom: 14 },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   sectionTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },

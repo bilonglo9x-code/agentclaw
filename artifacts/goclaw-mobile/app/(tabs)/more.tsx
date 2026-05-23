@@ -151,7 +151,8 @@ export default function MoreScreen() {
               { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#a78bfa", onPress: () => router.push("/tenants") },
               { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#f59e0b", onPress: () => router.push("/providers") },
               { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#22c55e", onPress: () => router.push("/api-keys") },
-              { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#60a5fa" },
+              { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#60a5fa", onPress: () => router.push("/import-export") },
+              { icon: "lock-closed-outline" as keyof typeof Ionicons["glyphMap"], label: "Config Permissions", color: "#a78bfa", onPress: () => router.push("/permissions") },
             ],
           },
         ]
@@ -161,7 +162,7 @@ export default function MoreScreen() {
       items: [
         { icon: "moon-outline", label: "Giao diện & Theme", badge: "Dark", color: "#a78bfa" },
         { icon: "language-outline", label: "Ngôn ngữ", badge: "Tiếng Việt", color: "#60a5fa" },
-        { icon: "help-circle-outline", label: "Trợ giúp", color: "#a1a1aa" },
+        { icon: "help-circle-outline", label: "Trợ giúp", color: "#a1a1aa", onPress: () => router.push("/help") },
         {
           icon: "log-out-outline",
           label: "Đăng xuất",

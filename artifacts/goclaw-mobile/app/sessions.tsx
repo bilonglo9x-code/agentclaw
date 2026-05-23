@@ -19,6 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { useSessionsHistory, SessionInfo } from "@/hooks/useSessionsHistory";
 import { useAgents } from "@/hooks/useAgents";
 import { useAuth } from "@/context/AuthContext";
+import { Methods } from "@/lib/api/protocol";
 
 const MOCK_SESSIONS: SessionInfo[] = [
   { key: "sess_abc123", messageCount: 24, created: new Date(Date.now() - 86400000 * 2).toISOString(), updated: new Date(Date.now() - 3600000).toISOString(), label: "Marketing Q2 analysis", agentName: "Assistant", model: "claude-3-5-sonnet", channel: "web", inputTokens: 12400, outputTokens: 8200 },
@@ -64,6 +65,10 @@ export default function SessionsScreen() {
   const { sessions: liveSessions, total, loading, error, refresh, deleteSession, labelSession } = useSessionsHistory(agentFilter);
   const [renaming, setRenaming] = useState<{ key: string; current: string } | null>(null);
   const [renameText, setRenameText] = useState("");
+  const [previewing, setPreviewing] = useState<string | null>(null);
+  const [previewMsgs, setPreviewMsgs] = useState<Array<{ role: string; content: string; created_at?: string }>>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const { ws } = useAuth();
   const baseSessions = connected && liveSessions.length > 0
     ? liveSessions
     : MOCK_SESSIONS.filter((s) => !agentFilter || s.agentName?.toLowerCase().includes(agentFilter.toLowerCase()));
@@ -82,6 +87,24 @@ export default function SessionsScreen() {
     { id: undefined, label: "Tất cả" },
     ...agents.map((a) => ({ id: a.id, label: a.display_name ?? a.id })),
   ];
+
+  const handlePreview = async (session: SessionInfo) => {
+    setPreviewing(session.key);
+    setPreviewMsgs([]);
+    if (!ws?.isConnected) return;
+    setPreviewLoading(true);
+    try {
+      const res = await ws.call<{ messages: Array<{ role: string; content: string; created_at?: string }>; count: number }>(
+        Methods.SESSIONS_PREVIEW,
+        { sessionKey: session.key, limit: 5 },
+      );
+      setPreviewMsgs(res.messages ?? []);
+    } catch {
+      setPreviewMsgs([]);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const handleRename = (session: SessionInfo) => {
     setRenaming({ key: session.key, current: session.label ?? "" });
@@ -179,6 +202,62 @@ export default function SessionsScreen() {
         </View>
       )}
 
+      {/* Preview Modal */}
+      <Modal visible={!!previewing} presentationStyle="pageSheet" animationType="slide" onRequestClose={() => setPreviewing(null)}>
+        <View style={[styles.previewModal, { backgroundColor: colors.background }]}>
+          <View style={[styles.previewHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setPreviewing(null)} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={colors.foreground} />
+            </TouchableOpacity>
+            <Text style={[styles.previewTitle, { color: colors.foreground }]}>Xem trước Session</Text>
+            <TouchableOpacity
+              onPress={() => { setPreviewing(null); if (previewing) router.push(`/chat/${previewing}`); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.previewOpenBtn, { color: colors.primary }]}>Mở →</Text>
+            </TouchableOpacity>
+          </View>
+          {previewLoading ? (
+            <View style={styles.previewLoading}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={[styles.previewLoadingText, { color: colors.mutedForeground }]}>Đang tải...</Text>
+            </View>
+          ) : previewMsgs.length === 0 ? (
+            <View style={styles.previewLoading}>
+              <Ionicons name="chatbubbles-outline" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.previewLoadingText, { color: colors.mutedForeground }]}>
+                {connected ? "Không có tin nhắn preview" : "Kết nối server để xem preview"}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.previewContent} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.previewHint, { color: colors.mutedForeground }]}>
+                5 tin nhắn đầu tiên
+              </Text>
+              {previewMsgs.map((msg, i) => {
+                const isUser = msg.role === "user";
+                return (
+                  <View key={i} style={[styles.previewMsg, isUser ? styles.previewMsgUser : styles.previewMsgAssistant]}>
+                    <View style={[styles.previewBubble, {
+                      backgroundColor: isUser ? colors.primary + "20" : colors.card,
+                      borderColor: isUser ? colors.primary + "40" : colors.border,
+                      alignSelf: isUser ? "flex-end" : "flex-start",
+                    }]}>
+                      <Text style={[styles.previewRole, { color: isUser ? colors.primary : colors.mutedForeground }]}>
+                        {isUser ? "Bạn" : "Agent"}
+                      </Text>
+                      <Text style={[styles.previewText, { color: colors.foreground }]} numberOfLines={6}>
+                        {msg.content}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
+
       {/* Rename Modal */}
       <Modal visible={!!renaming} transparent animationType="fade" onRequestClose={() => setRenaming(null)}>
         <View style={styles.modalOverlay}>
@@ -239,6 +318,13 @@ export default function SessionsScreen() {
                   </View>
                 </View>
                 <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => handlePreview(item)}
+                    style={styles.actionBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="eye-outline" size={15} color={colors.mutedForeground} />
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleRename(item)}
                     style={styles.actionBtn}
@@ -339,4 +425,18 @@ const styles = StyleSheet.create({
   updatedAt: { fontSize: 11, fontFamily: "Inter_400Regular", marginLeft: "auto" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  previewModal: { flex: 1 },
+  previewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, paddingTop: 20, borderBottomWidth: 1 },
+  previewTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  previewOpenBtn: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  previewLoading: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  previewLoadingText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  previewContent: { padding: 16, gap: 8 },
+  previewHint: { fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 8 },
+  previewMsg: { flexDirection: "row" },
+  previewMsgUser: { justifyContent: "flex-end" },
+  previewMsgAssistant: { justifyContent: "flex-start" },
+  previewBubble: { maxWidth: "80%", borderRadius: 14, borderWidth: 1, padding: 10, gap: 4 },
+  previewRole: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  previewText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
 });
