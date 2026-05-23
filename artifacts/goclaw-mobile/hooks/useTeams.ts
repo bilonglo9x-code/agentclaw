@@ -90,5 +90,24 @@ export function useTeams() {
     [ws],
   );
 
-  return { teams, loading, error, refresh: load, loadTasks };
+  const createTeam = useCallback(
+    async (params: { name: string; lead: string; members?: string[]; description?: string }): Promise<TeamData> => {
+      if (!ws?.isConnected) throw new Error("Not connected");
+      const res = await ws.call<{ team: TeamData }>(Methods.TEAMS_CREATE, params);
+      const team = res.team;
+      setTeams((prev) => [team, ...prev]);
+      return team;
+    },
+    [ws],
+  );
+
+  const addMember = useCallback(
+    async (teamId: string, agent: string, role: "member" | "reviewer" = "member"): Promise<void> => {
+      if (!ws?.isConnected) throw new Error("Not connected");
+      await ws.call(Methods.TEAMS_MEMBERS_ADD, { teamId, agent, role });
+    },
+    [ws],
+  );
+
+  return { teams, loading, error, refresh: load, loadTasks, createTeam, addMember };
 }

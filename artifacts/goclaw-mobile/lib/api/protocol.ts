@@ -107,6 +107,10 @@ export const Methods = {
   DEVICE_PAIR_INITIATE: "device.pair.initiate",
   DEVICE_PAIR_UNPAIR: "device.pair.unpair",
   DEVICE_PAIR_CANCEL: "device.pair.cancel",
+
+  WHATSAPP_QR_START: "whatsapp.qr.start",
+  ZALO_PERSONAL_QR_START: "zalo.personal.qr.start",
+  ZALO_PERSONAL_CONTACTS: "zalo.personal.contacts",
 } as const;
 
 export const Events = {
@@ -138,6 +142,10 @@ export const Events = {
   AGENT_LINK_CREATED: "agent_link.created",
   AGENT_LINK_UPDATED: "agent_link.updated",
   AGENT_LINK_DELETED: "agent_link.deleted",
+  WHATSAPP_QR_CODE: "whatsapp.qr.code",
+  WHATSAPP_QR_DONE: "whatsapp.qr.done",
+  ZALO_PERSONAL_QR_CODE: "zalo.personal.qr.code",
+  ZALO_PERSONAL_QR_DONE: "zalo.personal.qr.done",
 } as const;
 
 export const AgentEventTypes = {

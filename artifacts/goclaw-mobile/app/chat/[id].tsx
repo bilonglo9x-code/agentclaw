@@ -4,7 +4,9 @@ import {
   Alert,
   Clipboard,
   FlatList,
+  Image,
   Platform,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -16,11 +18,18 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import * as Haptics from "expo-haptics";
+
+interface AttachedImage {
+  uri: string;
+  name: string;
+  mimeType: string;
+}
 
 interface MsgBubbleProps {
   role: "user" | "assistant" | "tool";
@@ -224,7 +233,45 @@ export default function ChatScreen() {
   const { connected } = useAuth();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [attachments, setAttachments] = useState<AttachedImage[]>([]);
   const inputRef = useRef<TextInput>(null);
+
+  const handlePickImage = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Cần quyền truy cập", "Cho phép truy cập ảnh để đính kèm");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+      allowsMultipleSelection: true,
+      selectionLimit: 4,
+    });
+    if (!result.canceled) {
+      const picked: AttachedImage[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `image_${Date.now()}.jpg`,
+        mimeType: a.mimeType ?? "image/jpeg",
+      }));
+      setAttachments((prev) => [...prev, ...picked].slice(0, 4));
+    }
+  }, []);
+
+  const handlePickCamera = useCallback(async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Cần quyền camera", "Cho phép truy cập camera để chụp ảnh");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+    if (!result.canceled && result.assets[0]) {
+      const a = result.assets[0];
+      setAttachments((prev) => [...prev, { uri: a.uri, name: a.fileName ?? `photo_${Date.now()}.jpg`, mimeType: a.mimeType ?? "image/jpeg" }].slice(0, 4));
+    }
+  }, []);
+
+  const removeAttachment = (uri: string) => setAttachments((prev) => prev.filter((a) => a.uri !== uri));
 
   const conversation = conversations.find((c) => c.id === id);
   const mockMessages = getMessages(id ?? "");
@@ -264,18 +311,25 @@ export default function ChatScreen() {
   }, [displayMessages, agentName]);
 
   const handleSend = useCallback(() => {
-    if (!text.trim() || !id) return;
+    if ((!text.trim() && attachments.length === 0) || !id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Build message: text + attachment references
+    let msgText = text.trim();
+    if (attachments.length > 0) {
+      const refs = attachments.map((a) => `[Image: ${a.name}]`).join(" ");
+      msgText = msgText ? `${msgText}\n${refs}` : refs;
+    }
     if (sessionKey && connected) {
-      sendLive(text.trim());
+      sendLive(msgText);
     } else {
-      sendMessage(id, text.trim());
+      sendMessage(id, msgText);
     }
     setText("");
-  }, [text, id, sessionKey, connected, sendLive, sendMessage]);
+    setAttachments([]);
+  }, [text, attachments, id, sessionKey, connected, sendLive, sendMessage]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const canSend = text.trim().length > 0 && !sending && !isRunning;
+  const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending && !isRunning;
 
   return (
     <KeyboardAvoidingView
@@ -376,18 +430,36 @@ export default function ChatScreen() {
         ]}
       >
         <View style={styles.toolbar}>
-          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
-            <Ionicons name="attach" size={16} color={colors.mutedForeground} />
+          <TouchableOpacity
+            style={[styles.toolbarBtn, { backgroundColor: attachments.length > 0 ? colors.primary + "20" : colors.secondary }]}
+            onPress={handlePickImage}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="attach" size={16} color={attachments.length > 0 ? colors.primary : colors.mutedForeground} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
             <Ionicons name="mic-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} onPress={handlePickCamera} activeOpacity={0.7}>
             <Ionicons name="camera-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
           <View style={styles.toolbarSpacer} />
           <Text style={[styles.contextText, { color: colors.mutedForeground }]}>context: 12% ▓░░░░</Text>
         </View>
+
+        {/* Attachment preview strip */}
+        {attachments.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.attachStrip} contentContainerStyle={styles.attachStripContent}>
+            {attachments.map((a) => (
+              <View key={a.uri} style={styles.attachThumbWrap}>
+                <Image source={{ uri: a.uri }} style={styles.attachThumb} resizeMode="cover" />
+                <TouchableOpacity style={styles.attachRemove} onPress={() => removeAttachment(a.uri)} activeOpacity={0.7}>
+                  <Ionicons name="close-circle" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         <View style={styles.inputRow}>
           <TextInput
@@ -488,6 +560,11 @@ const styles = StyleSheet.create({
   toolbarBtn: { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   toolbarSpacer: { flex: 1 },
   contextText: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  attachStrip: { flexGrow: 0, flexShrink: 0 },
+  attachStripContent: { flexDirection: "row", gap: 8, paddingVertical: 2 },
+  attachThumbWrap: { width: 64, height: 64, borderRadius: 10, overflow: "hidden", position: "relative" },
+  attachThumb: { width: 64, height: 64 },
+  attachRemove: { position: "absolute", top: 2, right: 2 },
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular", maxHeight: 120 },
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },

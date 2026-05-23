@@ -159,6 +159,13 @@ export default function VoiceScreen() {
           <Text style={[styles.count, { color: colors.mutedForeground }]}>{allVoices.length} giọng</Text>
         </View>
         <TouchableOpacity
+          onPress={() => router.push("/tts-config")}
+          style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={15} color={colors.mutedForeground} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setShowDemo(!showDemo)}
           style={[styles.iconBtn, { backgroundColor: showDemo ? colors.primary + "20" : colors.muted }]}
           activeOpacity={0.7}

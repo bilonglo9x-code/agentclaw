@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,8 +18,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAgentDetail } from "@/hooks/useAgentDetail";
 import { useSessionsHistory } from "@/hooks/useSessionsHistory";
+import { useShares } from "@/hooks/useShares";
+import { useAuth } from "@/context/AuthContext";
 
-type Tab = "overview" | "files" | "sessions" | "config";
+type Tab = "overview" | "files" | "sessions" | "config" | "shares";
 
 const STATUS_CONFIG = {
   active: { color: "#22c55e", label: "Active" },
@@ -70,10 +75,16 @@ export default function AgentDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { connected } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { agent, files, loading, error, refresh } = useAgentDetail(id);
   const { sessions, loading: sessLoading, deleteSession } = useSessionsHistory();
+  const { shares, loading: sharesLoading, grantShare, revokeShare } = useShares(id);
   const [tab, setTab] = useState<Tab>("overview");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [newUserId, setNewUserId] = useState("");
+  const [newRole, setNewRole] = useState<"user" | "admin">("user");
+  const [granting, setGranting] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
@@ -82,11 +93,26 @@ export default function AgentDetailScreen() {
     (s) => s.agentName === agent?.agent_key || s.agentName === agent?.name,
   );
 
+  const handleGrantShare = async () => {
+    if (!newUserId.trim()) return;
+    setGranting(true);
+    try {
+      await grantShare(newUserId.trim(), newRole);
+      setShowShareModal(false);
+      setNewUserId("");
+    } catch (e) {
+      Alert.alert("Lỗi", e instanceof Error ? e.message : "Không thể thêm share");
+    } finally {
+      setGranting(false);
+    }
+  };
+
   const TABS: { value: Tab; label: string }[] = [
     { value: "overview", label: "Tổng quan" },
     { value: "files", label: "Files" },
     { value: "sessions", label: `Sessions${agentSessions.length > 0 ? ` (${agentSessions.length})` : ""}` },
     { value: "config", label: "Config" },
+    { value: "shares", label: `Shares${shares.length > 0 ? ` (${shares.length})` : ""}` },
   ];
 
   return (
@@ -343,8 +369,107 @@ export default function AgentDetailScreen() {
               }}
             />
           )}
+
+          {tab === "shares" && (
+            <FlatList
+              data={shares}
+              keyExtractor={(s) => s.user_id}
+              contentContainerStyle={[styles.tabContentInner, { paddingBottom: insets.bottom + 40 }]}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={connected ? (
+                <TouchableOpacity
+                  onPress={() => setShowShareModal(true)}
+                  style={[styles.addShareBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="person-add-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.addShareText, { color: colors.primary }]}>Thêm người dùng</Text>
+                </TouchableOpacity>
+              ) : null}
+              ListEmptyComponent={() =>
+                sharesLoading ? (
+                  <View style={styles.emptyWrap}>
+                    <ActivityIndicator color={colors.primary} />
+                  </View>
+                ) : (
+                  <View style={styles.emptyWrap}>
+                    <Ionicons name="share-social-outline" size={36} color={colors.mutedForeground} />
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa được chia sẻ</Text>
+                  </View>
+                )
+              }
+              renderItem={({ item }) => (
+                <View style={[styles.shareRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={[styles.shareAvatar, { backgroundColor: (item.role === "admin" ? "#f97316" : "#60a5fa") + "20" }]}>
+                    <Ionicons name={item.role === "admin" ? "shield-outline" : "person-outline"} size={16} color={item.role === "admin" ? "#f97316" : "#60a5fa"} />
+                  </View>
+                  <View style={styles.shareInfo}>
+                    <Text style={[styles.shareUserId, { color: colors.foreground }]}>{item.user_id}</Text>
+                    <View style={[styles.shareRoleBadge, { backgroundColor: (item.role === "admin" ? "#f97316" : "#60a5fa") + "20" }]}>
+                      <Text style={[styles.shareRoleText, { color: item.role === "admin" ? "#f97316" : "#60a5fa" }]}>{item.role}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert("Xóa quyền", `Xóa access của "${item.user_id}"?`, [
+                        { text: "Hủy", style: "cancel" },
+                        { text: "Xóa", style: "destructive", onPress: () => revokeShare(item.user_id) },
+                      ]);
+                    }}
+                    style={[styles.deleteBtn, { backgroundColor: colors.destructive + "15" }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.destructive} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+          )}
         </>
       )}
+
+      {/* Add Share Modal */}
+      <Modal visible={showShareModal} transparent animationType="slide" onRequestClose={() => setShowShareModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Thêm người dùng</Text>
+              <TouchableOpacity onPress={() => setShowShareModal(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[styles.shareInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={newUserId}
+              onChangeText={setNewUserId}
+              placeholder="User ID..."
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.roleRow}>
+              {(["user", "admin"] as const).map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  onPress={() => setNewRole(r)}
+                  style={[styles.roleBtn, { backgroundColor: newRole === r ? colors.primary + "20" : colors.secondary, borderColor: newRole === r ? colors.primary + "60" : colors.border }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.roleBtnText, { color: newRole === r ? colors.primary : colors.mutedForeground }]}>{r}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.grantBtn, { backgroundColor: colors.primary, opacity: granting ? 0.7 : 1 }]}
+              onPress={handleGrantShare}
+              disabled={granting || !newUserId.trim()}
+              activeOpacity={0.7}
+            >
+              {granting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.grantBtnText}>Cấp quyền</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -397,4 +522,22 @@ const styles = StyleSheet.create({
   sessionKey: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   sessionMeta: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
   deleteBtn: { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  addShareBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, borderWidth: 1, padding: 13, justifyContent: "center", marginBottom: 12 },
+  addShareText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  shareRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, borderWidth: 1, padding: 12, marginBottom: 8 },
+  shareAvatar: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  shareInfo: { flex: 1, gap: 4 },
+  shareUserId: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  shareRoleBadge: { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  shareRoleText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  modalContent: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 14, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  shareInput: { borderRadius: 12, borderWidth: 1, padding: 13, fontSize: 14, fontFamily: "Inter_400Regular" },
+  roleRow: { flexDirection: "row", gap: 10 },
+  roleBtn: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 12, borderWidth: 1 },
+  roleBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  grantBtn: { borderRadius: 14, paddingVertical: 13, alignItems: "center" },
+  grantBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });

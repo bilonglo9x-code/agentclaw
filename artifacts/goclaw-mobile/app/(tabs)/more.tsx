@@ -19,7 +19,7 @@ const FAVORITES_KEY = "goclaw:favorites";
 
 const ALL_SHORTCUTS = [
   { key: "search", icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Tìm kiếm", color: "#60a5fa", route: "/search" },
-  { key: "traces", icon: "search-outline" as keyof typeof Ionicons["glyphMap"], label: "Traces", color: "#a78bfa", route: "/traces" },
+  { key: "traces", icon: "analytics-outline" as keyof typeof Ionicons["glyphMap"], label: "Traces", color: "#a78bfa", route: "/traces" },
   { key: "approvals", icon: "shield-outline" as keyof typeof Ionicons["glyphMap"], label: "Approvals", color: "#f97316", route: "/approvals" },
   { key: "skills", icon: "flash-outline" as keyof typeof Ionicons["glyphMap"], label: "Skills", color: "#f59e0b", route: "/skills" },
   { key: "memory", icon: "library-outline" as keyof typeof Ionicons["glyphMap"], label: "Memory", color: "#22c55e", route: "/memory" },
@@ -30,6 +30,10 @@ const ALL_SHORTCUTS = [
   { key: "evolution", icon: "bulb-outline" as keyof typeof Ionicons["glyphMap"], label: "Evolution", color: "#f59e0b", route: "/evolution" },
   { key: "vault", icon: "archive-outline" as keyof typeof Ionicons["glyphMap"], label: "Vault", color: "#60a5fa", route: "/vault" },
   { key: "teams", icon: "people-circle-outline" as keyof typeof Ionicons["glyphMap"], label: "Teams", color: "#22c55e", route: "/teams" },
+  { key: "config", icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Config", color: "#f97316", route: "/config" },
+  { key: "media", icon: "images-outline" as keyof typeof Ionicons["glyphMap"], label: "Media", color: "#ec4899", route: "/media" },
+  { key: "vault-graph", icon: "git-network-outline" as keyof typeof Ionicons["glyphMap"], label: "Vault Graph", color: "#34d399", route: "/vault-graph" },
+  { key: "tts-config", icon: "mic-outline" as keyof typeof Ionicons["glyphMap"], label: "TTS Config", color: "#a78bfa", route: "/tts-config" },
 ];
 const DEFAULT_PINNED = ["search", "traces", "approvals", "skills", "memory", "kg"];
 
@@ -119,6 +123,15 @@ export default function MoreScreen() {
       ],
     },
     {
+      title: "Media & TTS",
+      items: [
+        { icon: "images-outline", label: "Media Library", color: "#ec4899", onPress: () => router.push("/media") },
+        { icon: "volume-high-outline", label: "Voices & TTS", color: "#f97316", onPress: () => router.push("/voice") },
+        { icon: "mic-outline", label: "TTS Config", color: "#a78bfa", onPress: () => router.push("/tts-config") },
+        { icon: "git-network-outline", label: "Vault Graph", color: "#34d399", onPress: () => router.push("/vault-graph") },
+      ],
+    },
+    {
       title: "Sistema",
       items: [
         { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
@@ -133,11 +146,12 @@ export default function MoreScreen() {
             title: "Admin",
             tag: "Owner only",
             items: [
-              { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#f97316" },
-              { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#60a5fa" },
-              { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#a78bfa", onPress: () => router.push("/providers") },
-              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#f59e0b", onPress: () => router.push("/api-keys") },
-              { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#22c55e" },
+              { icon: "code-slash-outline" as keyof typeof Ionicons["glyphMap"], label: "System Config", color: "#f97316", onPress: () => router.push("/config") },
+              { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#60a5fa" },
+              { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#a78bfa" },
+              { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#f59e0b", onPress: () => router.push("/providers") },
+              { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#22c55e", onPress: () => router.push("/api-keys") },
+              { icon: "swap-horizontal-outline" as keyof typeof Ionicons["glyphMap"], label: "Import / Export", color: "#60a5fa" },
             ],
           },
         ]

@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -14,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useTeams, TeamData, TeamTask, TaskStatus } from "@/hooks/useTeams";
 import { useAuth } from "@/context/AuthContext";
+import { useAgents } from "@/hooks/useAgents";
 
 const TASK_STATUS_CONFIG: Record<TaskStatus, { color: string; label: string; icon: keyof typeof Ionicons["glyphMap"] }> = {
   pending: { color: "#a1a1aa", label: "Pending", icon: "time-outline" },
@@ -60,11 +64,18 @@ export default function TeamsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const { teams: liveTeams, loading, error, refresh, loadTasks } = useTeams();
+  const { teams: liveTeams, loading, error, refresh, loadTasks, createTeam } = useTeams();
+  const { agents } = useAgents();
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [taskMap, setTaskMap] = useState<Record<string, TeamTask[]>>({});
   const [loadingTasks, setLoadingTasks] = useState<string | null>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [leadKey, setLeadKey] = useState("");
 
   const teams = connected && liveTeams.length > 0 ? liveTeams : MOCK_TEAMS;
 
@@ -89,6 +100,20 @@ export default function TeamsScreen() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!newName.trim() || !leadKey.trim()) return;
+    setCreating(true);
+    try {
+      await createTeam({ name: newName.trim(), lead: leadKey.trim(), description: newDesc.trim() || undefined });
+      setShowCreate(false);
+      setNewName(""); setNewDesc(""); setLeadKey("");
+    } catch (e) {
+      Alert.alert("Lỗi", e instanceof Error ? e.message : "Không thể tạo team");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 4 }]}>
@@ -96,6 +121,15 @@ export default function TeamsScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Teams</Text>
+        {connected && (
+          <TouchableOpacity
+            onPress={() => setShowCreate(true)}
+            style={[styles.iconBtn, { backgroundColor: colors.primary }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
@@ -237,9 +271,86 @@ export default function TeamsScreen() {
           <View style={styles.emptyWrap}>
             <Ionicons name="people-outline" size={36} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có teams</Text>
+            {connected && (
+              <TouchableOpacity onPress={() => setShowCreate(true)} activeOpacity={0.7}>
+                <Text style={[styles.createLink, { color: colors.primary }]}>Tạo team đầu tiên +</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
+
+      {/* Create Team Modal */}
+      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Tạo Team mới</Text>
+              <TouchableOpacity onPress={() => setShowCreate(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tên team *</Text>
+            <TextInput
+              style={[styles.fieldInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Customer Support, Research..."
+              placeholderTextColor={colors.mutedForeground}
+            />
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Lead Agent Key *</Text>
+            <TextInput
+              style={[styles.fieldInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={leadKey}
+              onChangeText={setLeadKey}
+              placeholder="agent_key hoặc UUID"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            {/* Agent picker hint */}
+            {agents.length > 0 && (
+              <View style={styles.agentHintScroll}>
+                {agents.slice(0, 5).map((a) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => setLeadKey(a.agent_key)}
+                    style={[styles.agentHintChip, { backgroundColor: leadKey === a.agent_key ? colors.primary + "20" : colors.secondary, borderColor: leadKey === a.agent_key ? colors.primary + "50" : colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.agentHintText, { color: leadKey === a.agent_key ? colors.primary : colors.mutedForeground }]} numberOfLines={1}>
+                      {a.display_name ?? a.agent_key}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Mô tả</Text>
+            <TextInput
+              style={[styles.fieldInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={newDesc}
+              onChangeText={setNewDesc}
+              placeholder="Mô tả team (tùy chọn)"
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[styles.createBtn, { backgroundColor: colors.primary, opacity: creating || !newName.trim() || !leadKey.trim() ? 0.6 : 1 }]}
+              onPress={handleCreate}
+              disabled={creating || !newName.trim() || !leadKey.trim()}
+              activeOpacity={0.7}
+            >
+              {creating ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="people-outline" size={16} color="#fff" />}
+              <Text style={styles.createBtnText}>Tạo Team</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -284,4 +395,16 @@ const styles = StyleSheet.create({
   noTasks: { padding: 14, fontSize: 13, fontFamily: "Inter_400Regular" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  createLink: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  modalContent: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.4 },
+  fieldInput: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 11, fontSize: 14, fontFamily: "Inter_400Regular" },
+  agentHintScroll: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  agentHintChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  agentHintText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  createBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 14, paddingVertical: 13, marginTop: 4 },
+  createBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });

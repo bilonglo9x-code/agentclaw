@@ -156,6 +156,21 @@ export default function ChannelsScreen() {
                     <Text style={[styles.credsText, { color: "#f59e0b" }]}>No credentials</Text>
                   </View>
                 )}
+                {(item.channel_type === "whatsapp" || item.channel_type === "zalo") && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({
+                        pathname: "/channels/[id]",
+                        params: { id: item.id, type: item.channel_type, name: item.display_name },
+                      })
+                    }
+                    style={[styles.pairBtn, { backgroundColor: channelCfg.color + "20", borderColor: channelCfg.color + "40" }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="qr-code-outline" size={11} color={channelCfg.color} />
+                    <Text style={[styles.pairText, { color: channelCfg.color }]}>Pair QR</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -206,6 +221,8 @@ const styles = StyleSheet.create({
   stateSummary: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
   credsBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   credsText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
+  pairBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, marginLeft: 4 },
+  pairText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

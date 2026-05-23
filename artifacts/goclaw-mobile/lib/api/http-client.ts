@@ -44,6 +44,28 @@ export class HttpClient {
     return this.request<T>(this.buildUrl(path), { method: "DELETE" });
   }
 
+  async postForm<T>(path: string, formData: FormData): Promise<T> {
+    const url = this.buildUrl(path);
+    const token = this.getToken();
+    const userId = this.getUserId();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (userId) headers["X-User-ID"] = userId;
+    const res = await fetch(url, { method: "POST", headers, body: formData });
+    if (res.status === 401 || res.status === 403) {
+      this.onAuthFailure?.();
+      throw new ApiError("UNAUTHORIZED", "Authentication failed");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      const message = err?.error?.message ?? err?.message ?? res.statusText;
+      throw new ApiError(err?.error?.code ?? "HTTP_ERROR", message);
+    }
+    const text = await res.text();
+    if (!text) return undefined as T;
+    return JSON.parse(text) as T;
+  }
+
   private buildUrl(path: string, params?: Record<string, string>): string {
     const base = this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl;
     const full = `${base}${path}`;

@@ -74,6 +74,7 @@ export default function VaultScreen() {
   const [scope, setScope] = useState<VaultScope>("all");
   const [docType, setDocType] = useState<VaultDocType>("all");
   const [search, setSearch] = useState("");
+  const [vectorMode, setVectorMode] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -117,6 +118,13 @@ export default function VaultScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Vault</Text>
           <Text style={[styles.totalBadge, { color: colors.mutedForeground }]}>{total} docs</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => router.push("/vault-graph")}
+          style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="git-network-outline" size={15} color={colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
@@ -161,11 +169,15 @@ export default function VaultScreen() {
 
       {/* Search bar */}
       <View style={[styles.searchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Ionicons name="search-outline" size={14} color={colors.mutedForeground} />
+        <Ionicons
+          name={vectorMode ? "sparkles-outline" : "search-outline"}
+          size={14}
+          color={vectorMode ? colors.primary : colors.mutedForeground}
+        />
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Tìm tài liệu..."
+          placeholder={vectorMode ? "Tìm ngữ nghĩa (vector)..." : "Tìm tài liệu..."}
           placeholderTextColor={colors.mutedForeground}
           style={[styles.searchInput, { color: colors.foreground }]}
         />
@@ -174,6 +186,16 @@ export default function VaultScreen() {
             <Ionicons name="close-circle" size={14} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          onPress={() => setVectorMode((v) => !v)}
+          style={[styles.vectorToggle, { backgroundColor: vectorMode ? colors.primary + "20" : colors.secondary, borderColor: vectorMode ? colors.primary + "40" : colors.border }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="sparkles-outline" size={11} color={vectorMode ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.vectorText, { color: vectorMode ? colors.primary : colors.mutedForeground }]}>
+            {vectorMode ? "Vector" : "Text"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Scope filter */}
@@ -306,8 +328,10 @@ const styles = StyleSheet.create({
   distLegendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   distDot: { width: 6, height: 6, borderRadius: 3 },
   distText: { fontSize: 10, fontFamily: "Inter_400Regular" },
-  searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 36 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 40 },
   searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  vectorToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
+  vectorText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },

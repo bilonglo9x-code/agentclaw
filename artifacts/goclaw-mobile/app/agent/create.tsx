@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -52,6 +53,9 @@ export default function AgentCreateScreen() {
   const { createAgent, updateAgent, saving, error, clearError } = useCreateAgent();
   const { agent, loading: loadingAgent } = useAgentDetail(id);
 
+  const [showImport, setShowImport] = useState(false);
+  const [importJson, setImportJson] = useState("");
+
   const [form, setForm] = useState<AgentFormData>({
     agent_key: "",
     name: "",
@@ -84,6 +88,28 @@ export default function AgentCreateScreen() {
     setForm((f) => ({ ...f, [field]: val }));
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(importJson.trim());
+      setForm((f) => ({
+        ...f,
+        agent_key: parsed.agent_key ?? parsed.key ?? f.agent_key,
+        name: parsed.name ?? parsed.display_name ?? f.name,
+        agent_description: parsed.agent_description ?? parsed.description ?? parsed.system_prompt ?? f.agent_description,
+        provider: parsed.provider ?? f.provider,
+        model: parsed.model ?? f.model,
+        agent_type: parsed.agent_type ?? parsed.type ?? f.agent_type,
+        context_window: parsed.context_window ?? f.context_window,
+        max_tool_iterations: parsed.max_tool_iterations ?? f.max_tool_iterations,
+        status: parsed.status ?? f.status,
+      }));
+      setShowImport(false);
+      setImportJson("");
+    } catch {
+      Alert.alert("JSON không hợp lệ", "Kiểm tra lại định dạng JSON cấu hình agent");
+    }
+  };
 
   const handleSave = async () => {
     clearError();
@@ -120,6 +146,16 @@ export default function AgentCreateScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>
           {isEdit ? "Sửa Agent" : "Tạo Agent mới"}
         </Text>
+        {!isEdit && (
+          <TouchableOpacity
+            onPress={() => setShowImport(true)}
+            style={[styles.importBtn, { backgroundColor: colors.muted }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="cloud-download-outline" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.importBtnText, { color: colors.mutedForeground }]}>Import</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           onPress={handleSave}
           disabled={saving}
@@ -297,6 +333,42 @@ export default function AgentCreateScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Import Agent Modal */}
+      <Modal visible={showImport} transparent animationType="slide" onRequestClose={() => setShowImport(false)}>
+        <View style={styles.importOverlay}>
+          <View style={[styles.importContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.importHeader}>
+              <Text style={[styles.importTitle, { color: colors.foreground }]}>Import Agent Config</Text>
+              <TouchableOpacity onPress={() => setShowImport(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.importHint, { color: colors.mutedForeground }]}>
+              Dán JSON cấu hình agent. Hỗ trợ trường: agent_key, name, description, provider, model, agent_type, context_window.
+            </Text>
+            <TextInput
+              style={[styles.importTextarea, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+              value={importJson}
+              onChangeText={setImportJson}
+              placeholder={'{\n  "agent_key": "my-agent",\n  "provider": "openai",\n  "model": "gpt-4o"\n}'}
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[styles.importApplyBtn, { backgroundColor: colors.primary, opacity: importJson.trim() ? 1 : 0.5 }]}
+              onPress={handleImport}
+              disabled={!importJson.trim()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="cloud-download-outline" size={16} color="#fff" />
+              <Text style={styles.importApplyText}>Áp dụng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -306,6 +378,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingBottom: 10, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  importBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  importBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  importOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.65)" },
+  importContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 20, gap: 12 },
+  importHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  importTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  importHint: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  importTextarea: { borderRadius: 12, borderWidth: 1, padding: 12, fontSize: 12, fontFamily: "Inter_400Regular", minHeight: 160, textAlignVertical: "top" },
+  importApplyBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 14, paddingVertical: 13 },
+  importApplyText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
   saveBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, minWidth: 60, alignItems: "center" },
   saveBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
   centerWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
