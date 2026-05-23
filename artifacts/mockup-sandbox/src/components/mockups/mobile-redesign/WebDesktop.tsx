@@ -177,58 +177,68 @@ export function WebDesktop() {
   return (
     <div className="w-[1280px] h-[800px] bg-[#f4f5fa] flex overflow-hidden select-none font-sans">
 
-      {/* ── Rail (icon-only, 56px) ── */}
-      <div className="w-14 h-full bg-[#18181b] flex flex-col items-center pt-4 pb-4 gap-1 shrink-0 z-20">
-        {/* Logo */}
-        <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center mb-4">
-          <Zap size={16} color="white" strokeWidth={2.5} />
+      {/* ── Rail (icon-only, 60px) ── */}
+      <div className="w-[60px] h-full bg-[#18181b] flex flex-col items-center py-4 shrink-0 z-20">
+
+        {/* ── Top: Logo ── */}
+        <div className="w-9 h-9 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-900/40">
+          <Zap size={17} color="white" strokeWidth={2.5} />
         </div>
 
-        {NAV.map((group) => {
-          const Icon = group.icon;
-          const isActive = activeGroup === group.id;
-          const hasBadge = group.items.some((i) => i.badge);
-          return (
-            <div key={group.id} className="relative group/tip">
-              <button
-                onClick={() => setActiveGroup(isActive ? null : group.id)}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  isActive
-                    ? "bg-indigo-500 text-white"
-                    : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                }`}
-              >
-                <Icon size={18} strokeWidth={1.8} />
+        {/* thin divider */}
+        <div className="w-5 h-px bg-zinc-800 mt-4 mb-1" />
+
+        {/* ── Center: Nav icons (vertically centered in remaining space) ── */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          {NAV.map((group) => {
+            const Icon = group.icon;
+            const isActive = activeGroup === group.id;
+            const hasBadge = group.items.some((i) => i.badge);
+            return (
+              <div key={group.id} className="relative group/tip">
+                <button
+                  onClick={() => setActiveGroup(isActive ? null : group.id)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    isActive
+                      ? "bg-indigo-500 text-white shadow-md shadow-indigo-900/50"
+                      : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                  }`}
+                >
+                  <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
+                </button>
+                {hasBadge && !isActive && (
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full ring-1 ring-[#18181b]" />
+                )}
+                {/* Tooltip */}
+                <div className="absolute left-[54px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
+                  {group.label}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* thin divider */}
+        <div className="w-5 h-px bg-zinc-800 mb-1" />
+
+        {/* ── Bottom: utility + avatar ── */}
+        <div className="flex flex-col items-center gap-0.5">
+          {[{ Icon: HelpCircle, label: "Trợ giúp" }, { Icon: Settings, label: "Cài đặt" }].map(({ Icon, label }) => (
+            <div key={label} className="relative group/tip">
+              <button className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100 transition-all">
+                <Icon size={17} strokeWidth={1.7} />
               </button>
-              {hasBadge && !isActive && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-              {/* Tooltip */}
-              <div className={`absolute left-[52px] top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg whitespace-nowrap pointer-events-none transition-opacity z-50 ${
-                activeGroup === group.id ? "opacity-0" : "opacity-0 group-hover/tip:opacity-100"
-              }`}>
-                {group.label}
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-zinc-800" />
+              <div className="absolute left-[54px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
+                {label}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
               </div>
             </div>
-          );
-        })}
-
-        <div className="flex-1" />
-
-        {/* Bottom icons */}
-        {[{ Icon: HelpCircle, label: "Help" }, { Icon: Settings, label: "Settings" }].map(({ Icon, label }) => (
-          <div key={label} className="relative group/tip">
-            <button className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:bg-zinc-800 hover:text-white transition-all">
-              <Icon size={18} strokeWidth={1.8} />
-            </button>
-            <div className="absolute left-[52px] top-1/2 -translate-y-1/2 bg-zinc-800 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50">
-              {label}
-              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-zinc-800" />
-            </div>
+          ))}
+          <div className="mt-1 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-zinc-700 cursor-pointer hover:ring-indigo-400 transition-all">
+            A
           </div>
-        ))}
-        <button className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[11px] font-bold mt-1">A</button>
+        </div>
       </div>
 
       {/* ── Flyout panel (220px) — slides in when group active ── */}
