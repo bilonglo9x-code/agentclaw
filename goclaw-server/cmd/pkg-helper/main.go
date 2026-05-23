@@ -57,95 +57,94 @@ func configureSocket(path string) error {
 	g, err := user.LookupGroup("goclaw")
 	if err == nil {
 		var gid int
-		if _, scanErr := fmt.Sscanf(g.Gid, "%d", &gid); scanErr == n
-import (
-	 os"bufiopath, 0, gi"errors"
-	"fmtrn"fmt"
-	d("net 0"os"}
-	"osc "os/usernn net.Conn) {
-	defer conn.Clos"syscanne)
-
-const o.Newsocker(apkList    = "/app/data/.rur()
-
-var packageNamePattern = regexp.MustCompileespon
-type request struct {
-	Action  string `json:"action"`
-	Package string `json:= Action  string `jsoerPackage string `json:"package}
-
-type response struct {
-	OK  se, EOK    bool   `json:"rError string `json:"errle}
-
-func main() {
-	_ = os.Remove(sockeEncod_ = os.RemoK: false, Error: err.Error()}if err != nil {
-		fmt.Fprintln(os.Stderr: CHANGELOG.md`fmt.Fprintln(haos.Exit(1)
-	}
-	deuest) error }
-	defer ltrngif err := confiPafmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	forros.Exit(1)
-	}
-	for {
-		connka}
-	for {
-	}
-	swconreif err != nil {
-			cont":continue
+		if _, scanErr := fmt.Sscanf(g.Gid, "%d", &gid); scanErr == nil {
+			_ = os.Chown(path, 0, gid)
 		}
-AP}
-		go h---c}
+	}
+	return os.Chmod(path, 0660)
 }
 
-func confi !} nil g, err := user.LookupGroup("goclaw")
-	istif err == nil {
-		var gid int
-		if llvar gid int
-	ruif _, scanpkimport (
-	 os"bufireturn err
-		}
-		return updatePersistedPack os"bg,"fmtrn"fmt"
-	d("net 0"os"}ord("net 0"id"osc "os/user
-fdefer conn.Clos"syscanne)rr
-const o.Newsocker(apkLisapk
-var packageNamePattern = regexp.MustCompileespon ertype request struct {
-	Action  string `json:"acxiAction  string `jso(ePackage string `json:= Actiok Action  string `jsoerPll
-type response struct {
-	OK  se, EOK    bool   `jsonithOK  se, EOK    boolus
-func main() {
-	_ = os.Remove(ce(string(out)))
-		}
+func handle(conn net.Conn) {
+	defer conn.Close()
+	scanner := bufio.NewScanner(conn)
+	enc := json.NewEncoder(conn)
+	if !scanner.Scan() {
+		_ = enc.Encode(response{OK: false, Error: "empty request"})
+		return
 	}
-	return _t.Errorf("ap_ = os.RemoK: false, Errriif err != nil {
-		fmt.Fprintln(os.Stderisfmt.Fprintlng fmt.Fprintln(haos.Exit
-		}
-	deuest) error }
-	deferct}{defer ltrngifosos.Exit(1)
+	var req request
+	if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
+		_ = enc.Encode(response{OK: false, Error: err.Error()})
+		return
 	}
-	forros.Exit(1)
+	if err := handleRequest(req); err != nil {
+		_ = enc.Encode(response{OK: false, Error: err.Error()})
+		return
 	}
-	for {
-		connka}
-	forr}
-	forr}
-	fo}
-	for {
-		connke trconSpfor {
-	}g(}
-	s, \ncont":continue
-		}
-ASp}
-AP}
-		if line != ""go}
+	_ = enc.Encode(response{OK: true})
+}
 
-func confi] = sistif err == niif add {
+func handleRequest(req request) error {
+	pkg := strings.TrimSpace(req.Package)
+	if !packageNamePattern.MatchString(pkg) {
+		return errors.New("invalid package name")
+	}
+	switch req.Action {
+	case "install":
+		if err := runAPK("add", "--no-cache", pkg); err != nil {
+			return err
+		}
+		return updatePersistedPackages(pkg, true)
+	case "uninstall":
+		if err := runAPK("del", pkg); err != nil {
+			return err
+		}
+		return updatePersistedPackages(pkg, false)
+	default:
+		return errors.New("invalid action")
+	}
+}
+
+func runAPK(args ...string) error {
+	cmd := exec.Command("apk", args...)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+			return fmt.Errorf("apk failed with status %d: %s", status.ExitStatus(), strings.TrimSpace(string(out)))
+		}
+	}
+	return fmt.Errorf("apk failed: %s", strings.TrimSpace(string(out)))
+}
+
+func updatePersistedPackages(pkg string, add bool) error {
+	packages := map[string]struct{}{}
+	data, err := os.ReadFile(apkList)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			packages[line] = struct{}{}
+		}
+	}
+	if add {
 		packages[pkg] = struct{}{}
-		var gid int
-		if paif llvar
-		ruif _, scanpkimtr os"bufireturn err
-		fo}
-		return updatePag {d("net 0"os"}ord("net 0"id"osc "os/user
-ft)fdefer conn.Clos"syscanne)rr
-const o.Newso= const o.Newsocker(apkLisapk
-"
-var packageNamePattern (apkList, []byte(content), 0640)
+	} else {
+		delete(packages, pkg)
+	}
+	list := make([]string, 0, len(packages))
+	for name := range packages {
+		list = append(list, name)
+	}
+	sort.Strings(list)
+	content := ""
+	if len(list) > 0 {
+		content = strings.Join(list, "\n") + "\n"
+	}
+	return os.WriteFile(apkList, []byte(content), 0640)
 }
