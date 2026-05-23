@@ -5,5 +5,8 @@ export const modules: ModuleMap = {
   "./components/mockups/mobile/ChatScreen.tsx": () => import("../components/mockups/mobile/ChatScreen.tsx"),
   "./components/mockups/mobile/DashboardScreen.tsx": () => import("../components/mockups/mobile/DashboardScreen.tsx"),
   "./components/mockups/mobile/MoreScreen.tsx": () => import("../components/mockups/mobile/MoreScreen.tsx"),
-  "./components/mockups/mobile/NavArchitecture.tsx": () => import("../components/mockups/mobile/NavArchitecture.tsx")
+  "./components/mockups/mobile/NavArchitecture.tsx": () => import("../components/mockups/mobile/NavArchitecture.tsx"),
+  "./components/mockups/mobile-redesign/DirectionA.tsx": () => import("../components/mockups/mobile-redesign/DirectionA.tsx"),
+  "./components/mockups/mobile-redesign/DirectionB.tsx": () => import("../components/mockups/mobile-redesign/DirectionB.tsx"),
+  "./components/mockups/mobile-redesign/DirectionC.tsx": () => import("../components/mockups/mobile-redesign/DirectionC.tsx")
 };
