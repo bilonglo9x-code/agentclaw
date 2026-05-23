@@ -413,7 +413,7 @@ export default function ChatScreen() {
             activeOpacity={1}
             onPress={() => setShowMenu(false)}
           />
-          <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border, top: topPad + 52 }]}>
             <TouchableOpacity style={styles.menuItem} onPress={handleExport} activeOpacity={0.7}>
               <Ionicons name="share-outline" size={16} color={colors.foreground} />
               <Text style={[styles.menuItemText, { color: colors.foreground }]}>Xuất cuộc trò chuyện</Text>
