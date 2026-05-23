@@ -178,6 +178,19 @@ This workspace has two GitHub remotes serving different purposes:
 
 **Sync note:** Replit manages all git pushes automatically. After each task is merged, the platform pushes to the configured remotes. The `origin` remote may lag by one merge cycle — this is expected and resolves automatically on the next push.
 
+### Sync tooling
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/post-merge.sh` | Runs after every merge: installs deps, pushes to both remotes, records results in `scripts/sync-status.json` |
+| `scripts/check-sync.sh` | Quick status check — run any time to see last push results and which remotes are configured |
+
+```bash
+bash scripts/check-sync.sh   # view current sync status
+```
+
+`scripts/sync-status.json` is a local runtime file (in `.gitignore`) that records the last push attempt per remote — timestamp, result (`success` / `failed` / `not_configured`), and SHA.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
