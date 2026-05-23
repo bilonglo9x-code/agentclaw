@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Settings2, Loader2, Save, AlertTriangle, Info, ExternalLink, Network, Cog } from "lucide-react";
+import { Settings2, Loader2, Save, AlertTriangle, Info, ExternalLink, Network, Cog, Palette, Globe, Mail, Image } from "lucide-react";
 import { Link } from "react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,14 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
   const [bgProvider, setBgProvider] = useState("");
   const [bgModel, setBgModel] = useState("");
 
+  // Branding
+  const [brandName, setBrandName] = useState("");
+  const [brandDescription, setBrandDescription] = useState("");
+  const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
+  const [brandAccentColor, setBrandAccentColor] = useState("");
+  const [brandSupportEmail, setBrandSupportEmail] = useState("");
+
   const applyConfigs = useCallback((
     configs: Record<string, string>,
     kgSettings?: { extraction_provider?: string; extraction_model?: string; min_confidence?: number },
@@ -83,6 +91,12 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
     setCompProvider(s.compProvider); setCompModel(s.compModel); setCompThreshold(s.compThreshold); setCompKeepRecent(s.compKeepRecent); setCompMaxTokens(s.compMaxTokens);
     setKgProvider(s.kgProvider); setKgModel(s.kgModel); setKgMinConfidence(s.kgMinConfidence);
     setBgProvider(s.bgProvider); setBgModel(s.bgModel);
+    setBrandName(configs["app.name"] ?? "");
+    setBrandDescription(configs["app.description"] ?? "");
+    setBrandLogoUrl(configs["app.logo_url"] ?? "");
+    setBrandFaviconUrl(configs["app.favicon_url"] ?? "");
+    setBrandAccentColor(configs["app.accent_color"] ?? "");
+    setBrandSupportEmail(configs["app.support_email"] ?? "");
     resetEmb();
   }, [resetEmb]);
 
@@ -126,7 +140,16 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
       if (compMaxTokens !== init.compMaxTokens) updates["compaction.max_tokens"] = compMaxTokens;
       if (bgProvider !== init.bgProvider) updates["background.provider"] = bgProvider;
       if (bgModel !== init.bgModel) updates["background.model"] = bgModel;
-      for (const [key, value] of Object.entries(updates)) await http.put(`/v1/system-configs/${key}`, { value });
+      // Branding
+      const brandUpdates: Record<string, string> = {};
+      if (brandName !== (init as Record<string,string>)["brandName"]) brandUpdates["app.name"] = brandName;
+      if (brandDescription !== (init as Record<string,string>)["brandDescription"]) brandUpdates["app.description"] = brandDescription;
+      if (brandLogoUrl !== (init as Record<string,string>)["brandLogoUrl"]) brandUpdates["app.logo_url"] = brandLogoUrl;
+      if (brandFaviconUrl !== (init as Record<string,string>)["brandFaviconUrl"]) brandUpdates["app.favicon_url"] = brandFaviconUrl;
+      if (brandAccentColor !== (init as Record<string,string>)["brandAccentColor"]) brandUpdates["app.accent_color"] = brandAccentColor;
+      if (brandSupportEmail !== (init as Record<string,string>)["brandSupportEmail"]) brandUpdates["app.support_email"] = brandSupportEmail;
+      const allUpdates = { ...updates, ...brandUpdates };
+      for (const [key, value] of Object.entries(allUpdates)) await http.put(`/v1/system-configs/${key}`, { value });
       const kgChanged = kgProvider !== init.kgProvider || kgModel !== init.kgModel || kgMinConfidence !== init.kgMinConfidence;
       if (kgChanged) {
         await http.put("/v1/tools/builtin/knowledge_graph_search", {
@@ -198,6 +221,58 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
                 <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/30 dark:text-slate-300">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{t("bg.info")}</span>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Branding */}
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4 text-blue-500" />Thương hiệu</CardTitle>
+                <CardDescription>Logo, tên ứng dụng, favicon và màu sắc nhận diện</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="brandName" className="flex items-center gap-1.5 text-xs"><Globe className="h-3 w-3" />Tên ứng dụng</Label>
+                    <Input id="brandName" placeholder="GoClaw" value={brandName} onChange={(e) => setBrandName(e.target.value)} className="text-base md:text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="brandEmail" className="flex items-center gap-1.5 text-xs"><Mail className="h-3 w-3" />Email hỗ trợ</Label>
+                    <Input id="brandEmail" type="email" placeholder="support@example.com" value={brandSupportEmail} onChange={(e) => setBrandSupportEmail(e.target.value)} className="text-base md:text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="brandDesc" className="text-xs">Mô tả</Label>
+                  <Input id="brandDesc" placeholder="Nền tảng AI agent thông minh..." value={brandDescription} onChange={(e) => setBrandDescription(e.target.value)} className="text-base md:text-sm" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="brandLogo" className="flex items-center gap-1.5 text-xs"><Image className="h-3 w-3" />URL Logo</Label>
+                    <Input id="brandLogo" placeholder="https://example.com/logo.png" value={brandLogoUrl} onChange={(e) => setBrandLogoUrl(e.target.value)} className="text-base md:text-sm" />
+                    <p className="text-xs text-muted-foreground">PNG/SVG nền trong suốt, ≥128×128px</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="brandFavicon" className="flex items-center gap-1.5 text-xs"><Image className="h-3 w-3" />URL Favicon</Label>
+                    <Input id="brandFavicon" placeholder="https://example.com/favicon.ico" value={brandFaviconUrl} onChange={(e) => setBrandFaviconUrl(e.target.value)} className="text-base md:text-sm" />
+                    <p className="text-xs text-muted-foreground">ICO hoặc PNG 32×32px</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="brandAccent" className="flex items-center gap-1.5 text-xs"><Palette className="h-3 w-3" />Màu nhấn (Hex)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="brandAccent" placeholder="#f97316" maxLength={7} value={brandAccentColor} onChange={(e) => setBrandAccentColor(e.target.value)} className="max-w-[140px] text-base md:text-sm font-mono" />
+                    {brandAccentColor.match(/^#[0-9a-fA-F]{6}$/) && (
+                      <div className="h-8 w-8 rounded-md border" style={{ backgroundColor: brandAccentColor }} />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Ví dụ: #f97316 (amber), #3b82f6 (blue)</p>
+                </div>
+                {brandLogoUrl && (
+                  <div className="flex items-center gap-3 rounded-md border px-3 py-2">
+                    <span className="text-xs text-muted-foreground">Xem trước logo:</span>
+                    <img src={brandLogoUrl} alt="Logo preview" className="h-8 max-w-[120px] object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  </div>
+                )}
               </CardContent>
             </Card>
 

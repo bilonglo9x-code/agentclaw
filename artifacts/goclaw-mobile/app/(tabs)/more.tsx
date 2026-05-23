@@ -147,7 +147,7 @@ export default function MoreScreen() {
             tag: "Owner only",
             items: [
               { icon: "code-slash-outline" as keyof typeof Ionicons["glyphMap"], label: "System Config", color: "#f97316", onPress: () => router.push("/config") },
-              { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#60a5fa" },
+              { icon: "color-palette-outline" as keyof typeof Ionicons["glyphMap"], label: "Branding & Theme", color: "#60a5fa", onPress: () => router.push("/branding") },
               { icon: "business-outline" as keyof typeof Ionicons["glyphMap"], label: "Tenants", color: "#a78bfa" },
               { icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Providers", color: "#f59e0b", onPress: () => router.push("/providers") },
               { icon: "key-outline" as keyof typeof Ionicons["glyphMap"], label: "API Keys", color: "#22c55e", onPress: () => router.push("/api-keys") },
