@@ -167,6 +167,17 @@ Mobile App (Expo) → connects to Go backend via WS + HTTP
 - AsyncStorage key: `goclaw:auth` stores `{serverUrl, token, userId, senderID}`
 - TypeScript: use `unknown as Record<...>` cast for colors (not direct `as`)
 
+## GitHub Remotes
+
+This workspace has two GitHub remotes serving different purposes:
+
+| Remote | URL | Purpose |
+|--------|-----|---------|
+| `origin` | https://github.com/bilonglo9x-code/Agent-Claw-Plan | Planning, roadmap, and task tracking repo. Receives commits via Replit's platform-managed push after each task merge. |
+| `agentclaw` | https://github.com/bilonglo9x-code/agentclaw | Main code mirror for the GoClaw platform (used for CI/CD and Coolify deployments). |
+
+**Sync note:** Replit manages all git pushes automatically. After each task is merged, the platform pushes to the configured remotes. The `origin` remote may lag by one merge cycle — this is expected and resolves automatically on the next push.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
