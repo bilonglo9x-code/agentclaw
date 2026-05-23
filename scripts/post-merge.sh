@@ -42,11 +42,12 @@ push_remote() {
   local remote="$1"
   local url="$2"
   local label="$3"
+  local branch="${4:-main}"
 
-  echo "Pushing to $label..."
-  if git push "$url" HEAD:main --force-with-lease 2>&1 | grep -v "GITHUB_TOKEN"; then
-    echo "✓ $label push succeeded ($HEAD_SHORT)"
-    record_push "$remote" "success" "$label"
+  echo "Pushing to $label ($branch)..."
+  if git push "$url" "HEAD:$branch" --force 2>&1 | grep -v "GITHUB_TOKEN"; then
+    echo "✓ $label push succeeded ($HEAD_SHORT → $branch)"
+    record_push "$remote" "success" "$label → $branch"
   else
     echo "WARNING: push to $label failed" >&2
     record_push "$remote" "failed" "$label — check credentials"
@@ -58,8 +59,8 @@ if [ -n "$GITHUB_TOKEN" ]; then
   ORIGIN_URL="https://${GITHUB_TOKEN}@github.com/bilonglo9x-code/Agent-Claw-Plan.git"
   AGENTCLAW_URL="https://${GITHUB_TOKEN}@github.com/bilonglo9x-code/agentclaw.git"
 
-  push_remote "origin"    "$ORIGIN_URL"    "origin (Agent-Claw-Plan)"
-  push_remote "agentclaw" "$AGENTCLAW_URL" "agentclaw mirror"
+  push_remote "origin"    "$ORIGIN_URL"    "origin (Agent-Claw-Plan)" "main"
+  push_remote "agentclaw" "$AGENTCLAW_URL" "agentclaw mirror"         "dev"
 else
   echo "INFO: GITHUB_TOKEN not set — falling back to configured remotes"
 
