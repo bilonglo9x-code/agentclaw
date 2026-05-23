@@ -57,7 +57,7 @@ export default function TTSConfigScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { connected } = useAuth();
+  const { connected, http } = useAuth();
   const { config, loading, saving, error, load, saveConfig } = useTTSConfig();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -94,6 +94,23 @@ export default function TTSConfigScreen() {
     }
   };
 
+  const [testing, setTesting] = useState(false);
+  const handleTestConnection = async () => {
+    if (!connected) {
+      Alert.alert("Chưa kết nối", "Cần kết nối đến server để test TTS");
+      return;
+    }
+    setTesting(true);
+    try {
+      await http?.post("/v1/tts/test", { provider: draft.provider, text: "Xin chào, đây là bài kiểm tra TTS." });
+      Alert.alert("Thành công", `Provider ${PROVIDER_CONFIG[draft.provider]?.label} hoạt động bình thường`);
+    } catch (e) {
+      Alert.alert("Lỗi kết nối", e instanceof Error ? e.message : "Kiểm tra TTS thất bại");
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const selectedProv = draft.provider;
   const provConfig = PROVIDER_CONFIG[selectedProv] ?? PROVIDER_CONFIG.edge;
   const provSettings = (draft[selectedProv] ?? {}) as Record<string, string>;
@@ -105,6 +122,21 @@ export default function TTSConfigScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>TTS Config</Text>
+        <TouchableOpacity
+          onPress={handleTestConnection}
+          disabled={testing}
+          style={[styles.testBtn, { backgroundColor: "#22c55e18", borderColor: "#22c55e35" }]}
+          activeOpacity={0.7}
+        >
+          {testing ? (
+            <ActivityIndicator size="small" color="#22c55e" />
+          ) : (
+            <>
+              <Ionicons name="play-circle-outline" size={14} color="#22c55e" />
+              <Text style={[styles.testBtnText, { color: "#22c55e" }]}>Test</Text>
+            </>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity onPress={load} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
@@ -284,4 +316,6 @@ const styles = StyleSheet.create({
   saveBar: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 14, paddingVertical: 13 },
   saveBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  testBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, height: 32 },
+  testBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 });

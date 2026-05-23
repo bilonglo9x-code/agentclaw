@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   ScrollView,
@@ -13,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { SearchBar } from "@/components/SearchBar";
 import { useAuth } from "@/context/AuthContext";
 import { useTraces, TraceData } from "@/hooks/useTraces";
 
@@ -178,8 +180,22 @@ export default function TracesScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+
   const traces = connected && liveTraces.length > 0 ? liveTraces : MOCK_TRACES;
-  const filtered = filter === "all" ? traces : traces.filter((t) => t.status === filter);
+  const filtered = useMemo(() => {
+    let list = filter === "all" ? traces : traces.filter((t) => t.status === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((t) =>
+        (t.agent_name ?? t.agent_id ?? "").toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q) ||
+        (t.channel ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [traces, filter, search]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -208,6 +224,13 @@ export default function TracesScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -216,6 +239,12 @@ export default function TracesScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm agent, trace ID, channel..." />
+        </View>
+      )}
 
       {/* Summary row */}
       <View style={styles.summaryRow}>
@@ -282,6 +311,18 @@ export default function TracesScreen() {
               <TouchableOpacity
                 style={[styles.traceCard, { backgroundColor: colors.card, borderColor: item.status === "failed" ? "#ef444440" : colors.border }]}
                 activeOpacity={0.8}
+                onPress={() => {
+                  Alert.alert(
+                    `Trace: ${item.agent_name ?? item.agent_id ?? "Agent"}`,
+                    [
+                      `ID: ${item.id}`,
+                      `Status: ${item.status}`,
+                      item.duration_ms != null ? `Duration: ${item.duration_ms < 1000 ? `${item.duration_ms}ms` : `${(item.duration_ms / 1000).toFixed(2)}s`}` : null,
+                      item.total_cost != null && item.total_cost > 0 ? `Cost: $${item.total_cost.toFixed(6)}` : null,
+                      item.error ? `Error: ${item.error}` : null,
+                    ].filter(Boolean).join("\n"),
+                  );
+                }}
               >
                 <View style={styles.traceTop}>
                   <View style={styles.traceLeft}>
@@ -429,4 +470,5 @@ const styles = StyleSheet.create({
   traceError: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

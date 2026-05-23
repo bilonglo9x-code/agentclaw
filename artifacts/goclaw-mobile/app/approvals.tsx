@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useApprovals, ApprovalItem } from "@/hooks/useApprovals";
 import * as Haptics from "expo-haptics";
+import { SearchBar } from "@/components/SearchBar";
 
 const RISK_CONFIG = {
   low: { color: "#22c55e", label: "Low risk" },
@@ -216,9 +217,25 @@ export default function ApprovalsScreen() {
     });
   };
 
-  const pending = approvals.filter((a) => a.status === "pending");
-  const resolved = approvals.filter((a) => a.status !== "pending");
-  const selectedPending = pending.filter((a) => selectedIds.has(a.id));
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+
+  const allPending = approvals.filter((a) => a.status === "pending");
+  const allResolved = approvals.filter((a) => a.status !== "pending");
+
+  const filterList = <T extends { tool_name: string; agent_name?: string; agent_id?: string; description?: string }>(list: T[]) => {
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((a) =>
+      a.tool_name.toLowerCase().includes(q) ||
+      (a.agent_name ?? a.agent_id ?? "").toLowerCase().includes(q) ||
+      (a.description ?? "").toLowerCase().includes(q),
+    );
+  };
+
+  const pending = filterList(allPending);
+  const resolved = filterList(allResolved);
+  const selectedPending = allPending.filter((a) => selectedIds.has(a.id));
   const hasSelection = selectedIds.size > 0;
 
   const bulkApprove = () => {
@@ -260,6 +277,13 @@ export default function ApprovalsScreen() {
             </View>
           )}
         </View>
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -268,6 +292,12 @@ export default function ApprovalsScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm tool, agent..." />
+        </View>
+      )}
 
       {pendingCount === 0 && !loading && (
         <View style={[styles.emptyBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -421,4 +451,5 @@ const styles = StyleSheet.create({
   approveText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
   resolvedRow: { flexDirection: "row", alignItems: "center", gap: 7, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   resolvedText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

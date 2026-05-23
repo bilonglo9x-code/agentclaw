@@ -89,6 +89,28 @@ export default function BrandingScreen() {
     }
   };
 
+  const handleReset = () => {
+    Alert.alert(
+      "Đặt lại mặc định",
+      "Đặt lại toàn bộ cấu hình thương hiệu về giá trị mặc định?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Đặt lại",
+          style: "destructive",
+          onPress: () => {
+            setName("GoClaw");
+            setDescription("AI Agent Platform");
+            setLogoUrl("");
+            setFaviconUrl("");
+            setAccentColor("#f97316");
+            setSupportEmail("");
+          },
+        },
+      ],
+    );
+  };
+
   const accentPreview = accentColor.match(/^#[0-9a-fA-F]{6}$/) ? accentColor : null;
 
   return (
@@ -99,6 +121,13 @@ export default function BrandingScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Thương hiệu</Text>
+        <TouchableOpacity
+          onPress={handleReset}
+          style={[styles.iconBtn, { backgroundColor: "#ef444415" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh-circle-outline" size={16} color="#ef4444" />
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={load}
           style={[styles.iconBtn, { backgroundColor: colors.secondary }]}

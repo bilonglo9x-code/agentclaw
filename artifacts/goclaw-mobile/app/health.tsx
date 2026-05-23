@@ -93,6 +93,20 @@ export default function HealthScreen() {
 
   const avgUptime = targets.filter((t) => t.uptime_pct != null && t.uptime_pct! > 0).reduce((sum, t, _, arr) => sum + (t.uptime_pct ?? 0) / arr.length, 0);
 
+  const handleAddTarget = () => {
+    Alert.alert(
+      "Thêm Health Target",
+      "Nhập URL để monitor. Ví dụ:\nhttps://api.example.com/health",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Thêm qua Console",
+          onPress: () => Alert.alert("Hướng dẫn", "Dùng web console hoặc WS method:\nheartbeat.add { url, name, interval_seconds }"),
+        },
+      ],
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPad + 4 }]}>
@@ -100,6 +114,13 @@ export default function HealthScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Health Monitor</Text>
+        <TouchableOpacity
+          onPress={handleAddTarget}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "20" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>

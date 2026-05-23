@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useCron, CronJob } from "@/hooks/useCron";
 import * as Haptics from "expo-haptics";
+import { SearchBar } from "@/components/SearchBar";
 
 const MOCK_JOBS: CronJob[] = [
   {
@@ -105,10 +107,31 @@ export default function CronScreen() {
   const router = useRouter();
   const { jobs: liveJobs, loading, error, toggle, run, refresh } = useCron();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "disabled" | "error">("all");
 
-  const jobs = liveJobs.length > 0 ? liveJobs : MOCK_JOBS;
-  const activeCount = jobs.filter((j) => j.enabled).length;
-  const errorCount = jobs.filter((j) => j.state?.lastStatus === "error").length;
+  const allJobs = liveJobs.length > 0 ? liveJobs : MOCK_JOBS;
+  const jobs = useMemo(() => {
+    let list = allJobs;
+    if (statusFilter === "enabled") list = list.filter((j) => j.enabled);
+    else if (statusFilter === "disabled") list = list.filter((j) => !j.enabled);
+    else if (statusFilter === "error") list = list.filter((j) => j.state?.lastStatus === "error");
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((j) => j.name.toLowerCase().includes(q) || (j.agentId ?? "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [allJobs, search, statusFilter]);
+
+  const activeCount = allJobs.filter((j) => j.enabled).length;
+  const errorCount = allJobs.filter((j) => j.state?.lastStatus === "error").length;
+
+  const handleCreate = () => {
+    Alert.alert("Tạo Cron Job", "Mở web console để tạo cron job mới?\n\nHoặc dùng WS method: cron.create", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Mở Console", onPress: () => {} },
+    ]);
+  };
 
   const handleRun = (job: CronJob) => {
     Alert.alert(
@@ -134,10 +157,41 @@ export default function CronScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Cron Jobs</Text>
+        <TouchableOpacity
+          onPress={handleCreate}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "20" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {/* Search bar */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm cron job..." />
+      </View>
+
+      {/* Status filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+        {(["all", "enabled", "disabled", "error"] as const).map((f) => {
+          const active = statusFilter === f;
+          const colors2 = f === "error" ? "#ef4444" : f === "enabled" ? "#22c55e" : f === "disabled" ? "#71717a" : colors.primary;
+          const label = f === "all" ? "Tất cả" : f === "enabled" ? "Active" : f === "disabled" ? "Paused" : "Error";
+          return (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setStatusFilter(f)}
+              style={[styles.filterChip, { backgroundColor: active ? colors2 + "20" : colors.muted, borderColor: active ? colors2 + "50" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterChipText, { color: active ? colors2 : colors.mutedForeground }]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -289,6 +343,11 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
+  filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 8, gap: 7 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChipText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   summaryRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 12 },
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   sumCount: { fontSize: 20, fontFamily: "Inter_700Bold" },

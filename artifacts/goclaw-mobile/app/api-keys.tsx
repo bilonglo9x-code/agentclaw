@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useApiKeys, ApiKeyData } from "@/hooks/useApiKeys";
 import { useAuth } from "@/context/AuthContext";
+import { SearchBar } from "@/components/SearchBar";
 
 const SCOPE_COLORS: Record<string, string> = {
   chat: "#60a5fa",
@@ -91,8 +92,15 @@ export default function ApiKeysScreen() {
   const [copied, setCopied] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const apiKeys = connected && liveKeys.length > 0 ? liveKeys : MOCK_KEYS;
-  const activeCount = apiKeys.filter((k) => !k.revoked && (!k.expires_at || new Date(k.expires_at) > new Date())).length;
+  const [search, setSearch] = useState("");
+
+  const allKeys = connected && liveKeys.length > 0 ? liveKeys : MOCK_KEYS;
+  const apiKeys = useMemo(() => {
+    if (!search.trim()) return allKeys;
+    const q = search.toLowerCase();
+    return allKeys.filter((k) => k.name.toLowerCase().includes(q) || (k.scopes ?? []).some((s) => s.toLowerCase().includes(q)));
+  }, [allKeys, search]);
+  const activeCount = allKeys.filter((k) => !k.revoked && (!k.expires_at || new Date(k.expires_at) > new Date())).length;
   const expiringSoon = apiKeys.filter((k) => {
     if (k.revoked || !k.expires_at) return false;
     const remaining = new Date(k.expires_at).getTime() - Date.now();
@@ -160,12 +168,17 @@ export default function ApiKeysScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setShowCreate(true)}
-          style={[styles.createBtn, { backgroundColor: colors.primary }]}
+          style={[styles.iconBtn, { backgroundColor: colors.primary }]}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={16} color="#fff" />
           <Text style={styles.createBtnText}>Tạo mới</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Search bar */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm API key..." />
       </View>
 
       <View style={styles.summaryRow}>
@@ -443,4 +456,5 @@ const styles = StyleSheet.create({
   doneBtnText: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

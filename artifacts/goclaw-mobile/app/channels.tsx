@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SearchBar } from "@/components/SearchBar";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,18 +53,39 @@ const MOCK_STATUSES: Record<string, ChannelStatus> = {
   ch5: { enabled: true, running: true, state: "healthy" },
 };
 
+const CHANNEL_TYPES = ["telegram", "slack", "whatsapp", "email", "zalo", "webhook", "chatgpt"];
+
 export default function ChannelsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { instances: liveInst, statuses: liveStatus, loading, error, toggle, refresh } = useChannels();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const instances = liveInst.length > 0 ? liveInst : MOCK_INSTANCES;
+  const allInstances = liveInst.length > 0 ? liveInst : MOCK_INSTANCES;
   const statuses = Object.keys(liveStatus).length > 0 ? liveStatus : MOCK_STATUSES;
 
-  const healthyCount = instances.filter((i) => statuses[i.id]?.state === "healthy").length;
-  const failedCount = instances.filter((i) => statuses[i.id]?.state === "failed").length;
+  const instances = useMemo(() => {
+    let list = allInstances;
+    if (typeFilter) list = list.filter((i) => i.channel_type === typeFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((i) => i.display_name.toLowerCase().includes(q) || i.agent_id.toLowerCase().includes(q) || i.channel_type.toLowerCase().includes(q));
+    }
+    return list;
+  }, [allInstances, search, typeFilter]);
+
+  const healthyCount = allInstances.filter((i) => statuses[i.id]?.state === "healthy").length;
+  const failedCount = allInstances.filter((i) => statuses[i.id]?.state === "failed").length;
+
+  const handleAddChannel = () => {
+    Alert.alert("Thêm Channel", "Cấu hình channel mới qua web console.\n\nHỗ trợ: Telegram, Slack, WhatsApp, Email, Zalo, Webhook", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Mở Console", onPress: () => {} },
+    ]);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -70,10 +94,48 @@ export default function ChannelsScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Channels</Text>
+        <TouchableOpacity
+          onPress={handleAddChannel}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "20" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm channel..." />
+      </View>
+
+      {/* Type filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+        <TouchableOpacity
+          onPress={() => setTypeFilter(null)}
+          style={[styles.filterChip, { backgroundColor: !typeFilter ? colors.primary + "20" : colors.muted, borderColor: !typeFilter ? colors.primary + "50" : colors.border }]}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterChipText, { color: !typeFilter ? colors.primary : colors.mutedForeground }]}>Tất cả</Text>
+        </TouchableOpacity>
+        {CHANNEL_TYPES.filter((t) => allInstances.some((i) => i.channel_type === t)).map((t) => {
+          const cfg = CHANNEL_ICONS[t] ?? { icon: "radio-outline", color: colors.primary };
+          const active = typeFilter === t;
+          return (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTypeFilter(active ? null : t)}
+              style={[styles.filterChip, { backgroundColor: active ? cfg.color + "20" : colors.muted, borderColor: active ? cfg.color + "50" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={cfg.icon} size={11} color={active ? cfg.color : colors.mutedForeground} />
+              <Text style={[styles.filterChipText, { color: active ? cfg.color : colors.mutedForeground }]}>{t}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {/* Summary */}
       <View style={styles.summaryRow}>
@@ -195,6 +257,11 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
+  filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 8, gap: 7 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChipText: { fontSize: 11, fontFamily: "Inter_500Medium", textTransform: "capitalize" },
   summaryRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 12 },
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   sumCount: { fontSize: 20, fontFamily: "Inter_700Bold" },

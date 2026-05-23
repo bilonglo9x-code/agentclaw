@@ -74,5 +74,11 @@ export function useMedia() {
     }
   }, [http]);
 
-  return { files, loading, uploading, error, load, refresh, upload, getMediaUrl };
+  const deleteFile = useCallback(async (id: string): Promise<void> => {
+    if (!http) throw new Error("Not connected");
+    await http.delete(`/v1/media/${id}`);
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  }, [http]);
+
+  return { files, loading, uploading, error, load, refresh, upload, getMediaUrl, deleteFile };
 }

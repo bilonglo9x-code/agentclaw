@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { SearchBar } from "@/components/SearchBar";
 import { useModels, ModelInfo } from "@/hooks/useModels";
 import { useAuth } from "@/context/AuthContext";
 
@@ -134,6 +135,7 @@ export default function ModelsScreen() {
 
   const [provFilter, setProvFilter] = useState<string | null>(null);
   const [capFilter, setCapFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const providers = useMemo(() => {
     const set = new Set(baseModels.map((m) => m.provider));
@@ -144,9 +146,13 @@ export default function ModelsScreen() {
     return baseModels.filter((m) => {
       if (provFilter && m.provider !== provFilter) return false;
       if (capFilter && !(m.capabilities ?? []).includes(capFilter)) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        return (m.display_name ?? m.name).toLowerCase().includes(q) || m.name.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q);
+      }
       return true;
     });
-  }, [baseModels, provFilter, capFilter]);
+  }, [baseModels, provFilter, capFilter, search]);
 
   const totalEnabled = baseModels.filter((m) => m.enabled !== false).length;
 
@@ -163,6 +169,11 @@ export default function ModelsScreen() {
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
+      </View>
+
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm model..." />
       </View>
 
       {/* Summary */}
@@ -259,6 +270,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   badge: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
   summaryRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 10 },
   sumCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, alignItems: "center" },
   sumCount: { fontSize: 20, fontFamily: "Inter_700Bold" },

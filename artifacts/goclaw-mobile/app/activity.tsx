@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useActivity, ActivityLog } from "@/hooks/useActivity";
 import { useAuth } from "@/context/AuthContext";
+import { SearchBar } from "@/components/SearchBar";
 
 const ACTION_ICONS: Record<string, { icon: keyof typeof Ionicons["glyphMap"]; color: string }> = {
   create: { icon: "add-circle-outline", color: "#22c55e" },
@@ -104,6 +105,8 @@ export default function ActivityScreen() {
   const [actionFilter, setActionFilter] = useState("Tất cả");
   const [entityFilter, setEntityFilter] = useState("Tất cả");
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const allLogs = connected && liveLogs.length > 0 ? liveLogs : MOCK_LOGS;
@@ -114,8 +117,12 @@ export default function ActivityScreen() {
     if (entityFilter !== "Tất cả" && l.entity_type !== entityFilter) return false;
     const age = Date.now() - new Date(l.created_at).getTime();
     if (timeMs !== Infinity && age > timeMs) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return (l.actor_id ?? "").toLowerCase().includes(q) || (l.entity_id ?? "").toLowerCase().includes(q) || l.action.toLowerCase().includes(q);
+    }
     return true;
-  }), [allLogs, actionFilter, entityFilter, timeMs]);
+  }), [allLogs, actionFilter, entityFilter, timeMs, search]);
 
   const total = connected ? liveTotal : allLogs.length;
 
@@ -135,10 +142,23 @@ export default function ActivityScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Activity</Text>
           <Text style={[styles.totalBadge, { color: colors.mutedForeground }]}>{total} events</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm actor, entity, action..." />
+        </View>
+      )}
 
       {/* Time range filter */}
       <View style={[styles.timeRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -271,6 +291,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   totalBadge: { fontSize: 12, fontFamily: "Inter_400Regular" },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 4 },
   timeRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginBottom: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4, gap: 2 },
   timeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, alignSelf: "flex-start" },
   timeChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },

@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -14,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useMCP, MCPServerData } from "@/hooks/useMCP";
+import { SearchBar } from "@/components/SearchBar";
 
 const TRANSPORT_CONFIG: Record<string, { color: string; label: string; icon: keyof typeof Ionicons["glyphMap"] }> = {
   stdio: { color: "#a78bfa", label: "STDIO", icon: "terminal-outline" },
@@ -49,11 +52,30 @@ export default function MCPScreen() {
   const router = useRouter();
   const { servers: liveServers, loading, error, toggle, refresh } = useMCP();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const [search, setSearch] = useState("");
+  const [transportFilter, setTransportFilter] = useState<string | null>(null);
 
-  const servers = liveServers.length > 0 ? liveServers : MOCK_SERVERS;
-  const enabledCount = servers.filter((s) => s.enabled).length;
-  const totalAgents = servers.reduce((sum, s) => sum + (s.agent_count ?? 0), 0);
+  const allServers = liveServers.length > 0 ? liveServers : MOCK_SERVERS;
+  const servers = useMemo(() => {
+    let list = allServers;
+    if (transportFilter) list = list.filter((s) => s.transport === transportFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.display_name.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.url ?? "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [allServers, search, transportFilter]);
+
+  const enabledCount = allServers.filter((s) => s.enabled).length;
+  const totalAgents = allServers.reduce((sum, s) => sum + (s.agent_count ?? 0), 0);
   const totalTools = Object.values(MOCK_TOOL_COUNTS).reduce((a, b) => a + b, 0);
+
+  const handleAddServer = () => {
+    Alert.alert("Thêm MCP Server", "Cấu hình MCP server mới qua web console.\n\nHỗ trợ: STDIO, SSE, Streamable HTTP", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Mở Console", onPress: () => {} },
+    ]);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -62,10 +84,41 @@ export default function MCPScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>MCP Servers</Text>
+        <TouchableOpacity
+          onPress={handleAddServer}
+          style={[styles.iconBtn, { backgroundColor: colors.primary + "20" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {/* Search + transport filter */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm MCP server..." />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+        {[null, "stdio", "sse", "streamable-http"].map((t) => {
+          const active = transportFilter === t;
+          const cfg = t ? TRANSPORT_CONFIG[t] : null;
+          const label = t ? (TRANSPORT_CONFIG[t]?.label ?? t) : "Tất cả";
+          const col = cfg?.color ?? colors.primary;
+          return (
+            <TouchableOpacity
+              key={t ?? "all"}
+              onPress={() => setTransportFilter(t)}
+              style={[styles.filterChip, { backgroundColor: active ? col + "20" : colors.muted, borderColor: active ? col + "50" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              {cfg && <Ionicons name={cfg.icon} size={11} color={active ? col : colors.mutedForeground} />}
+              <Text style={[styles.filterChipText, { color: active ? col : colors.mutedForeground }]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -182,6 +235,11 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
+  filterScroll: { flexGrow: 0, flexShrink: 0 },
+  filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 8, gap: 7 },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  filterChipText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   summaryRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 12 },
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 10, alignItems: "center" },
   sumCount: { fontSize: 18, fontFamily: "Inter_700Bold" },

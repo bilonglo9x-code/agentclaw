@@ -50,7 +50,7 @@ export default function MediaScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const { files: liveFiles, loading, uploading, error, load, refresh, upload, getMediaUrl } = useMedia();
+  const { files: liveFiles, loading, uploading, error, load, refresh, upload, getMediaUrl, deleteFile } = useMedia();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const files = connected && liveFiles.length > 0 ? liveFiles : (!connected ? MOCK_FILES : []);
@@ -81,6 +81,27 @@ export default function MediaScreen() {
     const url = file.url ?? getMediaUrl(file.id);
     await Share.share({ message: url, url });
     Alert.alert("Đã copy", url);
+  };
+
+  const handleDelete = (file: MediaFile) => {
+    Alert.alert(
+      "Xóa file",
+      `Xóa "${file.filename}"? Hành động này không thể hoàn tác.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteFile(file.id);
+            } catch {
+              Alert.alert("Lỗi", "Không thể xóa file");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const imageFiles = files.filter((f) => f.mime_type.startsWith("image/"));
@@ -177,6 +198,15 @@ export default function MediaScreen() {
               >
                 <Ionicons name="copy-outline" size={14} color={colors.mutedForeground} />
               </TouchableOpacity>
+              {connected && (
+                <TouchableOpacity
+                  onPress={() => handleDelete(item)}
+                  style={[styles.copyBtn, { backgroundColor: "#ef444415" }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                </TouchableOpacity>
+              )}
             </View>
           );
         }}
