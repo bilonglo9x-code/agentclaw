@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -78,21 +78,44 @@ export default function VaultScreen() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { documents: liveDocs, total: liveTotal, loading, error, refresh } = useVault(scope, docType);
+  const { documents: liveDocs, total: liveTotal, loading, error, refresh, vectorSearch } = useVault(scope, docType);
+  const [vectorResults, setVectorResults] = useState<VaultDocument[]>([]);
+  const [vectorSearching, setVectorSearching] = useState(false);
+
   const rawDocs = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS.filter((d) => {
     if (scope !== "all" && d.scope !== scope) return false;
     if (docType !== "all" && d.doc_type !== docType) return false;
     return true;
   });
 
-  const documents = search.trim()
-    ? rawDocs.filter((d) => {
-        const q = search.toLowerCase();
-        return d.title.toLowerCase().includes(q) || d.path.toLowerCase().includes(q) || (d.summary ?? "").toLowerCase().includes(q);
-      })
-    : rawDocs;
+  const documents = vectorMode && vectorResults.length > 0
+    ? vectorResults
+    : search.trim()
+      ? rawDocs.filter((d) => {
+          const q = search.toLowerCase();
+          return d.title.toLowerCase().includes(q) || d.path.toLowerCase().includes(q) || (d.summary ?? "").toLowerCase().includes(q);
+        })
+      : rawDocs;
 
-  const total = connected ? liveTotal : rawDocs.length;
+  const total = vectorMode && vectorResults.length > 0 ? vectorResults.length : (connected ? liveTotal : rawDocs.length);
+
+  const handleVectorSearch = useCallback(async (q: string) => {
+    if (!q.trim() || !connected) return;
+    setVectorSearching(true);
+    try {
+      const results = await vectorSearch(q);
+      setVectorResults(results);
+    } catch {
+      setVectorResults([]);
+    } finally {
+      setVectorSearching(false);
+    }
+  }, [vectorSearch, connected]);
+
+  const handleSearchChange = (q: string) => {
+    setSearch(q);
+    if (!q.trim()) setVectorResults([]);
+  };
 
   const typeCounts = MOCK_DOCS.reduce<Record<string, number>>((acc, d) => {
     acc[d.doc_type] = (acc[d.doc_type] ?? 0) + 1;
@@ -176,13 +199,26 @@ export default function VaultScreen() {
         />
         <TextInput
           value={search}
-          onChangeText={setSearch}
+          onChangeText={handleSearchChange}
           placeholder={vectorMode ? "Tìm ngữ nghĩa (vector)..." : "Tìm tài liệu..."}
           placeholderTextColor={colors.mutedForeground}
           style={[styles.searchInput, { color: colors.foreground }]}
+          onSubmitEditing={vectorMode ? () => handleVectorSearch(search) : undefined}
+          returnKeyType={vectorMode ? "search" : "default"}
         />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch("")}>
+        {vectorMode && search.length > 0 && (
+          <TouchableOpacity
+            onPress={() => handleVectorSearch(search)}
+            style={[styles.vectorSearchBtn, { backgroundColor: colors.primary }]}
+            activeOpacity={0.7}
+          >
+            {vectorSearching
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="search" size={12} color="#fff" />}
+          </TouchableOpacity>
+        )}
+        {!vectorMode && search.length > 0 && (
+          <TouchableOpacity onPress={() => handleSearchChange("")}>
             <Ionicons name="close-circle" size={14} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
@@ -332,6 +368,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
   vectorToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
   vectorText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  vectorSearchBtn: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },

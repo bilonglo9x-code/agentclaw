@@ -66,5 +66,19 @@ export function useVault(scope: VaultScope = "all", docType: VaultDocType = "all
     [http],
   );
 
-  return { documents, total, loading, error, refresh: load, deleteDocument };
+  const vectorSearch = useCallback(
+    async (query: string, agentId?: string): Promise<VaultDocument[]> => {
+      if (!http || !query.trim()) return [];
+      const body: Record<string, string> = { query: query.trim(), limit: "20" };
+      if (agentId) body.agent_id = agentId;
+      const res = await http.post<{ documents: VaultDocument[]; results?: VaultDocument[] }>(
+        "/v1/vault/search",
+        body,
+      );
+      return res.documents ?? res.results ?? [];
+    },
+    [http],
+  );
+
+  return { documents, total, loading, error, refresh: load, deleteDocument, vectorSearch };
 }

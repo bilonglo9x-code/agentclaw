@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -88,6 +89,22 @@ export default function AgentDetailScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
+
+  const handleExport = useCallback(async () => {
+    if (!agent || !connected) {
+      Alert.alert("Không khả dụng", "Cần kết nối server để export agent");
+      return;
+    }
+    try {
+      const url = `${agent.id ? `/v1/agents/${agent.id}/export` : ""}`;
+      await Share.share({
+        message: `Export agent: ${agent.name ?? agent.agent_key}\nURL: ${url}`,
+        title: `GoClaw — ${agent.name ?? agent.agent_key}`,
+      });
+    } catch {
+      Alert.alert("Lỗi", "Không thể export agent");
+    }
+  }, [agent, connected]);
 
   const agentSessions = sessions.filter(
     (s) => s.agentName === agent?.agent_key || s.agentName === agent?.name,
@@ -264,6 +281,7 @@ export default function AgentDetailScreen() {
                       { icon: "chatbubble-outline" as const, label: "Chat", color: colors.primary, onPress: () => {} },
                       { icon: "search-outline" as const, label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
                       { icon: "library-outline" as const, label: "Memory", color: "#a78bfa", onPress: () => router.push("/memory") },
+                      { icon: "share-outline" as const, label: "Export", color: "#22c55e", onPress: handleExport },
                     ].map((a) => (
                       <TouchableOpacity
                         key={a.label}
