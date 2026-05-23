@@ -84,6 +84,12 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
       kgProvider: kgSettings?.extraction_provider ?? "", kgModel: kgSettings?.extraction_model ?? "",
       kgMinConfidence: String(kgSettings?.min_confidence ?? 0.75),
       bgProvider: configs["background.provider"] ?? "", bgModel: configs["background.model"] ?? "",
+      brandName: configs["app.name"] ?? "",
+      brandDescription: configs["app.description"] ?? "",
+      brandLogoUrl: configs["app.logo_url"] ?? "",
+      brandFaviconUrl: configs["app.favicon_url"] ?? "",
+      brandAccentColor: configs["app.accent_color"] ?? "",
+      brandSupportEmail: configs["app.support_email"] ?? "",
     };
     setInit(s);
     setEmbProvider(s.embProvider); setEmbModel(s.embModel); setEmbMaxChunkLen(s.embMaxChunkLen); setEmbChunkOverlap(s.embChunkOverlap);
@@ -91,12 +97,12 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
     setCompProvider(s.compProvider); setCompModel(s.compModel); setCompThreshold(s.compThreshold); setCompKeepRecent(s.compKeepRecent); setCompMaxTokens(s.compMaxTokens);
     setKgProvider(s.kgProvider); setKgModel(s.kgModel); setKgMinConfidence(s.kgMinConfidence);
     setBgProvider(s.bgProvider); setBgModel(s.bgModel);
-    setBrandName(configs["app.name"] ?? "");
-    setBrandDescription(configs["app.description"] ?? "");
-    setBrandLogoUrl(configs["app.logo_url"] ?? "");
-    setBrandFaviconUrl(configs["app.favicon_url"] ?? "");
-    setBrandAccentColor(configs["app.accent_color"] ?? "");
-    setBrandSupportEmail(configs["app.support_email"] ?? "");
+    setBrandName(s.brandName);
+    setBrandDescription(s.brandDescription);
+    setBrandLogoUrl(s.brandLogoUrl);
+    setBrandFaviconUrl(s.brandFaviconUrl);
+    setBrandAccentColor(s.brandAccentColor);
+    setBrandSupportEmail(s.brandSupportEmail);
     resetEmb();
   }, [resetEmb]);
 
@@ -142,12 +148,12 @@ export function SystemSettingsModal({ open, onOpenChange }: SystemSettingsModalP
       if (bgModel !== init.bgModel) updates["background.model"] = bgModel;
       // Branding
       const brandUpdates: Record<string, string> = {};
-      if (brandName !== (init as Record<string,string>)["brandName"]) brandUpdates["app.name"] = brandName;
-      if (brandDescription !== (init as Record<string,string>)["brandDescription"]) brandUpdates["app.description"] = brandDescription;
-      if (brandLogoUrl !== (init as Record<string,string>)["brandLogoUrl"]) brandUpdates["app.logo_url"] = brandLogoUrl;
-      if (brandFaviconUrl !== (init as Record<string,string>)["brandFaviconUrl"]) brandUpdates["app.favicon_url"] = brandFaviconUrl;
-      if (brandAccentColor !== (init as Record<string,string>)["brandAccentColor"]) brandUpdates["app.accent_color"] = brandAccentColor;
-      if (brandSupportEmail !== (init as Record<string,string>)["brandSupportEmail"]) brandUpdates["app.support_email"] = brandSupportEmail;
+      if (brandName !== init.brandName) brandUpdates["app.name"] = brandName;
+      if (brandDescription !== init.brandDescription) brandUpdates["app.description"] = brandDescription;
+      if (brandLogoUrl !== init.brandLogoUrl) brandUpdates["app.logo_url"] = brandLogoUrl;
+      if (brandFaviconUrl !== init.brandFaviconUrl) brandUpdates["app.favicon_url"] = brandFaviconUrl;
+      if (brandAccentColor !== init.brandAccentColor) brandUpdates["app.accent_color"] = brandAccentColor;
+      if (brandSupportEmail !== init.brandSupportEmail) brandUpdates["app.support_email"] = brandSupportEmail;
       const allUpdates = { ...updates, ...brandUpdates };
       for (const [key, value] of Object.entries(allUpdates)) await http.put(`/v1/system-configs/${key}`, { value });
       const kgChanged = kgProvider !== init.kgProvider || kgModel !== init.kgModel || kgMinConfidence !== init.kgMinConfidence;

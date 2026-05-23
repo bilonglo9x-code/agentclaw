@@ -44,6 +44,12 @@ export interface InitState {
   kgMinConfidence: string;
   bgProvider: string;
   bgModel: string;
+  brandName: string;
+  brandDescription: string;
+  brandLogoUrl: string;
+  brandFaviconUrl: string;
+  brandAccentColor: string;
+  brandSupportEmail: string;
 }
 
 export const DEFAULTS: InitState = {
@@ -54,6 +60,9 @@ export const DEFAULTS: InitState = {
   compThreshold: "", compKeepRecent: "", compMaxTokens: "",
   kgProvider: "", kgModel: "", kgMinConfidence: "0.75",
   bgProvider: "", bgModel: "",
+  brandName: "", brandDescription: "",
+  brandLogoUrl: "", brandFaviconUrl: "",
+  brandAccentColor: "", brandSupportEmail: "",
 };
 
 export function parseBool(v: string | undefined, fallback: boolean): boolean {
