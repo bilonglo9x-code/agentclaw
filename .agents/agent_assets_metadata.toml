@@ -29,3 +29,9 @@ id = "1JXOkeyh-U5FTR3DKaBT6"
 uri = "file://MOBILE_REDESIGN_PLAN.md"
 type = "text"
 title = "GoClaw — Mobile Redesign Plan (PWA + Expo)"
+
+[[outputs]]
+id = "7YnCJdB07rUGeBchhjIOJ"
+uri = "file://docs/ota-update-plan.md"
+type = "text"
+title = "Kế hoạch OTA Update — GoClaw Mobile"
