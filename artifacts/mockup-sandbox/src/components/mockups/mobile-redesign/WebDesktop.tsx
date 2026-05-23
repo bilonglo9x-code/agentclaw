@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   LayoutDashboard, Bot, MessageSquare, GitBranch, Clock, Inbox, Users,
   Radio, Plug, Zap, Package, Cpu, Timer, Brain, FolderOpen, Share2,
@@ -171,25 +171,47 @@ function Card({ a }: { a: typeof AGENTS[0] }) {
 export function WebDesktop() {
   const [activeGroup, setActiveGroup] = useState<string | null>("core");
   const [activeItem, setActiveItem] = useState("Agents");
+  const [panelTop, setPanelTop] = useState(0);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const railRef = useRef<HTMLDivElement | null>(null);
 
   const currentGroup = NAV.find((g) => g.id === activeGroup);
+
+  function handleIconClick(groupId: string) {
+    if (activeGroup === groupId) { setActiveGroup(null); return; }
+    const btn = btnRefs.current[groupId];
+    const rail = railRef.current;
+    if (btn && rail) {
+      const btnRect = btn.getBoundingClientRect();
+      const railRect = rail.getBoundingClientRect();
+      // center of button relative to rail container
+      setPanelTop(btnRect.top - railRect.top + btnRect.height / 2);
+    }
+    setActiveGroup(groupId);
+  }
+
+  // estimated panel height: header(56) + items(44*n) + footer(48)
+  const panelItemCount = currentGroup?.items.length ?? 0;
+  const panelH = 56 + panelItemCount * 44 + 48;
+  const CONTAINER_H = 800;
+  // clamp so panel never overflows container
+  const clampedTop = Math.min(Math.max(panelTop - panelH / 2, 12), CONTAINER_H - panelH - 12);
 
   return (
     <div className="w-[1280px] h-[800px] bg-[#f4f5fa] flex overflow-hidden select-none font-sans">
 
-      {/* ── Rail (icon-only, 60px) ── */}
-      <div className="w-[60px] h-full bg-[#18181b] flex flex-col items-center py-4 shrink-0 z-20">
+      {/* ── Rail (icon-only, 64px) ── */}
+      <div ref={railRef} className="relative w-16 h-full bg-[#18181b] flex flex-col items-center py-5 shrink-0 z-30">
 
-        {/* ── Top: Logo ── */}
-        <div className="w-9 h-9 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-900/40">
+        {/* Logo */}
+        <div className="w-9 h-9 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-900/40 mb-2">
           <Zap size={17} color="white" strokeWidth={2.5} />
         </div>
 
-        {/* thin divider */}
-        <div className="w-5 h-px bg-zinc-800 mt-4 mb-1" />
+        <div className="w-6 h-px bg-zinc-800 my-3" />
 
-        {/* ── Center: Nav icons (vertically centered in remaining space) ── */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
+        {/* Nav icons — vertically centered, generous gap */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
           {NAV.map((group) => {
             const Icon = group.icon;
             const isActive = activeGroup === group.id;
@@ -197,102 +219,121 @@ export function WebDesktop() {
             return (
               <div key={group.id} className="relative group/tip">
                 <button
-                  onClick={() => setActiveGroup(isActive ? null : group.id)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  ref={(el) => { btnRefs.current[group.id] = el; }}
+                  onClick={() => handleIconClick(group.id)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
                     isActive
                       ? "bg-indigo-500 text-white shadow-md shadow-indigo-900/50"
                       : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
                   }`}
                 >
-                  <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
+                  <Icon size={18} strokeWidth={isActive ? 2.2 : 1.7} />
                 </button>
                 {hasBadge && !isActive && (
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full ring-1 ring-[#18181b]" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#18181b]" />
                 )}
-                {/* Tooltip */}
-                <div className="absolute left-[54px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
-                  {group.label}
-                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
-                </div>
+                {/* Tooltip — only when panel closed */}
+                {!activeGroup && (
+                  <div className="absolute left-[58px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
+                    {group.label}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* thin divider */}
-        <div className="w-5 h-px bg-zinc-800 mb-1" />
+        <div className="w-6 h-px bg-zinc-800 my-3" />
 
-        {/* ── Bottom: utility + avatar ── */}
-        <div className="flex flex-col items-center gap-0.5">
+        {/* Bottom utility */}
+        <div className="flex flex-col items-center gap-3">
           {[{ Icon: HelpCircle, label: "Trợ giúp" }, { Icon: Settings, label: "Cài đặt" }].map(({ Icon, label }) => (
             <div key={label} className="relative group/tip">
               <button className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100 transition-all">
-                <Icon size={17} strokeWidth={1.7} />
+                <Icon size={18} strokeWidth={1.7} />
               </button>
-              <div className="absolute left-[54px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
-                {label}
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
-              </div>
+              {!activeGroup && (
+                <div className="absolute left-[58px] top-1/2 -translate-y-1/2 bg-zinc-700 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 shadow-xl">
+                  {label}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-zinc-700" />
+                </div>
+              )}
             </div>
           ))}
-          <div className="mt-1 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-zinc-700 cursor-pointer hover:ring-indigo-400 transition-all">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-zinc-700 cursor-pointer hover:ring-indigo-400 transition-all">
             A
           </div>
         </div>
-      </div>
 
-      {/* ── Flyout panel (220px) — slides in when group active ── */}
-      <div className={`h-full bg-white border-r border-slate-200 flex flex-col transition-all duration-200 shrink-0 overflow-hidden ${
-        activeGroup ? "w-56" : "w-0"
-      }`}>
-        {currentGroup && (
-          <>
+        {/* ── Flyout panel — floats out from rail, aligned to active icon ── */}
+        {activeGroup && currentGroup && (
+          <div
+            className="absolute left-[68px] z-50 w-52 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] border border-slate-200 flex flex-col overflow-hidden"
+            style={{ top: clampedTop }}
+          >
+            {/* Arrow pointing left toward the icon */}
+            <div
+              className="absolute -left-[7px] w-3.5 h-3.5 bg-white border-l border-t border-slate-200 rotate-[-45deg]"
+              style={{ top: Math.min(Math.max(panelTop - clampedTop - 7, 12), panelH - 24) }}
+            />
+
             {/* Panel header */}
-            <div className="flex items-center gap-2.5 px-4 pt-5 pb-3">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
                 <currentGroup.icon size={15} className="text-indigo-600" strokeWidth={2} />
               </div>
               <span className="text-[13px] font-bold text-slate-800">{currentGroup.label}</span>
+              <button
+                onClick={() => setActiveGroup(null)}
+                className="ml-auto w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors text-[14px] leading-none"
+              >×</button>
             </div>
 
-            <div className="h-px bg-slate-100 mx-4 mb-2" />
+            <div className="h-px bg-slate-100 mx-3 mb-1" />
 
             {/* Items */}
-            <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto py-1">
+            <nav className="px-2 py-1.5 space-y-0.5">
               {currentGroup.items.map((item) => {
                 const ItemIcon = item.icon;
                 const isItemActive = activeItem === item.label;
                 return (
                   <button
                     key={item.label}
-                    onClick={() => setActiveItem(item.label)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-colors group/item ${
+                    onClick={() => { setActiveItem(item.label); setActiveGroup(null); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-colors ${
                       isItemActive
                         ? "bg-indigo-50 text-indigo-700"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }`}
                   >
-                    <ItemIcon size={15} strokeWidth={isItemActive ? 2.2 : 1.8} className={isItemActive ? "text-indigo-600" : "text-slate-400 group-hover/item:text-slate-600"} />
-                    <span className={`text-[13px] flex-1 ${isItemActive ? "font-semibold" : "font-medium"}`}>{item.label}</span>
+                    <ItemIcon
+                      size={14}
+                      strokeWidth={isItemActive ? 2.3 : 1.8}
+                      className={isItemActive ? "text-indigo-600 shrink-0" : "text-slate-400 shrink-0"}
+                    />
+                    <span className={`text-[12.5px] flex-1 ${isItemActive ? "font-semibold" : "font-medium"}`}>
+                      {item.label}
+                    </span>
                     {item.badge && (
                       <span className="text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                         {item.badge}
                       </span>
                     )}
-                    {isItemActive && <ChevronRight size={13} className="text-indigo-400" />}
+                    {isItemActive && <ChevronRight size={12} className="text-indigo-400 shrink-0" />}
                   </button>
                 );
               })}
             </nav>
 
-            {/* Panel footer */}
-            <div className="px-2 pb-4 pt-2 border-t border-slate-100 mt-2">
+            {/* Footer */}
+            <div className="px-2 pt-1.5 pb-3 border-t border-slate-100 mt-1">
               <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">
-                <LogOut size={14} strokeWidth={1.8} />
+                <LogOut size={13} strokeWidth={1.8} />
                 <span className="text-[12px] font-medium">Đăng xuất</span>
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
 
