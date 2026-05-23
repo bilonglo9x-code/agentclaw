@@ -21,6 +21,8 @@ import { useAgentDetail } from "@/hooks/useAgentDetail";
 import { useSessionsHistory } from "@/hooks/useSessionsHistory";
 import { useShares } from "@/hooks/useShares";
 import { useAuth } from "@/context/AuthContext";
+import { useModels } from "@/hooks/useModels";
+import { useCreateAgent } from "@/hooks/useCreateAgent";
 
 type Tab = "overview" | "files" | "sessions" | "config" | "shares";
 
@@ -81,11 +83,14 @@ export default function AgentDetailScreen() {
   const { agent, files, loading, error, refresh } = useAgentDetail(id);
   const { sessions, loading: sessLoading, deleteSession } = useSessionsHistory();
   const { shares, loading: sharesLoading, grantShare, revokeShare } = useShares(id);
+  const { models: allModels } = useModels();
+  const { updateAgent, saving: savingModel } = useCreateAgent();
   const [tab, setTab] = useState<Tab>("overview");
   const [showShareModal, setShowShareModal] = useState(false);
   const [newUserId, setNewUserId] = useState("");
   const [newRole, setNewRole] = useState<"user" | "admin">("user");
   const [granting, setGranting] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
@@ -105,6 +110,17 @@ export default function AgentDetailScreen() {
       Alert.alert("Lỗi", "Không thể export agent");
     }
   }, [agent, connected]);
+
+  const handleChangeModel = useCallback(async (modelName: string) => {
+    if (!agent) return;
+    try {
+      await updateAgent(agent.id, { model: modelName });
+      setShowModelPicker(false);
+      refresh();
+    } catch {
+      Alert.alert("Lỗi", "Không thể đổi model");
+    }
+  }, [agent, updateAgent, refresh]);
 
   const agentSessions = sessions.filter(
     (s) => s.agentName === agent?.agent_key || s.agentName === agent?.name,
@@ -280,6 +296,7 @@ export default function AgentDetailScreen() {
                     {[
                       { icon: "chatbubble-outline" as const, label: "Chat", color: colors.primary, onPress: () => {} },
                       { icon: "search-outline" as const, label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
+                      { icon: "hardware-chip-outline" as const, label: "Đổi Model", color: "#f59e0b", onPress: () => setShowModelPicker(true) },
                       { icon: "library-outline" as const, label: "Memory", color: "#a78bfa", onPress: () => router.push("/memory") },
                       { icon: "share-outline" as const, label: "Export", color: "#22c55e", onPress: handleExport },
                     ].map((a) => (
@@ -294,6 +311,75 @@ export default function AgentDetailScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  {/* Model Picker Modal */}
+                  <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
+                    <View style={styles.modalOverlay}>
+                      <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={styles.modalHeader}>
+                          <View>
+                            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Đổi Model AI</Text>
+                            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
+                              Hiện tại: {agent?.provider} / <Text style={{ color: colors.primary }}>{agent?.model || "—"}</Text>
+                            </Text>
+                          </View>
+                          <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                            <Ionicons name="close" size={20} color={colors.mutedForeground} />
+                          </TouchableOpacity>
+                        </View>
+                        <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+                          {allModels.filter((m) => m.provider === agent?.provider).length === 0 ? (
+                            <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
+                              <Ionicons name="cloud-offline-outline" size={32} color={colors.mutedForeground} />
+                              <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                                {connected ? `Không có model nào cho ${agent?.provider}` : "Kết nối server để xem danh sách model"}
+                              </Text>
+                            </View>
+                          ) : (
+                            allModels
+                              .filter((m) => m.provider === agent?.provider)
+                              .map((m) => {
+                                const active = agent?.model === m.name;
+                                return (
+                                  <TouchableOpacity
+                                    key={m.name}
+                                    onPress={() => handleChangeModel(m.name)}
+                                    style={[styles.modelItem, { borderColor: active ? colors.primary + "50" : colors.border, backgroundColor: active ? colors.primary + "10" : "transparent" }]}
+                                    activeOpacity={0.7}
+                                    disabled={savingModel}
+                                  >
+                                    <View style={{ flex: 1, gap: 2 }}>
+                                      <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: active ? colors.primary : colors.foreground }}>
+                                        {m.display_name || m.name}
+                                      </Text>
+                                      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+                                        {m.name}{m.context_window ? ` · ${(m.context_window / 1000).toFixed(0)}k ctx` : ""}
+                                      </Text>
+                                      {m.capabilities && m.capabilities.length > 0 && (
+                                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
+                                          {m.capabilities.map((c) => (
+                                            <View key={c} style={[styles.capBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                                              <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>{c}</Text>
+                                            </View>
+                                          ))}
+                                        </View>
+                                      )}
+                                    </View>
+                                    {savingModel && active
+                                      ? <ActivityIndicator size="small" color={colors.primary} />
+                                      : active
+                                        ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                                        : m.is_default
+                                          ? <View style={[styles.capBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}><Text style={{ fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" }}>default</Text></View>
+                                          : null}
+                                  </TouchableOpacity>
+                                );
+                              })
+                          )}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </Modal>
                 </View>
               )}
 
@@ -549,6 +635,9 @@ const styles = StyleSheet.create({
   shareRoleBadge: { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
   shareRoleText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  modalBox: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 20, gap: 14 },
+  modelItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
+  capBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
   modalContent: { borderRadius: 24, borderWidth: 1, padding: 20, gap: 14, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },

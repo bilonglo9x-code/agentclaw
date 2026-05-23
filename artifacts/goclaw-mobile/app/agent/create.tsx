@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useCreateAgent, AgentFormData } from "@/hooks/useCreateAgent";
 import { useAgentDetail } from "@/hooks/useAgentDetail";
+import { useModels } from "@/hooks/useModels";
+import { useAuth } from "@/context/AuthContext";
 
 const AGENT_TYPES = [
   { value: "predefined", label: "Predefined", icon: "planet-outline" as const, desc: "Agent được cấu hình sẵn với prompt cụ thể" },
@@ -50,11 +52,14 @@ export default function AgentCreateScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
 
+  const { connected } = useAuth();
   const { createAgent, updateAgent, saving, error, clearError } = useCreateAgent();
   const { agent, loading: loadingAgent } = useAgentDetail(id);
+  const { models: allModels, loading: modelsLoading } = useModels();
 
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState("");
+  const [showModelPicker, setShowModelPicker] = useState(false);
 
   const [form, setForm] = useState<AgentFormData>({
     agent_key: "",
@@ -272,15 +277,91 @@ export default function AgentCreateScreen() {
             </FormField>
 
             <FormField label="Model ID">
+              <TouchableOpacity
+                onPress={() => setShowModelPicker(true)}
+                activeOpacity={0.7}
+                style={[styles.input, styles.modelPickerBtn, { backgroundColor: colors.secondary, borderColor: form.model ? colors.primary + "50" : colors.border }]}
+              >
+                <Ionicons name="hardware-chip-outline" size={14} color={form.model ? colors.primary : colors.mutedForeground} />
+                <Text style={{ flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: form.model ? colors.foreground : colors.mutedForeground }}>
+                  {form.model || "Chọn model..."}
+                </Text>
+                {modelsLoading
+                  ? <ActivityIndicator size="small" color={colors.mutedForeground} />
+                  : <Ionicons name="chevron-down" size={14} color={colors.mutedForeground} />}
+              </TouchableOpacity>
+              {/* Manual override text */}
               <TextInput
-                style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+                style={[styles.inputSmall, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground, marginTop: 6 }]}
                 value={form.model}
                 onChangeText={set("model")}
-                placeholder="vd: gpt-4o, claude-3-5-sonnet..."
+                placeholder="Hoặc nhập model ID thủ công..."
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="none"
               />
             </FormField>
+
+            {/* Model Picker Modal */}
+            <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={[styles.modalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>Chọn Model</Text>
+                    <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                      <Ionicons name="close" size={20} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
+                    {form.provider} — {allModels.filter((m) => m.provider === form.provider).length} models
+                  </Text>
+                  <ScrollView style={{ maxHeight: 380 }}>
+                    {allModels.filter((m) => m.provider === form.provider || !form.provider).length === 0
+                      ? (
+                        <Text style={[styles.modalSub, { color: colors.mutedForeground, textAlign: "center", marginTop: 24 }]}>
+                          {connected ? "Không có model nào" : "Kết nối server để xem danh sách model"}
+                        </Text>
+                      )
+                      : allModels
+                          .filter((m) => m.provider === form.provider || !form.provider)
+                          .map((m) => {
+                            const active = form.model === m.name;
+                            return (
+                              <TouchableOpacity
+                                key={m.name}
+                                onPress={() => { setForm((f) => ({ ...f, model: m.name })); setShowModelPicker(false); }}
+                                style={[styles.modelItem, { borderColor: active ? colors.primary + "50" : colors.border, backgroundColor: active ? colors.primary + "10" : "transparent" }]}
+                                activeOpacity={0.7}
+                              >
+                                <View style={{ flex: 1, gap: 2 }}>
+                                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: active ? colors.primary : colors.foreground }}>
+                                    {m.display_name || m.name}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+                                    {m.name}{m.context_window ? ` · ${(m.context_window / 1000).toFixed(0)}k ctx` : ""}
+                                  </Text>
+                                  {m.capabilities && m.capabilities.length > 0 && (
+                                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
+                                      {m.capabilities.map((c) => (
+                                        <View key={c} style={[styles.capBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                                          <Text style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>{c}</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  )}
+                                </View>
+                                {active && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+                                {m.is_default && !active && (
+                                  <View style={[styles.capBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
+                                    <Text style={{ fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" }}>default</Text>
+                                  </View>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
           </View>
 
           {/* Advanced */}
@@ -411,4 +492,13 @@ const styles = StyleSheet.create({
   statusChip: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingVertical: 9 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  modelPickerBtn: { flexDirection: "row", alignItems: "center", gap: 8 },
+  inputSmall: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, fontSize: 12, fontFamily: "Inter_400Regular" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  modalBox: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 20, gap: 14 },
+  modalHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  modalSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  modelItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
+  capBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
 });
