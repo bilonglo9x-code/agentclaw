@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useMemory, MemoryDocument, EpisodicSummary } from "@/hooks/useMemory";
+import { SearchBar } from "@/components/SearchBar";
 import { useAgents } from "@/hooks/useAgents";
 import { useAuth } from "@/context/AuthContext";
 
@@ -57,12 +58,30 @@ export default function MemoryScreen() {
   const { agents } = useAgents();
   const [selectedAgent, setSelectedAgent] = useState<string | undefined>(undefined);
   const [tab, setTab] = useState<Tab>("documents");
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { documents: liveDocs, episodic: liveEpisodic, loading, error, refresh, deleteDocument } = useMemory(selectedAgent);
 
   const documents = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS;
   const episodic = connected && liveEpisodic.length > 0 ? liveEpisodic : MOCK_EPISODIC;
+  const filteredDocs = useMemo(() => {
+    if (!search.trim()) return documents;
+    const q = search.toLowerCase();
+    return documents.filter((d) =>
+      d.path.toLowerCase().includes(q) || (d.agent_id ?? "").toLowerCase().includes(q),
+    );
+  }, [documents, search]);
+  const filteredEpisodic = useMemo(() => {
+    if (!search.trim()) return episodic;
+    const q = search.toLowerCase();
+    return episodic.filter((e) =>
+      (e.summary ?? "").toLowerCase().includes(q) ||
+      (e.agent_id ?? "").toLowerCase().includes(q) ||
+      (e.key_topics ?? []).some((t: string) => t.toLowerCase().includes(q)),
+    );
+  }, [episodic, search]);
 
   const handleDelete = (path: string) => {
     Alert.alert("Xóa tài liệu", `Xóa "${path}" khỏi memory?`, [
@@ -94,10 +113,23 @@ export default function MemoryScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Memory</Text>
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm memory docs, agent..." />
+        </View>
+      )}
 
       {/* Summary stats */}
       <View style={styles.statsRow}>
@@ -183,7 +215,7 @@ export default function MemoryScreen() {
 
       {tab === "documents" && (
         <FlatList
-          data={documents}
+          data={filteredDocs}
           keyExtractor={(d) => d.path}
           renderItem={({ item }) => {
             const agentColor = item.agent_id ? (AGENT_COLORS[item.agent_id] ?? colors.primary) : colors.primary;
@@ -224,7 +256,7 @@ export default function MemoryScreen() {
 
       {tab === "episodic" && (
         <FlatList
-          data={episodic}
+          data={filteredEpisodic}
           keyExtractor={(e) => e.id}
           renderItem={({ item }) => {
             const agentColor = AGENT_COLORS[item.agent_id] ?? colors.primary;
@@ -348,4 +380,5 @@ const styles = StyleSheet.create({
   statText: { fontSize: 11, fontFamily: "Inter_400Regular" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

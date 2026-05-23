@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useEvents, LiveEvent } from "@/hooks/useEvents";
+import { SearchBar } from "@/components/SearchBar";
 
 const SOURCE_CONFIG: Record<string, { color: string; icon: keyof typeof Ionicons["glyphMap"]; label: string }> = {
   agent: { color: "#f97316", icon: "planet-outline", label: "Agent" },
@@ -67,6 +68,8 @@ export default function EventsScreen() {
   const { events: liveEvents, connected, clear } = useEvents();
   const listRef = useRef<FlatList>(null);
   const [paused, setPaused] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -82,8 +85,17 @@ export default function EventsScreen() {
   const filtered = useMemo(() => {
     let evts = sourceFilter === "all" ? allEvents : allEvents.filter((e) => e.source === sourceFilter);
     if (agentFilter !== "all") evts = evts.filter((e) => e.agentName === agentFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      evts = evts.filter((e) =>
+        (e.summary ?? "").toLowerCase().includes(q) ||
+        (e.agentName ?? "").toLowerCase().includes(q) ||
+        (e.type ?? "").toLowerCase().includes(q) ||
+        e.source.toLowerCase().includes(q),
+      );
+    }
     return evts;
-  }, [allEvents, sourceFilter, agentFilter]);
+  }, [allEvents, sourceFilter, agentFilter, search]);
 
   const countBySource = allEvents.reduce<Record<string, number>>((acc, e) => {
     acc[e.source] = (acc[e.source] ?? 0) + 1;
@@ -112,6 +124,13 @@ export default function EventsScreen() {
           )}
         </View>
         <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setPaused(!paused)}
           style={[styles.iconBtn, { backgroundColor: paused ? "#f59e0b20" : colors.muted }]}
           activeOpacity={0.7}
@@ -122,6 +141,12 @@ export default function EventsScreen() {
           <Ionicons name="trash-outline" size={15} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm event, agent, type..." />
+        </View>
+      )}
 
       {/* Stats bar */}
       <View style={styles.statsBar}>
@@ -334,4 +359,5 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 8, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   emptySubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useProviders, ProviderData } from "@/hooks/useProviders";
+import { SearchBar } from "@/components/SearchBar";
 
 const PROVIDER_ICONS: Record<string, { color: string; icon: keyof typeof Ionicons["glyphMap"] }> = {
   openai: { color: "#10b981", icon: "sparkles-outline" },
@@ -163,12 +164,23 @@ export default function ProvidersScreen() {
   const router = useRouter();
   const { providers: liveProviders, loading, error, toggle, refresh } = useProviders();
   const [compareMode, setCompareMode] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const providers = liveProviders.length > 0 ? liveProviders : MOCK_PROVIDERS;
   const enabledCount = providers.filter((p) => p.enabled).length;
+  const filteredProviders = useMemo(() => {
+    if (!search.trim()) return providers;
+    const q = search.toLowerCase();
+    return providers.filter((p) =>
+      (p.display_name ?? p.name ?? "").toLowerCase().includes(q) ||
+      (p.name ?? "").toLowerCase().includes(q) ||
+      (p.api_base ?? "").toLowerCase().includes(q),
+    );
+  }, [providers, search]);
   const selectedProviders = providers.filter((p) => selectedIds.has(p.id));
 
   const toggleSelect = (id: string) => {
@@ -195,10 +207,23 @@ export default function ProvidersScreen() {
           <Ionicons name="git-compare-outline" size={14} color={compareMode ? colors.primary : colors.mutedForeground} />
           <Text style={[styles.compareBtnText, { color: compareMode ? colors.primary : colors.mutedForeground }]}>Compare</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm provider..." />
+        </View>
+      )}
 
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -240,7 +265,7 @@ export default function ProvidersScreen() {
       )}
 
       <FlatList
-        data={providers}
+        data={filteredProviders}
         keyExtractor={(p) => p.id}
         renderItem={({ item }) => {
           const cfg = PROVIDER_ICONS[item.provider_type] ?? { color: colors.primary, icon: "server-outline" as const };
@@ -402,4 +427,5 @@ const styles = StyleSheet.create({
   updatedAt: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });

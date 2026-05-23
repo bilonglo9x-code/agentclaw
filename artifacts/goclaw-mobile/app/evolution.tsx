@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useEvolution, EvolutionSuggestion } from "@/hooks/useEvolution";
+import { SearchBar } from "@/components/SearchBar";
 import { useAgents } from "@/hooks/useAgents";
 import { useAuth } from "@/context/AuthContext";
 
@@ -127,10 +128,22 @@ export default function EvolutionScreen() {
   const { connected } = useAuth();
   const { agents } = useAgents();
   const [selectedAgent, setSelectedAgent] = useState<string>(paramAgentId ?? "");
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const { suggestions, toolAggs, statusFilter, setStatusFilter, loading, updating, error, refresh, updateSuggestion } =
     useEvolution(selectedAgent || undefined);
+  const filteredSuggestions = useMemo(() => {
+    if (!search.trim()) return suggestions;
+    const q = search.toLowerCase();
+    return suggestions.filter((s) =>
+      (s.type ?? "").toLowerCase().includes(q) ||
+      (s.title ?? "").toLowerCase().includes(q) ||
+      (s.content ?? "").toLowerCase().includes(q) ||
+      (s.rationale ?? "").toLowerCase().includes(q),
+    );
+  }, [suggestions, search]);
 
   const agent = agents.find((a) => a.id === selectedAgent);
 
@@ -157,10 +170,23 @@ export default function EvolutionScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Evolution</Text>
           {agent && <Text style={[styles.agentTag, { color: colors.primary }]}>{agent.display_name ?? agent.agent_key}</Text>}
         </View>
+        <TouchableOpacity
+          onPress={() => setShowSearch((v) => !v)}
+          style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.muted }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={15} color={showSearch ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
         </TouchableOpacity>
       </View>
+
+      {showSearch && (
+        <View style={styles.searchWrap}>
+          <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm suggestion, type..." />
+        </View>
+      )}
 
       {/* Agent selector */}
       {agents.length > 0 && (
@@ -246,7 +272,7 @@ export default function EvolutionScreen() {
         </View>
       ) : (
         <FlatList
-          data={suggestions}
+          data={filteredSuggestions}
           keyExtractor={(s) => s.id}
           renderItem={({ item }) => (
             <SuggestionCard
@@ -325,4 +351,5 @@ const styles = StyleSheet.create({
   reviewedBy: { fontSize: 10, fontFamily: "Inter_400Regular" },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 30 },
+  searchWrap: { paddingHorizontal: 14, paddingBottom: 6 },
 });
