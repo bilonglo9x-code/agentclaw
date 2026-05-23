@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Bot, Users, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { Loader2, Bot, Users, PanelRightOpen, PanelRightClose, Search, X } from "lucide-react";
 import { useHttp } from "@/hooks/use-ws";
 import { useAuthStore } from "@/stores/use-auth-store";
+import { cn } from "@/lib/utils";
 import type { RunActivity, ActiveTeamTask } from "@/types/chat";
 import type { AgentData } from "@/types/agent";
 import type { SessionInfo } from "@/types/session";
@@ -17,6 +18,10 @@ interface ChatTopBarProps {
   taskPanelOpen?: boolean;
   /** Current session — when provided, the bar renders a context-usage badge. */
   session?: SessionInfo | null;
+  showSearch?: boolean;
+  searchQuery?: string;
+  onSearchToggle?: () => void;
+  onSearchChange?: (q: string) => void;
 }
 
 const phaseLabels: Record<RunActivity["phase"], string> = {
@@ -28,11 +33,12 @@ const phaseLabels: Record<RunActivity["phase"], string> = {
   leader_processing: "Processing team results…",
 };
 
-export function ChatTopBar({ agentId, isRunning, isBusy, activity, teamTasks, onToggleTaskPanel, taskPanelOpen, session }: ChatTopBarProps) {
+export function ChatTopBar({ agentId, isRunning, isBusy, activity, teamTasks, onToggleTaskPanel, taskPanelOpen, session, showSearch, searchQuery, onSearchToggle, onSearchChange }: ChatTopBarProps) {
   const http = useHttp();
   const { t } = useTranslation("chat");
   const connected = useAuthStore((s) => s.connected);
   const [agent, setAgent] = useState<{ name: string; emoji?: string } | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch agent display info (lightweight, cached per agentId)
   useEffect(() => {
@@ -81,66 +87,113 @@ export function ChatTopBar({ agentId, isRunning, isBusy, activity, teamTasks, on
     return d;
   })();
 
+  // Auto-focus search input when search opens
+  useEffect(() => {
+    if (showSearch) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
+  }, [showSearch]);
+
   return (
-    <div className="flex items-center justify-between border-b px-4 py-1.5">
-      <div className="flex items-center gap-2">
-        {emoji ? (
-          <span className="text-base">{emoji}</span>
-        ) : (
-          <Bot className="h-4 w-4 text-muted-foreground" />
-        )}
-        <span className="text-sm font-semibold">{displayName}</span>
-      </div>
+    <div className="border-b">
+      {/* Main top bar row */}
+      <div className="flex items-center justify-between px-4 py-1.5">
+        <div className="flex items-center gap-2">
+          {emoji ? (
+            <span className="text-base">{emoji}</span>
+          ) : (
+            <Bot className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm font-semibold">{displayName}</span>
+        </div>
 
-      <div className="flex items-center gap-2">
-        {usage && (
-          <div
-            className={`hidden sm:flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] ${usage.color}`}
-            title={t("contextUsage.tooltip", {
-              used: usage.used.toLocaleString(),
-              max: usage.max.toLocaleString(),
-              percent: usage.percent,
-              compactions: session?.compactionCount ?? 0,
-              lastCompact: lastCompaction ? lastCompaction.toLocaleString() : t("contextUsage.never"),
-            })}
-          >
-            <span className="font-mono">
-              {usage.used.toLocaleString()}/{usage.max.toLocaleString()}
-            </span>
-            <span className="opacity-70">({usage.percent}%)</span>
-          </div>
-        )}
-        {isRunning ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span>{activity ? phaseLabels[activity.phase] : "Running…"}</span>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          </div>
-        ) : isBusy ? (
+        <div className="flex items-center gap-2">
+          {usage && (
+            <div
+              className={`hidden sm:flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] ${usage.color}`}
+              title={t("contextUsage.tooltip", {
+                used: usage.used.toLocaleString(),
+                max: usage.max.toLocaleString(),
+                percent: usage.percent,
+                compactions: session?.compactionCount ?? 0,
+                lastCompact: lastCompaction ? lastCompaction.toLocaleString() : t("contextUsage.never"),
+              })}
+            >
+              <span className="font-mono">
+                {usage.used.toLocaleString()}/{usage.max.toLocaleString()}
+              </span>
+              <span className="opacity-70">({usage.percent}%)</span>
+            </div>
+          )}
+          {isRunning ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>{activity ? phaseLabels[activity.phase] : "Running…"}</span>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            </div>
+          ) : isBusy ? (
+            <button
+              type="button"
+              onClick={onToggleTaskPanel}
+              className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>Team: {teamTasks.length} task{teamTasks.length > 1 ? "s" : ""} active</span>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            </button>
+          ) : (
+            <span className="text-xs text-muted-foreground/50">Ready</span>
+          )}
+
+          {/* Task panel toggle */}
+          {teamTasks.length > 0 && (
+            <button
+              type="button"
+              onClick={onToggleTaskPanel}
+              className="relative rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              title={taskPanelOpen ? "Close task panel" : "Open task panel"}
+            >
+              <PanelIcon className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Search toggle button */}
           <button
             type="button"
-            onClick={onToggleTaskPanel}
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            onClick={onSearchToggle}
+            className={cn(
+              "rounded-md p-1.5 hover:bg-accent hover:text-accent-foreground",
+              showSearch ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+            )}
+            title={showSearch ? "Close search" : "Search messages"}
           >
-            <Users className="h-3.5 w-3.5" />
-            <span>Team: {teamTasks.length} task{teamTasks.length > 1 ? "s" : ""} active</span>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            {showSearch ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
           </button>
-        ) : (
-          <span className="text-xs text-muted-foreground/50">Ready</span>
-        )}
-
-        {/* Task panel toggle — visible when there are (or recently were) team tasks */}
-        {teamTasks.length > 0 && (
-          <button
-            type="button"
-            onClick={onToggleTaskPanel}
-            className="relative rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            title={taskPanelOpen ? "Close task panel" : "Open task panel"}
-          >
-            <PanelIcon className="h-4 w-4" />
-          </button>
-        )}
+        </div>
       </div>
+
+      {/* Inline search bar */}
+      {showSearch && (
+        <div className="flex items-center gap-2 border-t px-4 py-2">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery ?? ""}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder="Tìm trong cuộc trò chuyện..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange?.("")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

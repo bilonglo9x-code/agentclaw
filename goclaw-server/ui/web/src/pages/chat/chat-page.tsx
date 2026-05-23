@@ -153,6 +153,27 @@ export function ChatPage() {
   useVirtualKeyboard();
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [taskPanelOpen, setTaskPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages;
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => typeof m.content === "string" && m.content.toLowerCase().includes(q));
+  }, [messages, searchQuery]);
+
+  const handleSearchToggle = useCallback(() => {
+    setShowSearch((v) => {
+      if (v) setSearchQuery("");
+      return !v;
+    });
+  }, []);
+
+  // Reset search when switching sessions
+  useEffect(() => {
+    setSearchQuery("");
+    setShowSearch(false);
+  }, [sessionKey]);
 
   // Auto-open task panel when first task appears, auto-close when all done.
   const prevTaskCountRef = useRef(0);
@@ -243,6 +264,10 @@ export function ChatPage() {
             onToggleTaskPanel={() => setTaskPanelOpen((v) => !v)}
             taskPanelOpen={taskPanelOpen}
             session={sessions.find((s) => s.key === sessionKey) ?? null}
+            showSearch={showSearch}
+            searchQuery={searchQuery}
+            onSearchToggle={handleSearchToggle}
+            onSearchChange={setSearchQuery}
           />
         </div>
 
@@ -254,7 +279,7 @@ export function ChatPage() {
 
         <DropZone onDrop={handleDropFiles}>
           <ChatThread
-            messages={messages}
+            messages={filteredMessages}
             streamText={streamText}
             thinkingText={thinkingText}
             toolStream={toolStream}

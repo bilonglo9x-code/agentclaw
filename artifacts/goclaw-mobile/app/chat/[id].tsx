@@ -237,6 +237,8 @@ export default function ChatScreen() {
   const { connected } = useAuth();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [pickerProvider, setPickerProvider] = useState<string>("");
   const [attachments, setAttachments] = useState<AttachedImage[]>([]);
@@ -295,7 +297,10 @@ export default function ChatScreen() {
 
   const useLive = connected && !!sessionKey && liveMessages.length > 0;
 
-  const displayMessages = useLive ? liveMessages : mockMessages;
+  const rawDisplayMessages = useLive ? liveMessages : mockMessages;
+  const displayMessages = searchQuery.trim()
+    ? rawDisplayMessages.filter((m) => typeof m.content === "string" && m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : rawDisplayMessages;
 
   const agentName = conversation?.agentName ?? id?.split(":")[1] ?? "Agent";
   const model = conversation?.model ?? "";
@@ -393,8 +398,17 @@ export default function ChatScreen() {
         </View>
 
         <View style={styles.headerActions}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={16} color={colors.mutedForeground} />
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: showSearch ? colors.primary + "22" : colors.secondary }]}
+            activeOpacity={0.7}
+            onPress={() => {
+              setShowSearch((v) => {
+                if (v) setSearchQuery("");
+                return !v;
+              });
+            }}
+          >
+            <Ionicons name={showSearch ? "close" : "search-outline"} size={16} color={showSearch ? colors.primary : colors.mutedForeground} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: showMenu ? colors.primary + "22" : colors.secondary }]}
@@ -405,6 +419,31 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Inline search bar */}
+      {showSearch && (
+        <View style={[styles.searchBar, { backgroundColor: colors.secondary, borderBottomColor: colors.border }]}>
+          <Ionicons name="search-outline" size={15} color={colors.mutedForeground} />
+          <TextInput
+            autoFocus
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Tìm trong cuộc trò chuyện..."
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.searchInput, { color: colors.foreground }]}
+          />
+          {searchQuery.length > 0 && (
+            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginRight: 4 }}>
+              {displayMessages.length} kết quả
+            </Text>
+          )}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {showMenu && (
         <>
@@ -689,6 +728,8 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular", maxHeight: 120 },
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  searchBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
   menuBackdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 },
   menuDropdown: {
     position: "absolute",
