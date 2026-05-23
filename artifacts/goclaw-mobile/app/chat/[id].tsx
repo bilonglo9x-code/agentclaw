@@ -5,6 +5,7 @@ import {
   Clipboard,
   FlatList,
   Image,
+  Modal,
   Platform,
   ScrollView,
   Share,
@@ -23,6 +24,9 @@ import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useModels } from "@/hooks/useModels";
+import { useAgents } from "@/hooks/useAgents";
+import { useCreateAgent } from "@/hooks/useCreateAgent";
 import * as Haptics from "expo-haptics";
 
 interface AttachedImage {
@@ -233,7 +237,15 @@ export default function ChatScreen() {
   const { connected } = useAuth();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [pickerProvider, setPickerProvider] = useState<string>("");
   const [attachments, setAttachments] = useState<AttachedImage[]>([]);
+
+  const { models: allModels } = useModels();
+  const { agents } = useAgents();
+  const { updateAgent, saving: savingModel } = useCreateAgent();
+
+  const providers = Array.from(new Set(allModels.map((m) => m.provider))).filter(Boolean);
   const inputRef = useRef<TextInput>(null);
 
   const handlePickImage = useCallback(async () => {
@@ -289,6 +301,7 @@ export default function ChatScreen() {
   const model = conversation?.model ?? "";
 
   const handleExport = useCallback(() => {
+    setShowMenu(false);
     const msgs = displayMessages;
     if (!msgs.length) {
       Alert.alert("Không có tin nhắn", "Session này chưa có nội dung để xuất.");
@@ -307,7 +320,6 @@ export default function ChatScreen() {
       lines.push("");
     });
     Share.share({ message: lines.join("\n"), title: `GoClaw — ${agentName}` }).catch(() => {});
-    setShowMenu(false);
   }, [displayMessages, agentName]);
 
   const handleSend = useCallback(() => {
@@ -361,7 +373,14 @@ export default function ChatScreen() {
             )}
           </View>
           {model ? (
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                const currentAgent = agents.find((a) => a.agent_key === agentName);
+                setPickerProvider(currentAgent?.provider ?? "");
+                setShowModelPicker(true);
+              }}
+            >
               <View style={[styles.modelBadge, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Text style={[styles.modelBadgeText, { color: colors.mutedForeground }]}>
                   {model} ▾
@@ -388,18 +407,120 @@ export default function ChatScreen() {
       </View>
 
       {showMenu && (
-        <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={styles.menuItem} onPress={handleExport} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={16} color={colors.foreground} />
-            <Text style={[styles.menuItemText, { color: colors.foreground }]}>Xuất cuộc trò chuyện</Text>
-          </TouchableOpacity>
-          <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => setShowMenu(false)}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.foreground} />
-            <Text style={[styles.menuItemText, { color: colors.foreground }]}>Thông tin session</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <TouchableOpacity
+            style={styles.menuBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowMenu(false)}
+          />
+          <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleExport} activeOpacity={0.7}>
+              <Ionicons name="share-outline" size={16} color={colors.foreground} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>Xuất cuộc trò chuyện</Text>
+            </TouchableOpacity>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => setShowMenu(false)}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.foreground} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>Thông tin session</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
+
+      {/* Model Picker Modal */}
+      <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
+        <View style={styles.modelModalOverlay}>
+          <View style={[styles.modelModalBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modelModalHeader}>
+              <View>
+                <Text style={[styles.modelModalTitle, { color: colors.foreground }]}>Đổi Provider & Model</Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
+                  Agent: <Text style={{ color: colors.primary }}>{agentName}</Text>
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowModelPicker(false)}>
+                <Ionicons name="close" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Provider chips */}
+            <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 }}>Provider</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              <View style={{ flexDirection: "row", gap: 8, paddingVertical: 2 }}>
+                {(providers.length > 0 ? providers : ["openai", "anthropic", "gemini", "groq", "ollama"]).map((p) => {
+                  const active = pickerProvider === p;
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      onPress={() => setPickerProvider(p)}
+                      style={[styles.providerChip, { backgroundColor: active ? colors.primary + "18" : colors.secondary, borderColor: active ? colors.primary : colors.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: active ? colors.primary : colors.mutedForeground }}>{p}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* Model list */}
+            <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 }}>Model</Text>
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {allModels.filter((m) => !pickerProvider || m.provider === pickerProvider).length === 0 ? (
+                <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
+                  <Ionicons name="cloud-offline-outline" size={28} color={colors.mutedForeground} />
+                  <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                    {connected ? "Không có model nào" : "Kết nối server để xem danh sách model"}
+                  </Text>
+                </View>
+              ) : (
+                allModels
+                  .filter((m) => !pickerProvider || m.provider === pickerProvider)
+                  .map((m) => {
+                    const active = model === m.name;
+                    return (
+                      <TouchableOpacity
+                        key={m.name}
+                        onPress={async () => {
+                          const currentAgent = agents.find((a) => a.agent_key === agentName);
+                          if (currentAgent) {
+                            try {
+                              await updateAgent(currentAgent.id, { model: m.name, provider: m.provider });
+                            } catch {
+                              Alert.alert("Lỗi", "Không thể đổi model");
+                            }
+                          }
+                          setShowModelPicker(false);
+                        }}
+                        style={[styles.modelPickItem, { borderColor: active ? colors.primary + "50" : colors.border, backgroundColor: active ? colors.primary + "10" : "transparent" }]}
+                        activeOpacity={0.7}
+                        disabled={savingModel}
+                      >
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: active ? colors.primary : colors.foreground }}>
+                            {m.display_name || m.name}
+                          </Text>
+                          <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+                            {m.name}{m.context_window ? ` · ${(m.context_window / 1000).toFixed(0)}k ctx` : ""}{m.provider !== pickerProvider && ` · ${m.provider}`}
+                          </Text>
+                        </View>
+                        {savingModel && active
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : active
+                            ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                            : m.is_default
+                              ? <View style={[styles.defaultBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
+                                  <Text style={{ fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" }}>default</Text>
+                                </View>
+                              : null}
+                      </TouchableOpacity>
+                    );
+                  })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <FlatList
         data={[...displayMessages].reverse()}
@@ -568,6 +689,7 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular", maxHeight: 120 },
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  menuBackdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 },
   menuDropdown: {
     position: "absolute",
     top: 0,
@@ -586,4 +708,11 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
   menuItemText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   menuDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 10 },
+  modelModalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  modelModalBox: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 20, gap: 14 },
+  modelModalHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  modelModalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  providerChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
+  modelPickItem: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
+  defaultBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
 });
