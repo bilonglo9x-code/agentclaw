@@ -8,5 +8,6 @@ export const modules: ModuleMap = {
   "./components/mockups/mobile/NavArchitecture.tsx": () => import("../components/mockups/mobile/NavArchitecture.tsx"),
   "./components/mockups/mobile-redesign/DirectionA.tsx": () => import("../components/mockups/mobile-redesign/DirectionA.tsx"),
   "./components/mockups/mobile-redesign/DirectionB.tsx": () => import("../components/mockups/mobile-redesign/DirectionB.tsx"),
-  "./components/mockups/mobile-redesign/DirectionC.tsx": () => import("../components/mockups/mobile-redesign/DirectionC.tsx")
+  "./components/mockups/mobile-redesign/DirectionC.tsx": () => import("../components/mockups/mobile-redesign/DirectionC.tsx"),
+  "./components/mockups/mobile-redesign/WebDesktop.tsx": () => import("../components/mockups/mobile-redesign/WebDesktop.tsx")
 };
