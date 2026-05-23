@@ -50,6 +50,21 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev' }}
             type=sha,format=short,prefix=
 
+      - name: Compile Go binaries
+        run: |
+          docker run --rm \
+            -e GITHUB_SHA="${GITHUB_SHA}" \
+            -v "$PWD/goclaw-server:/src" \
+            -w /src \
+            golang:1.26-bookworm \
+            sh -euxc '
+              go mod download
+              mkdir -p internal/webui/dist
+              [ -f internal/webui/dist/index.html ] || printf "<!doctype html>\n" > internal/webui/dist/index.html
+              CGO_ENABLED=0 GOOS=linux go build -tags embedui -ldflags="-s -w -X github.com/nextlevelbuilder/goclaw/cmd.Version=${GITHUB_SHA}" -o /tmp/goclaw .
+              CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /tmp/pkg-helper ./cmd/pkg-helper
+            '
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
