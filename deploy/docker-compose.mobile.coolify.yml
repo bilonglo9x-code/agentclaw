@@ -1,0 +1,10 @@
+services:
+  goclaw-mobile:
+    image: ghcr.io/bilonglo9x-code/agentclaw-mobile:dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
