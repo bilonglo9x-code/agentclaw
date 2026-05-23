@@ -1,6 +1,6 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageSquare, Trash2 } from "lucide-react";
+import { MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { SessionInfo } from "@/types/session";
 
 interface SessionSwitcherProps {
@@ -18,6 +19,7 @@ interface SessionSwitcherProps {
   activeKey: string;
   onSelect: (key: string) => void;
   onDelete?: (key: string) => void;
+  onRename?: (key: string, label: string) => void;
   loading?: boolean;
 }
 
@@ -45,10 +47,13 @@ function sessionLabel(session: SessionInfo): string {
   return scope.length > 24 ? scope.slice(0, 21) + "…" : scope;
 }
 
-export const SessionSwitcher = memo(function SessionSwitcher({ sessions, activeKey, onSelect, onDelete, loading }: SessionSwitcherProps) {
+export const SessionSwitcher = memo(function SessionSwitcher({ sessions, activeKey, onSelect, onDelete, onRename, loading }: SessionSwitcherProps) {
   const { t } = useTranslation("chat");
   const { t: tc } = useTranslation("common");
   const [deleteTarget, setDeleteTarget] = useState<SessionInfo | null>(null);
+  const [renameTarget, setRenameTarget] = useState<SessionInfo | null>(null);
+  const [renameText, setRenameText] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   if (sessions.length === 0 && loading) {
     return (
@@ -93,32 +98,96 @@ export const SessionSwitcher = memo(function SessionSwitcher({ sessions, activeK
                   <span>{formatRelativeTime(session.updated)}</span>
                 </div>
               </div>
-              {onDelete && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(session);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100">
+                {onRename && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
                       e.stopPropagation();
-                      e.preventDefault();
+                      setRenameText(session.label ?? sessionLabel(session));
+                      setRenameTarget(session);
+                      setTimeout(() => renameInputRef.current?.focus(), 50);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setRenameText(session.label ?? sessionLabel(session));
+                        setRenameTarget(session);
+                      }
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    title="Đổi tên"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </span>
+                )}
+                {onDelete && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDeleteTarget(session);
-                    }
-                  }}
-                  className="shrink-0 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 max-sm:opacity-100"
-                  title={t("deleteChat")}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </span>
-              )}
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setDeleteTarget(session);
+                      }
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    title={t("deleteChat")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
       </div>
 
+      {/* Rename dialog */}
+      <Dialog open={!!renameTarget} onOpenChange={(open) => !open && setRenameTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Đổi tên session</DialogTitle>
+            <DialogDescription>Nhập tên mới cho session này.</DialogDescription>
+          </DialogHeader>
+          <Input
+            ref={renameInputRef}
+            value={renameText}
+            onChange={(e) => setRenameText(e.target.value)}
+            placeholder="Tên session..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (renameTarget) {
+                  onRename?.(renameTarget.key, renameText);
+                  setRenameTarget(null);
+                }
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)}>{tc("cancel")}</Button>
+            <Button
+              onClick={() => {
+                if (renameTarget) {
+                  onRename?.(renameTarget.key, renameText);
+                  setRenameTarget(null);
+                }
+              }}
+            >
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>

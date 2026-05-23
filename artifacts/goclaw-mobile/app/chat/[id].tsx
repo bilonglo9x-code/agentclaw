@@ -25,6 +25,7 @@ import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 import { useModels } from "@/hooks/useModels";
+import { Methods } from "@/lib/api/protocol";
 import { useAgents } from "@/hooks/useAgents";
 import { useCreateAgent } from "@/hooks/useCreateAgent";
 import * as Haptics from "expo-haptics";
@@ -234,11 +235,14 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { conversations, getMessages, sendMessage } = useApp();
-  const { connected } = useAuth();
+  const { connected, ws } = useAuth();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showRename, setShowRename] = useState(false);
+  const [renameText, setRenameText] = useState("");
+  const [renameLabel, setRenameLabel] = useState<string>("");
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [pickerProvider, setPickerProvider] = useState<string>("");
   const [attachments, setAttachments] = useState<AttachedImage[]>([]);
@@ -304,6 +308,25 @@ export default function ChatScreen() {
 
   const agentName = conversation?.agentName ?? id?.split(":")[1] ?? "Agent";
   const model = conversation?.model ?? "";
+
+  const handleRenameOpen = useCallback(() => {
+    setShowMenu(false);
+    const current = renameLabel || conversation?.agentName || agentName;
+    setRenameText(current);
+    setShowRename(true);
+  }, [renameLabel, conversation, agentName]);
+
+  const handleRenameConfirm = useCallback(async () => {
+    if (!sessionKey || !ws) return;
+    try {
+      await ws.call(Methods.SESSIONS_PATCH, { key: sessionKey, label: renameText.trim() || null });
+      setRenameLabel(renameText.trim());
+    } catch {
+      Alert.alert("Lỗi", "Không thể đổi tên session");
+    } finally {
+      setShowRename(false);
+    }
+  }, [sessionKey, ws, renameText]);
 
   const handleExport = useCallback(() => {
     setShowMenu(false);
@@ -372,7 +395,7 @@ export default function ChatScreen() {
 
         <View style={styles.agentInfo}>
           <View style={styles.agentNameRow}>
-            <Text style={[styles.agentName, { color: colors.foreground }]}>{agentName}</Text>
+            <Text style={[styles.agentName, { color: colors.foreground }]}>{renameLabel || agentName}</Text>
             {isRunning && (
               <View style={[styles.runningDot, { backgroundColor: colors.primary }]} />
             )}
@@ -453,6 +476,15 @@ export default function ChatScreen() {
             onPress={() => setShowMenu(false)}
           />
           <View style={[styles.menuDropdown, { backgroundColor: colors.card, borderColor: colors.border, top: topPad + 52 }]}>
+            {connected && !!sessionKey && (
+              <>
+                <TouchableOpacity style={styles.menuItem} onPress={handleRenameOpen} activeOpacity={0.7}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.foreground} />
+                  <Text style={[styles.menuItemText, { color: colors.foreground }]}>Đổi tên session</Text>
+                </TouchableOpacity>
+                <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+              </>
+            )}
             <TouchableOpacity style={styles.menuItem} onPress={handleExport} activeOpacity={0.7}>
               <Ionicons name="share-outline" size={16} color={colors.foreground} />
               <Text style={[styles.menuItemText, { color: colors.foreground }]}>Xuất cuộc trò chuyện</Text>
@@ -465,6 +497,42 @@ export default function ChatScreen() {
           </View>
         </>
       )}
+
+      {/* Rename Session Modal */}
+      <Modal visible={showRename} animationType="fade" transparent onRequestClose={() => setShowRename(false)}>
+        <View style={styles.renameOverlay}>
+          <View style={[styles.renameBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.renameTitle, { color: colors.foreground }]}>Đổi tên session</Text>
+            <TextInput
+              style={[styles.renameInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Nhập tên mới..."
+              placeholderTextColor={colors.mutedForeground}
+              autoFocus
+              selectTextOnFocus
+              returnKeyType="done"
+              onSubmitEditing={handleRenameConfirm}
+            />
+            <View style={styles.renameActions}>
+              <TouchableOpacity
+                style={[styles.renameBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={() => setShowRename(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.renameBtnText, { color: colors.mutedForeground }]}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.renameBtn, { backgroundColor: colors.primary }]}
+                onPress={handleRenameConfirm}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.renameBtnText, { color: "#fff" }]}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Model Picker Modal */}
       <Modal visible={showModelPicker} animationType="slide" transparent onRequestClose={() => setShowModelPicker(false)}>
@@ -730,6 +798,13 @@ const styles = StyleSheet.create({
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
+  renameOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 },
+  renameBox: { width: "100%", borderRadius: 16, borderWidth: 1, padding: 20, gap: 16 },
+  renameTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  renameInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular" },
+  renameActions: { flexDirection: "row", gap: 10 },
+  renameBtn: { flex: 1, borderRadius: 10, paddingVertical: 11, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  renameBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   menuBackdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 },
   menuDropdown: {
     position: "absolute",

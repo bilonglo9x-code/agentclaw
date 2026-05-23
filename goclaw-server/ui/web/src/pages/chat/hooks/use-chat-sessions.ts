@@ -74,6 +74,18 @@ export function useChatSessions(agentId: string) {
   }, []);
   useWsEvent(Events.SESSION_UPDATED, handleSessionUpdated);
 
+  const renameSession = useCallback(async (key: string, label: string) => {
+    if (!connected) return;
+    try {
+      await ws.call(Methods.SESSIONS_PATCH, { key, label: label.trim() || null });
+      setSessions((prev) => prev.map((s) => s.key === key ? { ...s, label: label.trim() || undefined } : s));
+      toast.success(i18next.t("sessions:toast.updated"));
+    } catch (err) {
+      toast.error(i18next.t("sessions:toast.updateFailed"), userFriendlyError(err));
+      throw err;
+    }
+  }, [ws, connected]);
+
   return {
     sessions,
     loading,
@@ -81,5 +93,6 @@ export function useChatSessions(agentId: string) {
     refresh: loadSessions,
     buildNewSessionKey,
     deleteSession,
+    renameSession,
   };
 }

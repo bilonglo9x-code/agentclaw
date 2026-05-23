@@ -52,6 +52,7 @@ export function ChatPage() {
     refresh: refreshSessions,
     buildNewSessionKey,
     deleteSession,
+    renameSession,
   } = useChatSessions(agentId);
 
   const {
@@ -105,6 +106,10 @@ export function ChatPage() {
     },
     [navigate],
   );
+
+  const handleRenameSession = useCallback(async (key: string, label: string) => {
+    await renameSession(key, label);
+  }, [renameSession]);
 
   const handleDeleteSession = useCallback(async (key: string) => {
     await deleteSession(key);
@@ -223,6 +228,7 @@ export function ChatPage() {
               activeSessionKey={sessionKey}
               onSessionSelect={handleSessionSelectMobile}
               onDeleteSession={handleDeleteSession}
+              onRenameSession={handleRenameSession}
               onNewChat={handleNewChatMobile}
             />
           </div>
@@ -236,6 +242,7 @@ export function ChatPage() {
           activeSessionKey={sessionKey}
           onSessionSelect={handleSessionSelect}
           onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
           onNewChat={handleNewChat}
         />
       )}
