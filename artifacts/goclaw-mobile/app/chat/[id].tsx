@@ -299,7 +299,7 @@ export default function ChatScreen() {
     sessionKey ?? "",
   );
 
-  const useLive = connected && !!sessionKey && liveMessages.length > 0;
+  const useLive = connected && !!sessionKey;
 
   const rawDisplayMessages = useLive ? liveMessages : mockMessages;
   const displayMessages = searchQuery.trim()
@@ -645,10 +645,23 @@ export default function ChatScreen() {
           );
         }}
         inverted
-        contentContainerStyle={[styles.messageList, { paddingBottom: 16, paddingTop: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.messageList, { paddingBottom: 16, paddingTop: insets.bottom + 80, flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <View style={[styles.emptyChatIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.primary} />
+            </View>
+            <Text style={[styles.emptyChatTitle, { color: colors.foreground }]}>
+              {agentName}
+            </Text>
+            <Text style={[styles.emptyChatSub, { color: colors.mutedForeground }]}>
+              {connected ? "Nhập tin nhắn để bắt đầu cuộc trò chuyện" : "Kết nối server để bắt đầu chat"}
+            </Text>
+          </View>
+        }
       />
 
       <View
@@ -798,6 +811,10 @@ const styles = StyleSheet.create({
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },
+  emptyChat: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32, transform: [{ scaleY: -1 }] },
+  emptyChatIcon: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  emptyChatTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  emptyChatSub: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
   renameOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 },
   renameBox: { width: "100%", borderRadius: 16, borderWidth: 1, padding: 20, gap: 16 },
   renameTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },

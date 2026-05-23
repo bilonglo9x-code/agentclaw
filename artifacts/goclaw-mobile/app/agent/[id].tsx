@@ -294,7 +294,12 @@ export default function AgentDetailScreen() {
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Thao tác nhanh</Text>
                   <View style={styles.actionsRow}>
                     {[
-                      { icon: "chatbubble-outline" as const, label: "Chat", color: colors.primary, onPress: () => {} },
+                      { icon: "chatbubble-outline" as const, label: "Chat", color: colors.primary, onPress: () => {
+                        if (!agent) return;
+                        const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                        const key = `agent:${agent.agent_key}:ws:direct:${uid}`;
+                        router.push(`/chat/${encodeURIComponent(key)}`);
+                      } },
                       { icon: "search-outline" as const, label: "Traces", color: "#60a5fa", onPress: () => router.push("/traces") },
                       { icon: "hardware-chip-outline" as const, label: "Đổi Model", color: "#f59e0b", onPress: () => setShowModelPicker(true) },
                       { icon: "library-outline" as const, label: "Memory", color: "#a78bfa", onPress: () => router.push("/memory") },
