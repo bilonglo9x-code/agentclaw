@@ -17,6 +17,7 @@ import { useUsage } from "@/hooks/useUsage";
 import { useApprovals } from "@/hooks/useApprovals";
 import { useAgents } from "@/hooks/useAgents";
 import { useQuota } from "@/hooks/useQuota";
+import { useEvents } from "@/hooks/useEvents";
 
 type Period = "today" | "7d" | "30d";
 
@@ -128,7 +129,10 @@ export default function DashboardScreen() {
       })
     : ["Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Hôm nay"];
 
-  const costData = [0.12, 0.25, 0.18, 0.34, 0.28, 0.41, 0.38];
+  const { events: liveEvents } = useEvents();
+  const costData = timeseries.length > 0
+    ? timeseries.slice(-7).map((p) => (p as unknown as Record<string, number>).cost ?? 0)
+    : [0.12, 0.25, 0.18, 0.34, 0.28, 0.41, 0.38];
   const costMax = Math.max(...costData, 0.01);
 
   const lastUpdated = loading ? "Đang tải..." : summary ? "Vừa cập nhật" : "Demo data";
@@ -429,15 +433,26 @@ export default function DashboardScreen() {
             <Text style={[styles.viewAll, { color: colors.primary }]}>Xem tất cả →</Text>
           </TouchableOpacity>
         </View>
-        {MOCK_ACTIVITY.map((item, i) => (
-          <View key={item.id} style={[styles.activityRow, { borderBottomColor: colors.border }, i === MOCK_ACTIVITY.length - 1 && { borderBottomWidth: 0 }]}>
-            <View style={[styles.activityIcon, { backgroundColor: item.color + "18" }]}>
-              <Ionicons name={item.icon} size={14} color={item.color} />
+        {(liveEvents.length > 0 ? liveEvents.slice(0, 5) : MOCK_ACTIVITY).map((item, i, arr) => {
+          const isLive = liveEvents.length > 0;
+          const id = isLive ? (item as typeof liveEvents[0]).id : (item as typeof MOCK_ACTIVITY[0]).id;
+          const text = isLive ? (item as typeof liveEvents[0]).summary : (item as typeof MOCK_ACTIVITY[0]).text;
+          const timeVal = isLive
+            ? (() => { const d = Date.now() - (item as typeof liveEvents[0]).timestamp; return d < 60000 ? "vừa xong" : d < 3600000 ? `${Math.floor(d / 60000)}m` : `${Math.floor(d / 3600000)}h`; })()
+            : (item as typeof MOCK_ACTIVITY[0]).time;
+          const status = isLive ? (item as typeof liveEvents[0]).status : undefined;
+          const iconColor = status === "error" ? "#ef4444" : status === "running" ? "#60a5fa" : "#22c55e";
+          const iconName = (status === "error" ? "alert-circle-outline" : status === "running" ? "sync-outline" : "checkmark-circle-outline") as keyof typeof Ionicons["glyphMap"];
+          return (
+            <View key={id} style={[styles.activityRow, { borderBottomColor: colors.border }, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+              <View style={[styles.activityIcon, { backgroundColor: (isLive ? iconColor : (item as typeof MOCK_ACTIVITY[0]).color) + "18" }]}>
+                <Ionicons name={isLive ? iconName as keyof typeof Ionicons["glyphMap"] : (item as typeof MOCK_ACTIVITY[0]).icon} size={14} color={isLive ? iconColor : (item as typeof MOCK_ACTIVITY[0]).color} />
+              </View>
+              <Text style={[styles.activityText, { color: colors.foreground }]} numberOfLines={1}>{text}</Text>
+              <Text style={[styles.activityTime, { color: colors.mutedForeground }]}>{timeVal}</Text>
             </View>
-            <Text style={[styles.activityText, { color: colors.foreground }]} numberOfLines={1}>{item.text}</Text>
-            <Text style={[styles.activityTime, { color: colors.mutedForeground }]}>{item.time}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
       {/* Extra stats from summary */}

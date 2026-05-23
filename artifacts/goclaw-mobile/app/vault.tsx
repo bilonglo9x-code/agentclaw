@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   ScrollView,
@@ -78,7 +79,7 @@ export default function VaultScreen() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const { documents: liveDocs, total: liveTotal, loading, error, refresh, vectorSearch } = useVault(scope, docType);
+  const { documents: liveDocs, total: liveTotal, loading, error, refresh, deleteDocument, vectorSearch } = useVault(scope, docType);
   const [vectorResults, setVectorResults] = useState<VaultDocument[]>([]);
   const [vectorSearching, setVectorSearching] = useState(false);
 
@@ -129,6 +130,27 @@ export default function VaultScreen() {
       else next.add(id);
       return next;
     });
+  };
+
+  const handleDelete = (item: VaultDocument) => {
+    Alert.alert(
+      "Xóa tài liệu",
+      `Xóa "${item.title}"? Hành động này không thể hoàn tác.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDocument(item.id);
+            } catch {
+              Alert.alert("Lỗi", "Không thể xóa tài liệu");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -327,6 +349,16 @@ export default function VaultScreen() {
                       <Text style={[styles.expandedMetaValue, { color: scopeColor }]}>{item.scope}</Text>
                     </View>
                   </View>
+                  {connected && (
+                    <TouchableOpacity
+                      style={[styles.deleteDocBtn, { backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "30" }]}
+                      onPress={(e) => { e.stopPropagation?.(); handleDelete(item); }}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.destructive} />
+                      <Text style={[styles.deleteDocText, { color: colors.destructive }]}>Xóa tài liệu</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             </TouchableOpacity>
@@ -399,4 +431,6 @@ const styles = StyleSheet.create({
   expandedMetaValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  deleteDocBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7, marginTop: 4 },
+  deleteDocText: { fontSize: 13, fontFamily: "Inter_500Medium" },
 });

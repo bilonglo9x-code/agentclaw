@@ -7,6 +7,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -33,6 +34,145 @@ const EXPORT_ITEMS: ExportItem[] = [
   { key: "cron", label: "Cron Jobs", description: "Danh sách cron jobs và lịch chạy", icon: "time-outline", color: "#22c55e", endpoint: "/v1/cron/export" },
   { key: "teams", label: "Teams", description: "Cấu trúc teams và members", icon: "people-circle-outline", color: "#22c55e", endpoint: "/v1/teams/export" },
 ];
+
+const IMPORT_ITEMS = [
+  { key: "agents", label: "Agents", icon: "hardware-chip-outline" as const, color: "#f97316", endpoint: "/v1/agents/import" },
+  { key: "config", label: "System Config", icon: "settings-outline" as const, color: "#60a5fa", endpoint: "/v1/config/import" },
+  { key: "vault", label: "Vault", icon: "archive-outline" as const, color: "#a78bfa", endpoint: "/v1/vault/import" },
+  { key: "skills", label: "Skills", icon: "flash-outline" as const, color: "#f59e0b", endpoint: "/v1/skills/import" },
+  { key: "cron", label: "Cron Jobs", icon: "time-outline" as const, color: "#22c55e", endpoint: "/v1/cron/import" },
+];
+
+interface ImportSectionProps {
+  colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+  connected: boolean;
+  http: ReturnType<typeof import("@/context/AuthContext").useAuth>["http"];
+  serverUrl: string | undefined;
+}
+
+function ImportSection({ colors, connected, http, serverUrl }: ImportSectionProps) {
+  const [selectedType, setSelectedType] = useState<string>("agents");
+  const [jsonText, setJsonText] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async () => {
+    if (!connected || !http) {
+      Alert.alert("Chưa kết nối", "Kết nối máy chủ để import dữ liệu");
+      return;
+    }
+    if (!jsonText.trim()) {
+      Alert.alert("Lỗi", "Vui lòng dán JSON cần import");
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      Alert.alert("JSON không hợp lệ", "Kiểm tra lại cú pháp JSON");
+      return;
+    }
+    const item = IMPORT_ITEMS.find((i) => i.key === selectedType);
+    if (!item) return;
+    Alert.alert(
+      "Xác nhận import",
+      `Import dữ liệu vào ${item.label}? Hành động này có thể ghi đè dữ liệu hiện có.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Import",
+          style: "default",
+          onPress: async () => {
+            setImporting(true);
+            try {
+              await http.post(item.endpoint, parsed as Record<string, unknown>);
+              Alert.alert("Thành công", `Đã import dữ liệu ${item.label}`);
+              setJsonText("");
+            } catch (e) {
+              Alert.alert("Lỗi import", String(e));
+            } finally {
+              setImporting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={[importStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={importStyles.typeRow}>
+        {IMPORT_ITEMS.map((item) => (
+          <TouchableOpacity
+            key={item.key}
+            style={[
+              importStyles.typeChip,
+              { borderColor: selectedType === item.key ? item.color : colors.border, backgroundColor: selectedType === item.key ? item.color + "18" : "transparent" },
+            ]}
+            onPress={() => setSelectedType(item.key)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={item.icon} size={12} color={selectedType === item.key ? item.color : colors.mutedForeground} />
+            <Text style={[importStyles.typeChipText, { color: selectedType === item.key ? item.color : colors.mutedForeground }]}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TextInput
+        style={[importStyles.jsonInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+        placeholder={`Dán JSON ${IMPORT_ITEMS.find((i) => i.key === selectedType)?.label ?? ""} vào đây...`}
+        placeholderTextColor={colors.mutedForeground}
+        value={jsonText}
+        onChangeText={setJsonText}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+        autoCapitalize="none"
+        autoCorrect={false}
+        spellCheck={false}
+      />
+      <View style={importStyles.actions}>
+        {jsonText.length > 0 && (
+          <TouchableOpacity onPress={() => setJsonText("")} activeOpacity={0.7} style={[importStyles.clearBtn, { backgroundColor: colors.muted }]}>
+            <Text style={[importStyles.clearText, { color: colors.mutedForeground }]}>Xóa</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[importStyles.importBtn, { backgroundColor: connected ? colors.primary : colors.muted, opacity: importing ? 0.7 : 1 }]}
+          onPress={handleImport}
+          activeOpacity={0.8}
+          disabled={importing || !connected}
+        >
+          {importing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="cloud-upload-outline" size={15} color={connected ? "#fff" : colors.mutedForeground} />
+          )}
+          <Text style={[importStyles.importBtnText, { color: connected ? "#fff" : colors.mutedForeground }]}>
+            {importing ? "Đang import..." : "Import JSON"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {!connected && (
+        <Text style={[importStyles.hint, { color: colors.mutedForeground }]}>
+          Kết nối tới {serverUrl || "server"} để import
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const importStyles = StyleSheet.create({
+  card: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 12, marginBottom: 16 },
+  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  typeChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
+  typeChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  jsonInput: { borderRadius: 12, borderWidth: 1, padding: 12, fontSize: 12, fontFamily: "monospace", minHeight: 120 },
+  actions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  clearBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  clearText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  importBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 12 },
+  importBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  hint: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center" },
+});
 
 export default function ImportExportScreen() {
   const colors = useColors();
@@ -173,23 +313,7 @@ export default function ImportExportScreen() {
 
         {/* Import section */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 24 }]}>IMPORT</Text>
-        <View style={[styles.importCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="cloud-upload-outline" size={32} color={colors.mutedForeground} />
-          <Text style={[styles.importTitle, { color: colors.foreground }]}>Import từ file JSON</Text>
-          <Text style={[styles.importDesc, { color: colors.mutedForeground }]}>
-            Tính năng import file đang được phát triển. Hiện tại dùng web dashboard để import cấu hình.
-          </Text>
-          <TouchableOpacity
-            style={[styles.webDashBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-            activeOpacity={0.75}
-            onPress={() =>
-              Alert.alert("Truy cập Web Dashboard", `Mở ${serverUrl || "server URL"} trên trình duyệt để import cấu hình.`)
-            }
-          >
-            <Ionicons name="open-outline" size={15} color={colors.mutedForeground} />
-            <Text style={[styles.webDashText, { color: colors.mutedForeground }]}>Mở Web Dashboard</Text>
-          </TouchableOpacity>
-        </View>
+        <ImportSection colors={colors} connected={connected} http={http} serverUrl={serverUrl} />
 
         {/* Tips */}
         <View style={[styles.tipsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
