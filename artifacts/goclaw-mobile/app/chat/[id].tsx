@@ -578,7 +578,7 @@ export default function ChatScreen() {
                 ["Agent", agentName ?? "—"],
                 ["Model", model ?? "—"],
                 ["Tin nhắn", s ? String(s.messageCount ?? displayMessages.length) : String(displayMessages.length)],
-                ["Tokens", s ? String((s.inputTokens ?? 0) + (s.outputTokens ?? 0)) : "—"],
+                ["Tokens", s?.estimatedTokens ? String(s.estimatedTokens) : "—"],
                 ["Cập nhật", s?.updated ? new Date(s.updated).toLocaleString("vi") : "—"],
               ];
               return rows.map(([label, val]) => (
@@ -718,7 +718,8 @@ export default function ChatScreen() {
           );
         }}
         inverted
-        contentContainerStyle={[styles.messageList, { paddingBottom: 16, paddingTop: insets.bottom + 80, flexGrow: 1 }]}
+        style={styles.messageList}
+        contentContainerStyle={{ paddingBottom: 16, paddingTop: 10, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
@@ -740,7 +741,7 @@ export default function ChatScreen() {
       <View
         style={[
           styles.inputArea,
-          { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 },
+          { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 8) + 4 },
         ]}
       >
         <View style={styles.toolbar}>
@@ -839,13 +840,13 @@ const styles = StyleSheet.create({
   activityText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   headerActions: { flexDirection: "row", gap: 6 },
   iconBtn: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
-  messageList: { paddingHorizontal: 14 },
+  messageList: { flex: 1, paddingHorizontal: 14 },
   bubbleWrap: { marginVertical: 5, flexDirection: "row", alignItems: "flex-end", gap: 8 },
   userWrap: { justifyContent: "flex-end" },
   assistantWrap: { justifyContent: "flex-start" },
   agentAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 16 },
-  bubbleContent: { maxWidth: "80%", gap: 3 },
-  bubbleWide: { maxWidth: "100%" },
+  bubbleContent: { maxWidth: "82%", gap: 3, flexShrink: 1, minWidth: 0 },
+  bubbleWide: { maxWidth: "96%" },
   userBubbleContent: { alignItems: "flex-end" },
   toolBadge: {
     flexDirection: "row",
@@ -880,6 +881,7 @@ const styles = StyleSheet.create({
   codeBlock: { borderRadius: 10, borderWidth: 1, overflow: "hidden", marginVertical: 4 },
   codeHeader: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#1e293b" },
   codeLang: { fontSize: 10, fontFamily: "Inter_500Medium", color: "#64748b", textTransform: "uppercase" },
+  codeScroll: { maxHeight: 280 },
   codeText: { fontSize: 12, fontFamily: "monospace", color: "#e2e8f0", padding: 10, lineHeight: 18 },
   inputArea: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingTop: 10, gap: 8 },
   toolbar: { flexDirection: "row", alignItems: "center", gap: 8 },
