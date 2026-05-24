@@ -358,6 +358,7 @@ export default function ChatScreen() {
   const [text, setText] = useState("");
   const draftKey = id ? `goclaw:draft:${id}` : null;
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isComposingRef = useRef(false);
 
   useEffect(() => {
     if (!draftKey) return;
@@ -531,6 +532,7 @@ export default function ChatScreen() {
       sendLive(msgText);
     }
     setText("");
+    if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; }
     if (draftKey) AsyncStorage.removeItem(draftKey);
     setAttachments([]);
   }, [text, attachments, id, sessionKey, sendLive]);
@@ -968,11 +970,15 @@ export default function ChatScreen() {
             maxLength={4000}
             returnKeyType="default"
             onKeyPress={Platform.OS === "web" ? ((e: any) => {
-              if (e.nativeEvent?.key === "Enter" && !e.nativeEvent?.shiftKey) {
+              if (e.nativeEvent?.key === "Enter" && !e.nativeEvent?.shiftKey && !isComposingRef.current) {
                 e.preventDefault?.();
                 if (canSend) handleSend();
               }
             }) : undefined}
+            {...(Platform.OS === "web" ? {
+              onCompositionStart: () => { isComposingRef.current = true; },
+              onCompositionEnd: () => { setTimeout(() => { isComposingRef.current = false; }, 0); },
+            } : {})}
           />
           <TouchableOpacity
             style={[styles.sendBtn, { backgroundColor: canSend ? colors.primary : colors.secondary }]}
