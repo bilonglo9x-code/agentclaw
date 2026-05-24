@@ -1,6 +1,19 @@
 services:
   postgres:
     image: pgvector/pgvector:pg18
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c effective_cache_size=6GB
+      -c work_mem=32MB
+      -c maintenance_work_mem=256MB
+      -c max_connections=50
+      -c wal_buffers=64MB
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-goclaw}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -25,7 +38,7 @@ services:
       - GOCLAW_HOST=0.0.0.0
       - GOCLAW_PORT=18790
       - GOCLAW_CONFIG=/app/data/config.json
-      - GOCLAW_POSTGRES_DSN=postgres://${POSTGRES_USER:-goclaw}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-goclaw}?sslmode=disable
+      - GOCLAW_POSTGRES_DSN=postgres://${POSTGRES_USER:-goclaw}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-goclaw}?sslmode=disable&pool_max_conns=20&pool_min_conns=2
       - GOCLAW_GATEWAY_TOKEN=${GOCLAW_GATEWAY_TOKEN:?GOCLAW_GATEWAY_TOKEN is required}
       - GOCLAW_ENCRYPTION_KEY=${GOCLAW_ENCRYPTION_KEY:?GOCLAW_ENCRYPTION_KEY is required}
       - GOCLAW_SKILLS_DIR=/app/data/skills
@@ -34,6 +47,12 @@ services:
       - goclaw-workspace:/app/workspace
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.http.middlewares.goclaw-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      - "traefik.http.middlewares.goclaw-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,X-GoClaw-Tenant-Id,X-GoClaw-User-Id"
+      - "traefik.http.middlewares.goclaw-cors.headers.accesscontrolalloworiginlist=https://mobile.vnsi.app,https://agent.vnsi.app"
+      - "traefik.http.middlewares.goclaw-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.middlewares.goclaw-cors.headers.addvaryheader=true"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:18790/health"]

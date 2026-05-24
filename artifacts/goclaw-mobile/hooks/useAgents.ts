@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { Methods } from "@/lib/api/protocol";
 
@@ -29,23 +30,29 @@ export function useAgents() {
       setLoading(true);
       setError(null);
       try {
-        if (http) {
-          const res = await http.get<{ agents: AgentData[] }>("/v1/agents");
-          if (res.agents && res.agents.length > 0) {
-            setAgents(res.agents);
-            return;
+        // On web, skip HTTP (CORS). On native, try HTTP first (faster REST).
+        if (Platform.OS !== "web" && http) {
+          try {
+            const res = await http.get<{ agents: AgentData[] }>("/v1/agents");
+            if (res.agents && res.agents.length > 0) {
+              setAgents(res.agents);
+              return;
+            }
+          } catch {
+            // fall through to WS
           }
         }
 
         if (ws) {
-          const res = await ws.call<{ agents: { id: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string }[] }>(
+          const res = await ws.call<{ agents: { id: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string }[] }>(
             Methods.AGENTS_LIST,
           );
           setAgents(
             (res.agents ?? []).map((a) => ({
               id: a.id,
-              agent_key: a.id,
+              agent_key: a.agentKey ?? a.id,
               display_name: a.displayName ?? a.id,
+              provider: a.provider,
               model: a.model,
               agent_type: a.agentType === "predefined" ? "predefined" : "open",
               status: a.isRunning ? "active" : "idle",
