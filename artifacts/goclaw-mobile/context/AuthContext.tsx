@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const wsRef = useRef<WsClient | null>(null);
   const httpRef = useRef<HttpClient | null>(null);
 
-  const buildClients = useCallback((url: string, tok: string, uid: string, sid: string) => {
+  const buildClients = useCallback((url: string, tok: string, uid: string, sid: string, waitForConnect = false): Promise<void> => {
     if (wsRef.current) {
       wsRef.current.disconnect();
     }
@@ -59,27 +59,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const http = new HttpClient(httpBase, () => tok, () => uid);
     httpRef.current = http;
 
-    const ws = new WsClient(
-      wsUrl,
-      () => tok,
-      () => uid,
-      () => sid,
-      (state) => {
-        setConnectionState(state);
-        if (state === "connected") {
-          setRole(ws.role);
-          setTenantName(ws.tenantName);
-          setIsOwner(ws.isOwner);
-          setIsMasterScope(ws.isMasterScope);
-        }
-      },
-    );
-    ws.onAuthFailure = async () => {
-      setAuthError("Token không hợp lệ hoặc bị từ chối bởi máy chủ");
-      await logout();
-    };
-    wsRef.current = ws;
-    ws.connect();
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+
+      const connectTimeout = waitForConnect
+        ? setTimeout(() => settle(() => reject(new Error("Kết nối hết thời gian (30s). Kiểm tra URL và kết nối mạng."))), 30000)
+        : null;
+
+      const ws = new WsClient(
+        wsUrl,
+        () => tok,
+        () => uid,
+        () => sid,
+        (state) => {
+          setConnectionState(state);
+          if (state === "connected") {
+            if (connectTimeout) clearTimeout(connectTimeout);
+            setRole(ws.role);
+            setTenantName(ws.tenantName);
+            setIsOwner(ws.isOwner);
+            setIsMasterScope(ws.isMasterScope);
+            settle(resolve);
+          }
+        },
+      );
+      ws.onAuthFailure = async () => {
+        if (connectTimeout) clearTimeout(connectTimeout);
+        const err = "Token không hợp lệ hoặc bị từ chối bởi máy chủ";
+        setAuthError(err);
+        settle(() => reject(new Error(err)));
+        await logout();
+      };
+      wsRef.current = ws;
+      ws.connect();
+      if (!waitForConnect) settle(resolve);
+    });
   }, []);
 
   const logout = useCallback(async () => {
@@ -99,29 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (url: string, tok: string) => {
     setAuthError(null);
-    const base = url.endsWith("/") ? url.slice(0, -1) : url;
-    // Pre-validate: check server reachable and token accepted via HTTP
-    const testHttp = new HttpClient(base, () => tok, () => "");
-    try {
-      await testHttp.get("/health");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("UNAUTHORIZED") || msg.includes("401") || msg.includes("403")) {
-        throw new Error("Token không hợp lệ");
-      }
-      // Server reachable but /health returned non-auth error → still proceed
-      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("ECONNREFUSED")) {
-        throw new Error(`Không kết nối được máy chủ: ${base}`);
-      }
-    }
     const uid = "";
     const sid = `mobile-${Date.now()}`;
+    await buildClients(url, tok, uid, sid, true);
     const auth: AuthState = { serverUrl: url, token: tok, userId: uid, senderID: sid };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
     setServerUrl(url);
     setToken(tok);
     setUserId(uid);
-    buildClients(url, tok, uid, sid);
   }, [buildClients]);
 
   useEffect(() => {
