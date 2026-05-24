@@ -95,5 +95,28 @@ export function useCron() {
     [ws],
   );
 
-  return { jobs, loading, error, toggle, run, remove, refresh: load };
+  const create = useCallback(
+    async (params: {
+      name: string;
+      agentId: string;
+      schedule: CronSchedule;
+      message?: string;
+      enabled?: boolean;
+    }): Promise<CronJob> => {
+      if (!ws?.isConnected) throw new Error("Not connected");
+      const payload = params.message ? { kind: "message", message: params.message } : undefined;
+      const res = await ws.call<{ job: CronJob }>(Methods.CRON_CREATE, {
+        name: params.name,
+        agentId: params.agentId,
+        schedule: params.schedule,
+        payload,
+        enabled: params.enabled ?? true,
+      });
+      setJobs((prev) => [res.job, ...prev]);
+      return res.job;
+    },
+    [ws],
+  );
+
+  return { jobs, loading, error, toggle, run, remove, create, refresh: load };
 }

@@ -3,11 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,6 +20,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useChannels, ChannelInstance, ChannelStatus } from "@/hooks/useChannels";
+import { useAgents } from "@/hooks/useAgents";
 
 const CHANNEL_ICONS: Record<string, { icon: keyof typeof Ionicons["glyphMap"]; color: string }> = {
   telegram: { icon: "paper-plane-outline", color: "#2AABEE" },
@@ -59,10 +63,17 @@ export default function ChannelsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { instances: liveInst, statuses: liveStatus, loading, error, toggle, refresh } = useChannels();
+  const { instances: liveInst, statuses: liveStatus, loading, error, toggle, create, refresh } = useChannels();
+  const { agents } = useAgents();
   const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [newDisplayName, setNewDisplayName] = useState("");
+  const [newChannelType, setNewChannelType] = useState("telegram");
+  const [newAgentId, setNewAgentId] = useState("");
 
   const allInstances = liveInst;
   const statuses = liveStatus;
@@ -80,11 +91,21 @@ export default function ChannelsScreen() {
   const healthyCount = allInstances.filter((i) => statuses[i.id]?.state === "healthy").length;
   const failedCount = allInstances.filter((i) => statuses[i.id]?.state === "failed").length;
 
-  const handleAddChannel = () => {
-    Alert.alert("Thêm Channel", "Cấu hình channel mới qua web console.\n\nHỗ trợ: Telegram, Slack, WhatsApp, Email, Zalo, Webhook", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Mở Console", onPress: () => {} },
-    ]);
+  const handleAddChannel = () => { setCreateError(null); setShowCreate(true); };
+
+  const submitCreateChannel = async () => {
+    if (!newDisplayName.trim()) { setCreateError("Nhập tên channel"); return; }
+    if (!newAgentId.trim()) { setCreateError("Chọn agent"); return; }
+    setCreating(true); setCreateError(null);
+    try {
+      const name = newDisplayName.trim().toLowerCase().replace(/\s+/g, "_");
+      await create({ name, display_name: newDisplayName.trim(), channel_type: newChannelType, agent_id: newAgentId.trim() });
+      setShowCreate(false); setNewDisplayName(""); setNewAgentId("");
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Lỗi tạo channel");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -247,6 +268,57 @@ export default function ChannelsScreen() {
           </View>
         }
       />
+
+      {/* Create Channel Modal */}
+      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Thêm Channel</Text>
+              <TouchableOpacity onPress={() => setShowCreate(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tên hiển thị *</Text>
+              <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                value={newDisplayName} onChangeText={setNewDisplayName} placeholder="vd: Telegram Main Bot" placeholderTextColor={colors.mutedForeground} />
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Loại channel</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {CHANNEL_TYPES.map((t) => {
+                  const cfg = CHANNEL_ICONS[t] ?? { icon: "radio-outline", color: colors.primary };
+                  return (
+                    <TouchableOpacity key={t} onPress={() => setNewChannelType(t)}
+                      style={[styles.typeChip, { backgroundColor: newChannelType === t ? cfg.color + "20" : colors.secondary, borderColor: newChannelType === t ? cfg.color : colors.border }]}>
+                      <Ionicons name={cfg.icon} size={12} color={newChannelType === t ? cfg.color : colors.mutedForeground} />
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: newChannelType === t ? cfg.color : colors.mutedForeground, textTransform: "capitalize" }}>{t}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Agent *</Text>
+              {agents.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  {agents.map((a) => (
+                    <TouchableOpacity key={a.id} onPress={() => setNewAgentId(a.agent_key)}
+                      style={[styles.typeChip, { backgroundColor: newAgentId === a.agent_key ? colors.primary + "20" : colors.secondary, borderColor: newAgentId === a.agent_key ? colors.primary : colors.border }]}>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: newAgentId === a.agent_key ? colors.primary : colors.foreground }}>{a.display_name ?? a.agent_key}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                  value={newAgentId} onChangeText={setNewAgentId} placeholder="agent_key" placeholderTextColor={colors.mutedForeground} />
+              )}
+              {createError && <Text style={{ color: colors.destructive, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>{createError}</Text>}
+              <TouchableOpacity onPress={submitCreateChannel} disabled={creating}
+                style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: creating ? 0.6 : 1 }]}>
+                {creating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Tạo Channel</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -292,4 +364,13 @@ const styles = StyleSheet.create({
   pairText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, padding: 20, maxHeight: "80%" },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  fieldLabel: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 },
+  fieldInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 12 },
+  typeChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, marginRight: 8 },
+  submitBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 4, marginBottom: 12 },
+  submitBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 });

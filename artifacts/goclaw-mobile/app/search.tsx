@@ -164,7 +164,7 @@ export default function SearchScreen() {
     }
 
     return results;
-  }, [query, category, agents, conversations, router]);
+  }, [query, category, agents, sessions, router]);
 
   const results = buildResults();
   const q = query.trim();

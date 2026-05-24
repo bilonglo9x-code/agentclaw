@@ -77,7 +77,7 @@ export default function TeamsScreen() {
   const [newDesc, setNewDesc] = useState("");
   const [leadKey, setLeadKey] = useState("");
 
-  const teams = connected && liveTeams.length > 0 ? liveTeams : MOCK_TEAMS;
+  const teams = liveTeams;
 
   const handleExpandTeam = async (teamId: string) => {
     if (expandedTeam === teamId) {
@@ -87,7 +87,7 @@ export default function TeamsScreen() {
     setExpandedTeam(teamId);
     if (!taskMap[teamId]) {
       if (!connected) {
-        setTaskMap((prev) => ({ ...prev, [teamId]: MOCK_TASKS[teamId] ?? [] }));
+        setTaskMap((prev) => ({ ...prev, [teamId]: [] }));
         return;
       }
       setLoadingTasks(teamId);

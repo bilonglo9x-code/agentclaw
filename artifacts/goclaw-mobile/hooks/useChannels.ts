@@ -89,5 +89,20 @@ export function useChannels() {
     [ws],
   );
 
-  return { statuses, instances, loading, error, toggle, refresh: load };
+  const create = useCallback(
+    async (params: {
+      name: string;
+      display_name: string;
+      channel_type: string;
+      agent_id: string;
+    }): Promise<ChannelInstance> => {
+      if (!ws?.isConnected) throw new Error("Not connected");
+      const res = await ws.call<{ instance: ChannelInstance }>(Methods.CHANNEL_INSTANCES_CREATE, params);
+      setInstances((prev) => [res.instance, ...prev]);
+      return res.instance;
+    },
+    [ws],
+  );
+
+  return { statuses, instances, loading, error, toggle, create, refresh: load };
 }

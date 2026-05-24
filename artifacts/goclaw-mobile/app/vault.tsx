@@ -83,7 +83,7 @@ export default function VaultScreen() {
   const [vectorResults, setVectorResults] = useState<VaultDocument[]>([]);
   const [vectorSearching, setVectorSearching] = useState(false);
 
-  const rawDocs = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS.filter((d) => {
+  const rawDocs = liveDocs.filter((d) => {
     if (scope !== "all" && d.scope !== scope) return false;
     if (docType !== "all" && d.doc_type !== docType) return false;
     return true;
@@ -118,7 +118,7 @@ export default function VaultScreen() {
     if (!q.trim()) setVectorResults([]);
   };
 
-  const typeCounts = MOCK_DOCS.reduce<Record<string, number>>((acc, d) => {
+  const typeCounts = liveDocs.reduce<Record<string, number>>((acc, d) => {
     acc[d.doc_type] = (acc[d.doc_type] ?? 0) + 1;
     return acc;
   }, {});
@@ -176,13 +176,13 @@ export default function VaultScreen() {
       </View>
 
       {/* Doc type distribution bar */}
-      {MOCK_DOCS.length > 0 && (
+      {liveDocs.length > 0 && (
         <View style={[styles.distBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.distLabel, { color: colors.mutedForeground }]}>PHÂN BỐ</Text>
           <View style={styles.distTrack}>
             {Object.entries(typeCounts).map(([type, count]) => {
               const cfg = DOC_TYPE_ICONS[type] ?? DOC_TYPE_ICONS.document;
-              const pct = (count / MOCK_DOCS.length) * 100;
+              const pct = (count / liveDocs.length) * 100;
               return (
                 <TouchableOpacity
                   key={type}

@@ -3,11 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useCron, CronJob } from "@/hooks/useCron";
+import { useAgents } from "@/hooks/useAgents";
 import * as Haptics from "expo-haptics";
 import { SearchBar } from "@/components/SearchBar";
 
@@ -105,10 +109,20 @@ export default function CronScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { jobs: liveJobs, loading, error, toggle, run, refresh } = useCron();
+  const { jobs: liveJobs, loading, error, toggle, run, remove, create, refresh } = useCron();
+  const { agents } = useAgents();
   const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "disabled" | "error">("all");
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newAgent, setNewAgent] = useState("");
+  const [newScheduleKind, setNewScheduleKind] = useState<"every" | "cron">("every");
+  const [newEveryMin, setNewEveryMin] = useState("60");
+  const [newCronExpr, setNewCronExpr] = useState("0 8 * * *");
+  const [newMessage, setNewMessage] = useState("");
 
   const allJobs = liveJobs;
   const jobs = useMemo(() => {
@@ -126,11 +140,24 @@ export default function CronScreen() {
   const activeCount = allJobs.filter((j) => j.enabled).length;
   const errorCount = allJobs.filter((j) => j.state?.lastStatus === "error").length;
 
-  const handleCreate = () => {
-    Alert.alert("Tạo Cron Job", "Mở web console để tạo cron job mới?\n\nHoặc dùng WS method: cron.create", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Mở Console", onPress: () => {} },
-    ]);
+  const handleCreate = () => { setCreateError(null); setShowCreate(true); };
+
+  const submitCreate = async () => {
+    if (!newName.trim()) { setCreateError("Nhập tên cron job"); return; }
+    if (!newAgent.trim()) { setCreateError("Chọn agent"); return; }
+    setCreating(true); setCreateError(null);
+    try {
+      const schedule = newScheduleKind === "every"
+        ? { kind: "every" as const, everyMs: parseInt(newEveryMin, 10) * 60000 }
+        : { kind: "cron" as const, expr: newCronExpr.trim(), tz: "Asia/Ho_Chi_Minh" };
+      await create({ name: newName.trim(), agentId: newAgent.trim(), schedule, message: newMessage.trim() || undefined });
+      setShowCreate(false); setNewName(""); setNewAgent(""); setNewMessage("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Lỗi tạo cron job");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleRun = (job: CronJob) => {
@@ -333,6 +360,68 @@ export default function CronScreen() {
           </View>
         }
       />
+
+      {/* Create Cron Job Modal */}
+      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Tạo Cron Job</Text>
+              <TouchableOpacity onPress={() => setShowCreate(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tên job *</Text>
+              <TextInput
+                style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                value={newName} onChangeText={setNewName} placeholder="vd: Daily Report" placeholderTextColor={colors.mutedForeground}
+              />
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Agent ID *</Text>
+              {agents.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  {agents.map((a) => (
+                    <TouchableOpacity key={a.id} onPress={() => setNewAgent(a.agent_key)}
+                      style={[styles.agentChip, { backgroundColor: newAgent === a.agent_key ? colors.primary + "20" : colors.secondary, borderColor: newAgent === a.agent_key ? colors.primary : colors.border }]}>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: newAgent === a.agent_key ? colors.primary : colors.foreground }}>{a.display_name ?? a.agent_key}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                  value={newAgent} onChangeText={setNewAgent} placeholder="agent_key" placeholderTextColor={colors.mutedForeground} />
+              )}
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Lịch</Text>
+              <View style={[styles.scheduleToggle, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                {(["every", "cron"] as const).map((k) => (
+                  <TouchableOpacity key={k} onPress={() => setNewScheduleKind(k)}
+                    style={[styles.scheduleBtn, { backgroundColor: newScheduleKind === k ? colors.primary + "20" : "transparent" }]}>
+                    <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: newScheduleKind === k ? colors.primary : colors.mutedForeground }}>{k === "every" ? "Mỗi X phút" : "Cron expr"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {newScheduleKind === "every" ? (
+                <View style={styles.everyRow}>
+                  <TextInput style={[styles.fieldInput, { flex: 1, backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                    value={newEveryMin} onChangeText={setNewEveryMin} keyboardType="numeric" placeholder="60" placeholderTextColor={colors.mutedForeground} />
+                  <Text style={[styles.everyUnit, { color: colors.mutedForeground }]}>phút</Text>
+                </View>
+              ) : (
+                <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                  value={newCronExpr} onChangeText={setNewCronExpr} placeholder="0 8 * * *" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" />
+              )}
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tin nhắn gửi agent (tùy chọn)</Text>
+              <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border, minHeight: 60 }]}
+                value={newMessage} onChangeText={setNewMessage} placeholder="Nội dung lệnh..." placeholderTextColor={colors.mutedForeground} multiline />
+              {createError && <Text style={{ color: colors.destructive, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>{createError}</Text>}
+              <TouchableOpacity onPress={submitCreate} disabled={creating}
+                style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: creating ? 0.6 : 1 }]}>
+                {creating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Tạo Cron Job</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -380,4 +469,17 @@ const styles = StyleSheet.create({
   errorMsg: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, padding: 20, maxHeight: "80%" },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  fieldLabel: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 },
+  fieldInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 12 },
+  scheduleToggle: { flexDirection: "row", borderRadius: 10, borderWidth: 1, overflow: "hidden", marginBottom: 12 },
+  scheduleBtn: { flex: 1, alignItems: "center", paddingVertical: 8 },
+  everyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  everyUnit: { fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 12 },
+  agentChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, marginRight: 8 },
+  submitBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 4, marginBottom: 12 },
+  submitBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 });

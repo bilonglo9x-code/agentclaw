@@ -62,7 +62,7 @@ export default function VoiceScreen() {
   const [showDemo, setShowDemo] = useState(false);
   const topPad = insets.top;
 
-  const allVoices = liveVoices.length > 0 ? liveVoices : MOCK_VOICES;
+  const allVoices = liveVoices;
   const providers = [...new Set(allVoices.map((v) => v.provider))];
 
   const filtered = allVoices.filter((v) => {
