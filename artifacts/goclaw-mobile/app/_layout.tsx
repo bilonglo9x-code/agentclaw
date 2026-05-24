@@ -6,9 +6,10 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, router, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -273,7 +274,33 @@ function RootLayoutNav() {
   );
 }
 
+function useIosPwaNavFix() {
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const nav = window.navigator as Navigator & { standalone?: boolean };
+    if (!nav.standalone) return;
+    const handler = (e: MouseEvent) => {
+      let el = e.target as HTMLElement | null;
+      while (el && el.tagName !== "A") el = el.parentElement;
+      if (!el || el.tagName !== "A") return;
+      const href = (el as HTMLAnchorElement).href;
+      if (!href || !href.startsWith(window.location.origin)) return;
+      e.preventDefault();
+      const path = href.slice(window.location.origin.length) || "/";
+      try {
+        router.replace(path as `/${string}`);
+      } catch {
+        window.history.pushState({}, "", path);
+        window.dispatchEvent(new PopStateEvent("popstate", { state: {} }));
+      }
+    };
+    document.addEventListener("click", handler as EventListener);
+    return () => document.removeEventListener("click", handler as EventListener);
+  }, []);
+}
+
 export default function RootLayout() {
+  useIosPwaNavFix();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
