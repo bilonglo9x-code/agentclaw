@@ -27,6 +27,8 @@ RUN EXPO_ROUTER_ORIGIN=${EXPO_ROUTER_ORIGIN} \
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
 FROM nginx:alpine AS runtime
 
+RUN apk add --no-cache netcat-openbsd
+
 COPY --from=builder /dist /usr/share/nginx/html
 
 # SPA routing: fallback all routes to index.html
