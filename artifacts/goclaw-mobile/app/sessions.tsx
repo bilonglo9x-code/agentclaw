@@ -5,6 +5,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useToast } from "@/context/ToastContext";
 import { useSessionsHistory, SessionInfo } from "@/hooks/useSessionsHistory";
 import { useAgents } from "@/hooks/useAgents";
 import { useAuth } from "@/context/AuthContext";
@@ -55,6 +57,9 @@ export default function SessionsScreen() {
   const topPad = insets.top;
 
   const { sessions: liveSessions, total, loading, error, refresh, deleteSession, labelSession } = useSessionsHistory(agentFilter);
+  const { showToast } = useToast();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const [renaming, setRenaming] = useState<{ key: string; current: string } | null>(null);
   const [renameText, setRenameText] = useState("");
   const [previewing, setPreviewing] = useState<string | null>(null);
@@ -103,8 +108,14 @@ export default function SessionsScreen() {
 
   const handleRenameConfirm = async () => {
     if (!renaming) return;
-    await labelSession?.(renaming.key, renameText);
-    setRenaming(null);
+    try {
+      await labelSession?.(renaming.key, renameText.trim() || "");
+      showToast("Đã đổi tên session", "success");
+    } catch {
+      showToast("Không thể đổi tên", "error");
+    } finally {
+      setRenaming(null);
+    }
   };
 
   const handleDelete = (session: SessionInfo) => {
@@ -357,6 +368,7 @@ export default function SessionsScreen() {
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="chatbubbles-outline" size={36} color={colors.mutedForeground} />

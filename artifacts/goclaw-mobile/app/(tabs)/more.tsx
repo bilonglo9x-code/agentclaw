@@ -27,13 +27,17 @@ const ALL_SHORTCUTS = [
   { key: "models", icon: "cube-outline" as keyof typeof Ionicons["glyphMap"], label: "Models", color: "#60a5fa", route: "/models" },
   { key: "events", icon: "radio-outline" as keyof typeof Ionicons["glyphMap"], label: "Events", color: "#a78bfa", route: "/events" },
   { key: "devices", icon: "phone-portrait-outline" as keyof typeof Ionicons["glyphMap"], label: "Devices", color: "#22c55e", route: "/devices" },
-  { key: "evolution", icon: "bulb-outline" as keyof typeof Ionicons["glyphMap"], label: "Evolution", color: "#f59e0b", route: "/evolution" },
   { key: "vault", icon: "archive-outline" as keyof typeof Ionicons["glyphMap"], label: "Vault", color: "#60a5fa", route: "/vault" },
   { key: "teams", icon: "people-circle-outline" as keyof typeof Ionicons["glyphMap"], label: "Teams", color: "#22c55e", route: "/teams" },
   { key: "config", icon: "settings-outline" as keyof typeof Ionicons["glyphMap"], label: "Config", color: "#f97316", route: "/config" },
   { key: "media", icon: "images-outline" as keyof typeof Ionicons["glyphMap"], label: "Media", color: "#ec4899", route: "/media" },
   { key: "vault-graph", icon: "git-network-outline" as keyof typeof Ionicons["glyphMap"], label: "Vault Graph", color: "#34d399", route: "/vault-graph" },
   { key: "tts-config", icon: "mic-outline" as keyof typeof Ionicons["glyphMap"], label: "TTS Config", color: "#a78bfa", route: "/tts-config" },
+  { key: "voice", icon: "volume-high-outline" as keyof typeof Ionicons["glyphMap"], label: "Voices", color: "#f97316", route: "/voice" },
+  { key: "import-export", icon: "swap-vertical-outline" as keyof typeof Ionicons["glyphMap"], label: "Import/Export", color: "#22c55e", route: "/import-export" },
+  { key: "activity", icon: "time-outline" as keyof typeof Ionicons["glyphMap"], label: "Activity Log", color: "#60a5fa", route: "/activity" },
+  { key: "evolution", icon: "bulb-outline" as keyof typeof Ionicons["glyphMap"], label: "Evolution", color: "#f59e0b", route: "/evolution" },
+  { key: "sessions", icon: "chatbubble-ellipses-outline" as keyof typeof Ionicons["glyphMap"], label: "Sessions", color: "#a78bfa", route: "/sessions" },
 ];
 const DEFAULT_PINNED = ["search", "traces", "approvals", "skills", "memory", "kg"];
 

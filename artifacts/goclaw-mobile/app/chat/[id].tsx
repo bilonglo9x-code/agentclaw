@@ -500,7 +500,7 @@ export default function ChatScreen() {
     setShowMenu(false);
     const msgs = displayMessages;
     if (!msgs.length) {
-      Alert.alert("Không có tin nhắn", "Session này chưa có nội dung để xuất.");
+      showToast("Chưa có nội dung để xuất", "warning");
       return;
     }
     const lines: string[] = [

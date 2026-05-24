@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { Events, ChatEventTypes } from "@/lib/api/protocol";
 import { useAllSessions } from "@/hooks/useSessions";
 import { useAgents } from "@/hooks/useAgents";
 import { ConversationItem } from "@/components/ConversationItem";
@@ -131,6 +132,19 @@ export default function ChatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => { setRefreshing(true); await refreshSessions?.(); setRefreshing(false); };
   const searchRef = useRef<any>(null);
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+
+  const { ws } = useAuth();
+  useEffect(() => {
+    if (!ws) return;
+    return ws.on(Events.CHAT, (payload: any) => {
+      const type = payload?.type ?? payload?.event_type;
+      const sessionKey = payload?.session_key ?? payload?.sessionKey;
+      if (type === ChatEventTypes.MESSAGE && sessionKey && payload?.role === "assistant") {
+        setUnreadMap((prev) => ({ ...prev, [sessionKey]: (prev[sessionKey] ?? 0) + 1 }));
+      }
+    });
+  }, [ws]);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -181,11 +195,11 @@ export default function ChatsScreen() {
         model: s.model ?? "",
         lastMessage: s.label ?? `${s.messageCount} tin nhắn`,
         lastMessageAt: new Date(s.updated),
-        unread: 0,
+        unread: unreadMap[s.key] ?? 0,
         sessionKey: s.key,
       });
       });
-  }, [sessions, search, agents]);
+  }, [sessions, search, agents, unreadMap]);
 
   const handleSelectAgent = (agentId: string, agentKey: string, agentName: string) => {
     setShowPicker(false);
@@ -249,7 +263,10 @@ export default function ChatsScreen() {
           renderItem={({ item }) => (
             <ConversationItem
               conversation={item}
-              onPress={() => router.push(`/chat/${item.id}`)}
+              onPress={() => {
+                setUnreadMap((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
+                router.push(`/chat/${item.id}`);
+              }}
               onDelete={() => { deleteSession?.(item.id); showToast("Đã xoá session", "success"); }}
             />
           )}
