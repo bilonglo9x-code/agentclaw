@@ -130,7 +130,7 @@ export default function EvolutionScreen() {
   const [selectedAgent, setSelectedAgent] = useState<string>(paramAgentId ?? "");
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { suggestions, toolAggs, statusFilter, setStatusFilter, loading, updating, error, refresh, updateSuggestion } =
     useEvolution(selectedAgent || undefined);

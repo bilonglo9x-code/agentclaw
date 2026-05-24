@@ -54,7 +54,7 @@ export default function BrandingScreen() {
   const router = useRouter();
   const { connected } = useAuth();
   const { branding, loading, saving, error, load, save } = useBranding();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");

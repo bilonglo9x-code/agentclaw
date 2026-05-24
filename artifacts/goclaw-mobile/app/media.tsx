@@ -51,7 +51,7 @@ export default function MediaScreen() {
   const router = useRouter();
   const { connected } = useAuth();
   const { files: liveFiles, loading, uploading, error, load, refresh, upload, getMediaUrl, deleteFile } = useMedia();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const files = connected && liveFiles.length > 0 ? liveFiles : (!connected ? MOCK_FILES : []);
 

@@ -21,9 +21,9 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
-import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useAllSessions } from "@/hooks/useSessions";
 import { useModels } from "@/hooks/useModels";
 import { Methods } from "@/lib/api/protocol";
 import { useAgents } from "@/hooks/useAgents";
@@ -234,8 +234,8 @@ export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { conversations, getMessages, sendMessage } = useApp();
   const { connected, ws } = useAuth();
+  const { sessions } = useAllSessions();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -291,9 +291,6 @@ export default function ChatScreen() {
 
   const removeAttachment = (uri: string) => setAttachments((prev) => prev.filter((a) => a.uri !== uri));
 
-  const conversation = conversations.find((c) => c.id === id);
-  const mockMessages = getMessages(id ?? "");
-
   const sessionKey = id?.includes(":") ? id : undefined;
   const { messages: liveMessages, sending, isRunning, activity, send: sendLive } = useMessages(
     sessionKey ?? "",
@@ -301,20 +298,22 @@ export default function ChatScreen() {
 
   const useLive = connected && !!sessionKey;
 
-  const rawDisplayMessages = useLive ? liveMessages : mockMessages;
+  const liveSession = sessions.find((s) => s.key === sessionKey);
+
+  const rawDisplayMessages = liveMessages;
   const displayMessages = searchQuery.trim()
     ? rawDisplayMessages.filter((m) => typeof m.content === "string" && m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : rawDisplayMessages;
 
-  const agentName = conversation?.agentName ?? id?.split(":")[1] ?? "Agent";
-  const model = conversation?.model ?? "";
+  const agentName = liveSession?.agentName ?? id?.split(":")[1] ?? "Agent";
+  const model = liveSession?.model ?? "";
 
   const handleRenameOpen = useCallback(() => {
     setShowMenu(false);
-    const current = renameLabel || conversation?.agentName || agentName;
+    const current = renameLabel || agentName;
     setRenameText(current);
     setShowRename(true);
-  }, [renameLabel, conversation, agentName]);
+  }, [renameLabel, agentName]);
 
   const handleRenameConfirm = useCallback(async () => {
     if (!sessionKey || !ws) return;
@@ -359,16 +358,14 @@ export default function ChatScreen() {
       const refs = attachments.map((a) => `[Image: ${a.name}]`).join(" ");
       msgText = msgText ? `${msgText}\n${refs}` : refs;
     }
-    if (sessionKey && connected) {
+    if (sessionKey) {
       sendLive(msgText);
-    } else {
-      sendMessage(id, msgText);
     }
     setText("");
     setAttachments([]);
-  }, [text, attachments, id, sessionKey, connected, sendLive, sendMessage]);
+  }, [text, attachments, id, sessionKey, sendLive]);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending && !isRunning;
 
   return (

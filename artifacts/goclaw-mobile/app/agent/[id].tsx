@@ -100,7 +100,7 @@ export default function AgentDetailScreen() {
   const [newLinkEvent, setNewLinkEvent] = useState("run.completed");
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [creatingLink, setCreatingLink] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const stCfg = agent ? (STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.active) : STATUS_CONFIG.active;
 

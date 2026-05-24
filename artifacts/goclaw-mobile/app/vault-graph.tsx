@@ -64,7 +64,7 @@ export default function VaultGraphScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { http, connected } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [graph, setGraph] = useState<VaultGraph | null>(null);
   const [loading, setLoading] = useState(false);

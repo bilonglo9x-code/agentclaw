@@ -60,7 +60,7 @@ export default function SessionsScreen() {
   const { agents } = useAgents();
   const [agentFilter, setAgentFilter] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { sessions: liveSessions, total, loading, error, refresh, deleteSession, labelSession } = useSessionsHistory(agentFilter);
   const [renaming, setRenaming] = useState<{ key: string; current: string } | null>(null);

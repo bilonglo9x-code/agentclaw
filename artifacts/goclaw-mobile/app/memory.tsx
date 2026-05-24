@@ -60,7 +60,7 @@ export default function MemoryScreen() {
   const [tab, setTab] = useState<Tab>("documents");
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { documents: liveDocs, episodic: liveEpisodic, loading, error, refresh, deleteDocument } = useMemory(selectedAgent);
 

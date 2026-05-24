@@ -66,7 +66,7 @@ export default function ContactsScreen() {
   const { connected } = useAuth();
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<string | undefined>(undefined);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { contacts: liveContacts, total: liveTotal, loading, error, refresh } = useContacts(search, channelFilter);
   const contacts = connected && liveContacts.length > 0

@@ -13,7 +13,6 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAllSessions } from "@/hooks/useSessions";
 import { useAgents } from "@/hooks/useAgents";
@@ -40,31 +39,22 @@ function AgentPickerModal({
 }: {
   visible: boolean;
   onClose: () => void;
-  onSelect: (agentId: string, agentName: string) => void;
+  onSelect: (agentId: string, agentKey: string, agentName: string) => void;
   colors: ReturnType<typeof useColors>;
 }) {
   const { agents } = useAgents();
-  const { agents: mockAgents } = useApp();
   const { connected } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const agentList = connected && agents.length > 0
-    ? agents.map((a) => ({
-        id: a.id,
-        name: a.display_name ?? a.agent_key,
-        type: a.agent_type ?? "predefined",
-        provider: a.provider ?? "",
-        model: a.model ?? "",
-        status: a.status ?? "idle",
-      }))
-    : mockAgents.map((a) => ({
-        id: a.id,
-        name: a.displayName,
-        type: a.type,
-        provider: a.provider,
-        model: a.model ?? "",
-        status: a.status,
-      }));
+  const agentList = agents.map((a) => ({
+    id: a.id,
+    key: a.agent_key,
+    name: a.display_name ?? a.agent_key,
+    type: a.agent_type ?? "predefined",
+    provider: a.provider ?? "",
+    model: a.model ?? "",
+    status: a.status ?? "idle",
+  }));
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -96,7 +86,7 @@ function AgentPickerModal({
             return (
               <TouchableOpacity
                 style={[pickerStyles.agentRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => onSelect(item.id, item.name)}
+                onPress={() => onSelect(item.id, item.key, item.name)}
                 activeOpacity={0.7}
               >
                 <View style={[pickerStyles.agentAvatar, { backgroundColor: provColor + "20" }]}>
@@ -130,13 +120,10 @@ export default function ChatsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { conversations } = useApp();
   const { connected } = useAuth();
   const { sessions, loading: sessionsLoading } = useAllSessions();
   const [search, setSearch] = useState("");
   const [showPicker, setShowPicker] = useState(false);
-
-  const liveSessions = connected && sessions.length > 0;
 
   interface DisplayItem {
     id: string;
@@ -150,45 +137,36 @@ export default function ChatsScreen() {
   }
 
   const displayItems = useMemo((): DisplayItem[] => {
-    if (liveSessions) {
-      return sessions
-        .filter((s) => {
-          const q = search.toLowerCase();
-          return (
-            !q ||
-            (s.agentName ?? "").toLowerCase().includes(q) ||
-            (s.label ?? s.key).toLowerCase().includes(q)
-          );
-        })
-        .map((s) => ({
-          id: s.key,
-          agentId: s.key.split(":")[1] ?? "",
-          agentName: s.agentName ?? s.key.split(":")[1] ?? "Agent",
-          model: s.model ?? "",
-          lastMessage: s.label ?? `${s.messageCount} tin nhắn`,
-          lastMessageAt: new Date(s.updated),
-          unread: 0,
-          sessionKey: s.key,
-        }));
-    }
+    return sessions
+      .filter((s) => {
+        const q = search.toLowerCase();
+        return (
+          !q ||
+          (s.agentName ?? "").toLowerCase().includes(q) ||
+          (s.label ?? s.key).toLowerCase().includes(q)
+        );
+      })
+      .map((s) => ({
+        id: s.key,
+        agentId: s.key.split(":")[1] ?? "",
+        agentName: s.agentName ?? s.key.split(":")[1] ?? "Agent",
+        model: s.model ?? "",
+        lastMessage: s.label ?? `${s.messageCount} tin nhắn`,
+        lastMessageAt: new Date(s.updated),
+        unread: 0,
+        sessionKey: s.key,
+      }));
+  }, [sessions, search]);
 
-    return conversations
-      .filter(
-        (c) =>
-          c.agentName.toLowerCase().includes(search.toLowerCase()) ||
-          c.lastMessage.toLowerCase().includes(search.toLowerCase()),
-      )
-      .map((c) => ({ ...c, sessionKey: undefined }));
-  }, [liveSessions, sessions, conversations, search]);
-
-  const handleSelectAgent = (agentId: string, agentName: string) => {
+  const handleSelectAgent = (agentId: string, agentKey: string, agentName: string) => {
     setShowPicker(false);
-    const sessionId = `new_${agentId}_${Date.now()}`;
-    router.push(`/chat/${sessionId}`);
+    const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const sessionKey = `agent:${agentKey}:ws:direct:${uid}`;
+    router.push(`/chat/${encodeURIComponent(sessionKey)}`);
   };
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const isLoading = connected && sessionsLoading;
+  const topPad = insets.top;
+  const isLoading = sessionsLoading;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -61,7 +61,7 @@ export default function SkillsScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const rawSkills = connected && liveSkills.length > 0 ? liveSkills : MOCK_SKILLS;
 

@@ -59,7 +59,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const { connected, tenantName, role, logout } = useAuth();
   const { pendingCount } = useApprovals();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [pinnedKeys, setPinnedKeys] = useState<string[]>(DEFAULT_PINNED);
   const [editMode, setEditMode] = useState(false);
 

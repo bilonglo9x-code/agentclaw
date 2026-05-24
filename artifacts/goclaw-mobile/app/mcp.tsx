@@ -51,7 +51,7 @@ export default function MCPScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { servers: liveServers, loading, error, toggle, refresh } = useMCP();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [transportFilter, setTransportFilter] = useState<string | null>(null);
 

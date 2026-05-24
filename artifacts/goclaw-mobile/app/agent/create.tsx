@@ -106,7 +106,7 @@ export default function AgentCreateScreen() {
   const set = (field: keyof AgentFormData) => (val: string) =>
     setForm((f) => ({ ...f, [field]: val }));
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const handleImport = () => {
     try {

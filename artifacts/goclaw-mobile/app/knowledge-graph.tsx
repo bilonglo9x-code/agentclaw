@@ -277,7 +277,7 @@ export default function KnowledgeGraphScreen() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedEntity, setSelectedEntity] = useState<KGEntity | null>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { entities, stats, loading, error, search, setSearch, refresh, deleteEntity } =
     useKnowledgeGraph(selectedAgent || undefined);

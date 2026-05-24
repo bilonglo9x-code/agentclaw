@@ -83,7 +83,7 @@ export default function ThemeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [accentColor] = useState<string>("amber");
 

@@ -63,7 +63,7 @@ export default function DashboardScreen() {
   const { agents } = useAgents();
   const { quota, usagePercent, isNearLimit, isOverLimit } = useQuota();
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const activeAgents = agents.filter((a) => a.status === "active").length;
   const idleAgents = agents.filter((a) => a.status !== "active" && a.status !== "error").length;

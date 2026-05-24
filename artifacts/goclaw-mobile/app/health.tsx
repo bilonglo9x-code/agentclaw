@@ -60,7 +60,7 @@ export default function HealthScreen() {
   const { connected } = useAuth();
   const { config, loading, error, refresh, toggleTarget, testTarget } = useHeartbeat();
   const [testing, setTesting] = useState<string | null>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const targets = connected && config?.targets && config.targets.length > 0 ? config.targets : MOCK_TARGETS;
   const okCount = targets.filter((t) => t.last_status === "ok").length;

@@ -70,7 +70,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const pulseAnim = useRef(new Animated.Value(1)).current;

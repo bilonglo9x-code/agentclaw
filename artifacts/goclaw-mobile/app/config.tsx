@@ -23,7 +23,7 @@ export default function ConfigScreen() {
   const router = useRouter();
   const { connected } = useAuth();
   const { config, loading, applying, error, load, applyConfig, patchConfig } = useConfig();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [editRaw, setEditRaw] = useState("");
   const [mode, setMode] = useState<"view" | "edit">("view");

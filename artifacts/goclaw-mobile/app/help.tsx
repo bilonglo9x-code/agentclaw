@@ -48,7 +48,7 @@ export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected, serverUrl } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (

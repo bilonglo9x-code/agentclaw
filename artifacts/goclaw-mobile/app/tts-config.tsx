@@ -59,7 +59,7 @@ export default function TTSConfigScreen() {
   const router = useRouter();
   const { connected, http } = useAuth();
   const { config, loading, saving, error, load, saveConfig } = useTTSConfig();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [draft, setDraft] = useState<TTSConfig>({ provider: "edge", auto: true, mode: "auto" });
   const [dirty, setDirty] = useState(false);

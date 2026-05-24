@@ -168,7 +168,7 @@ export default function ProvidersScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const providers = liveProviders.length > 0 ? liveProviders : MOCK_PROVIDERS;
   const enabledCount = providers.filter((p) => p.enabled).length;

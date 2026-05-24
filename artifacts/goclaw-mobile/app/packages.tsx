@@ -66,7 +66,7 @@ export default function PackagesScreen() {
   const [tab, setTab] = useState<Tab>("pip");
   const [installInput, setInstallInput] = useState("");
   const [search, setSearch] = useState("");
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const pip = connected && packages.pip ? packages.pip : MOCK_PIP;
   const npm = connected && packages.npm ? packages.npm : MOCK_NPM;

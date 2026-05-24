@@ -191,7 +191,7 @@ export default function TenantsScreen() {
     createTenant,
     updateTenant,
   } = useTenants();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const mine = connected && liveMine ? liveMine : MOCK_MINE;
   const allTenants = connected && liveTenants.length > 0 ? liveTenants : MOCK_TENANTS;

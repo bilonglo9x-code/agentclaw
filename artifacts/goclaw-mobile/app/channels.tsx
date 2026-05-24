@@ -60,7 +60,7 @@ export default function ChannelsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { instances: liveInst, statuses: liveStatus, loading, error, toggle, refresh } = useChannels();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 

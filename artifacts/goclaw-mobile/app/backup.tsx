@@ -22,7 +22,7 @@ export default function BackupScreen() {
   const router = useRouter();
   const { connected } = useAuth();
   const { preflight, phase, downloadUrl, progressMsg, error, loadPreflight, runBackup } = useBackup();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   useEffect(() => {
     if (connected) loadPreflight();

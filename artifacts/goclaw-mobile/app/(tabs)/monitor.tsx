@@ -66,7 +66,7 @@ export default function MonitorScreen() {
   const [autoScroll, setAutoScroll] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const listRef = useRef<FlatList>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const displayLogs = connected && logs.length > 0 ? logs : MOCK_LOGS;
 

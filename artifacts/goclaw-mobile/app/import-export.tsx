@@ -179,7 +179,7 @@ export default function ImportExportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected, http, serverUrl } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [exporting, setExporting] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());

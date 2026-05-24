@@ -126,7 +126,7 @@ export default function StorageScreen() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [previewFile, setPreviewFile] = useState<StorageFile | null>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const rootFiles = connected && liveFiles.length > 0 ? liveFiles : MOCK_FILES.filter((f) => !f.path.slice(1).includes("/"));
 

@@ -69,7 +69,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { serverUrl, token, userId, connected, connectionState, role, tenantName, isOwner, logout } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [showToken, setShowToken] = useState(false);
 
   const initials = userId ? userId.slice(0, 2).toUpperCase() : "??";

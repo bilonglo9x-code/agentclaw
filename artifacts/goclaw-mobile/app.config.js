@@ -27,6 +27,18 @@ module.exports = {
     web: {
       favicon: "./assets/images/icon.png",
       backgroundColor: "#09090b",
+      themeColor: "#09090b",
+      display: "standalone",
+      shortName: "GoClaw",
+      description: "GoClaw AI Agent Platform",
+      meta: {
+        viewport:
+          "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "black-translucent",
+        "apple-mobile-web-app-title": "GoClaw",
+        "mobile-web-app-capable": "yes",
+      },
     },
     plugins: [
       [

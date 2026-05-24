@@ -26,7 +26,7 @@ export default function ChannelQRScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id, type, name } = useLocalSearchParams<{ id: string; type: string; name?: string }>();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const channelType = (type ?? "whatsapp") as QRChannelType;
   const { state, startQR, reset } = useChannelQR(channelType, id);

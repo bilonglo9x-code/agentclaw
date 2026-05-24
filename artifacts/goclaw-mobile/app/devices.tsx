@@ -156,7 +156,7 @@ export default function DevicesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { devices: liveDevices, pairing, loading, error, refresh, initiratePairing, unpair, cancelPairing } = useDevices();
   const devices = connected && liveDevices.length > 0 ? liveDevices : MOCK_DEVICES;

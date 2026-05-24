@@ -181,7 +181,7 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const { approvals, loading, pendingCount, approve, deny, refresh } = useApprovals();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const handleApprove = async (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

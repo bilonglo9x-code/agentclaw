@@ -90,7 +90,7 @@ export default function ApiKeysScreen() {
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [search, setSearch] = useState("");
 

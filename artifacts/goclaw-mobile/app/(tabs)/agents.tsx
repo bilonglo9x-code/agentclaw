@@ -13,7 +13,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAgents as useRealAgents } from "@/hooks/useAgents";
 import { AgentCard } from "@/components/AgentCard";
@@ -32,24 +31,21 @@ export default function AgentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { agents: mockAgents } = useApp();
   const { connected } = useAuth();
   const { agents: realAgents, loading } = useRealAgents();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const rawAgents = connected && realAgents.length > 0
-    ? realAgents.map((a) => ({
-        id: a.id,
-        key: a.agent_key,
-        displayName: a.display_name ?? a.id,
-        description: a.workspace ?? "",
-        type: a.agent_type as "open" | "predefined",
-        status: (a.status === "active" ? "active" : "idle") as "active" | "idle",
-        model: a.model,
-        provider: a.provider ?? "",
-      }))
-    : mockAgents;
+  const rawAgents = realAgents.map((a) => ({
+    id: a.id,
+    key: a.agent_key,
+    displayName: a.display_name ?? a.id,
+    description: a.workspace ?? "",
+    type: a.agent_type as "open" | "predefined",
+    status: (a.status === "active" ? "active" : "idle") as "active" | "idle",
+    model: a.model,
+    provider: a.provider ?? "",
+  }));
 
   const filtered = useMemo(
     () =>
@@ -69,7 +65,7 @@ export default function AgentsScreen() {
     [rawAgents, search, filter],
   );
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -60,7 +60,7 @@ export default function VoiceScreen() {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [demoText, setDemoText] = useState("Xin chào! Đây là bản thử giọng nói.");
   const [showDemo, setShowDemo] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const allVoices = liveVoices.length > 0 ? liveVoices : MOCK_VOICES;
   const providers = [...new Set(allVoices.map((v) => v.provider))];

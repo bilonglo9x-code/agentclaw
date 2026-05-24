@@ -77,7 +77,7 @@ export default function VaultScreen() {
   const [search, setSearch] = useState("");
   const [vectorMode, setVectorMode] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { documents: liveDocs, total: liveTotal, loading, error, refresh, deleteDocument, vectorSearch } = useVault(scope, docType);
   const [vectorResults, setVectorResults] = useState<VaultDocument[]>([]);

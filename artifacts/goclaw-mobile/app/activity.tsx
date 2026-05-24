@@ -107,7 +107,7 @@ export default function ActivityScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const allLogs = connected && liveLogs.length > 0 ? liveLogs : MOCK_LOGS;
   const timeMs = TIME_RANGES.find((t) => t.value === timeRange)?.ms ?? Infinity;

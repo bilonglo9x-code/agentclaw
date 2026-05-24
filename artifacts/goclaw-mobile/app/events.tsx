@@ -72,7 +72,7 @@ export default function EventsScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const allEvents = connected && liveEvents.length > 0 ? liveEvents : MOCK_EVENTS;
 

@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAgents } from "@/hooks/useAgents";
-import { useApp } from "@/context/AppContext";
+import { useAllSessions } from "@/hooks/useSessions";
 import { useAuth } from "@/context/AuthContext";
 
 type SearchCategory = "all" | "agents" | "sessions" | "vault" | "memory";
@@ -86,12 +86,12 @@ export default function SearchScreen() {
   const router = useRouter();
   const { connected } = useAuth();
   const { agents } = useAgents();
-  const { conversations } = useApp();
+  const { sessions } = useAllSessions();
   const inputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<SearchCategory>("all");
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -126,22 +126,22 @@ export default function SearchScreen() {
     }
 
     if (category === "all" || category === "sessions") {
-      conversations
+      sessions
         .filter(
-          (c) =>
-            c.agentName.toLowerCase().includes(q) ||
-            c.lastMessage.toLowerCase().includes(q),
+          (s) =>
+            (s.agentName ?? "").toLowerCase().includes(q) ||
+            (s.label ?? s.key).toLowerCase().includes(q),
         )
         .slice(0, 4)
-        .forEach((c) =>
+        .forEach((s) =>
           results.push({
-            id: `session:${c.id}`,
+            id: `session:${s.key}`,
             type: "session",
-            title: c.agentName,
-            subtitle: c.lastMessage.slice(0, 60),
+            title: s.agentName ?? s.key.split(":")[1] ?? "Agent",
+            subtitle: s.label ?? `${s.messageCount} tin nhắn`,
             icon: "chatbubble-outline",
             color: "#60a5fa",
-            onPress: () => router.push(`/chat/${c.id}`),
+            onPress: () => router.push(`/chat/${encodeURIComponent(s.key)}`),
           }),
         );
     }

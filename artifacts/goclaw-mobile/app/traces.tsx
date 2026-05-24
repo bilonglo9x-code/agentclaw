@@ -178,7 +178,7 @@ export default function TracesScreen() {
   const { traces: liveTraces, loading, error, refresh } = useTraces(50);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);

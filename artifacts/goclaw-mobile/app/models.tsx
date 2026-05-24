@@ -128,7 +128,7 @@ export default function ModelsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const { models: liveModels, loading, error, refresh } = useModels();
   const baseModels = connected && liveModels.length > 0 ? liveModels : MOCK_MODELS;

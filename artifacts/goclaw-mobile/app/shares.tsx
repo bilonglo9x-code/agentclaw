@@ -30,7 +30,7 @@ export default function SharesScreen() {
   const { agentId, agentName } = useLocalSearchParams<{ agentId: string; agentName?: string }>();
   const { connected } = useAuth();
   const { shares, loading, error, load, grantShare, revokeShare } = useShares(agentId);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [showModal, setShowModal] = useState(false);
   const [newUserId, setNewUserId] = useState("");

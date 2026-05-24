@@ -92,7 +92,7 @@ export default function PermissionsScreen() {
   const router = useRouter();
   const { connected, isOwner } = useAuth();
   const { permissions: livePerms, loading, error, refresh, grantPermission, revokePermission } = useConfigPermissions();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const permissions = connected && livePerms.length > 0 ? livePerms : MOCK_PERMISSIONS;
 

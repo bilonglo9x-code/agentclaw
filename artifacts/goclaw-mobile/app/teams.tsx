@@ -69,7 +69,7 @@ export default function TeamsScreen() {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [taskMap, setTaskMap] = useState<Record<string, TeamTask[]>>({});
   const [loadingTasks, setLoadingTasks] = useState<string | null>(null);
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
 
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);

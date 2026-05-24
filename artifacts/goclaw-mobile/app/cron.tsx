@@ -106,7 +106,7 @@ export default function CronScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { jobs: liveJobs, loading, error, toggle, run, refresh } = useCron();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "disabled" | "error">("all");
 
