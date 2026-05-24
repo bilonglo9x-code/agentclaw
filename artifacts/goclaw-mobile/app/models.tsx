@@ -131,7 +131,7 @@ export default function ModelsScreen() {
   const topPad = insets.top;
 
   const { models: liveModels, loading, error, refresh } = useModels();
-  const baseModels = connected && liveModels.length > 0 ? liveModels : MOCK_MODELS;
+  const baseModels = liveModels;
 
   const [provFilter, setProvFilter] = useState<string | null>(null);
   const [capFilter, setCapFilter] = useState<string | null>(null);

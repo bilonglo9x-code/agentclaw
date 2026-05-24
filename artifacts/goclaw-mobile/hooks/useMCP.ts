@@ -13,6 +13,8 @@ export interface MCPServerData {
   timeout_sec?: number;
   enabled: boolean;
   agent_count?: number;
+  tool_count?: number;
+  latency_ms?: number;
   created_at: string;
   updated_at: string;
 }
@@ -58,5 +60,32 @@ export function useMCP() {
     [http],
   );
 
-  return { servers, loading, error, toggle, refresh: load };
+  const create = useCallback(
+    async (params: {
+      name: string;
+      display_name: string;
+      transport: "stdio" | "sse" | "streamable-http";
+      command?: string;
+      args?: string[];
+      url?: string;
+      tool_prefix?: string;
+    }): Promise<MCPServerData> => {
+      if (!http) throw new Error("Not connected");
+      const res = await http.post<{ server: MCPServerData }>("/v1/mcp/servers", params);
+      setServers((prev) => [res.server, ...prev]);
+      return res.server;
+    },
+    [http],
+  );
+
+  const deleteServer = useCallback(
+    async (id: string) => {
+      if (!http) return;
+      await http.delete(`/v1/mcp/servers/${id}`);
+      setServers((prev) => prev.filter((s) => s.id !== id));
+    },
+    [http],
+  );
+
+  return { servers, loading, error, toggle, create, deleteServer, refresh: load };
 }

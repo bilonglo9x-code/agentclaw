@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,6 +18,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useMCP, MCPServerData } from "@/hooks/useMCP";
+import * as Haptics from "expo-haptics";
 import { SearchBar } from "@/components/SearchBar";
 
 const TRANSPORT_CONFIG: Record<string, { color: string; label: string; icon: keyof typeof Ionicons["glyphMap"] }> = {
@@ -50,10 +53,19 @@ export default function MCPScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { servers: liveServers, loading, error, toggle, refresh } = useMCP();
+  const { servers: liveServers, loading, error, toggle, create, refresh } = useMCP();
   const topPad = insets.top;
   const [search, setSearch] = useState("");
   const [transportFilter, setTransportFilter] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newDisplayName, setNewDisplayName] = useState("");
+  const [newTransport, setNewTransport] = useState<"stdio"|"sse"|"streamable-http">("stdio");
+  const [newCommand, setNewCommand] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [newPrefix, setNewPrefix] = useState("");
 
   const allServers = liveServers;
   const servers = useMemo(() => {
@@ -70,11 +82,28 @@ export default function MCPScreen() {
   const totalAgents = allServers.reduce((sum, s) => sum + (s.agent_count ?? 0), 0);
   const totalTools = allServers.reduce((sum, s) => sum + (s.tool_count ?? 0), 0);
 
-  const handleAddServer = () => {
-    Alert.alert("Thêm MCP Server", "Cấu hình MCP server mới qua web console.\n\nHỗ trợ: STDIO, SSE, Streamable HTTP", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Mở Console", onPress: () => {} },
-    ]);
+  const handleAddServer = () => { setCreateError(null); setShowCreate(true); };
+
+  const submitCreate = async () => {
+    if (!newName.trim()) { setCreateError("Nhập tên server"); return; }
+    if (!newDisplayName.trim()) { setCreateError("Nhập tên hiển thị"); return; }
+    if (newTransport !== "stdio" && !newUrl.trim()) { setCreateError("Nhập URL server"); return; }
+    if (newTransport === "stdio" && !newCommand.trim()) { setCreateError("Nhập command"); return; }
+    setCreating(true); setCreateError(null);
+    try {
+      await create({
+        name: newName.trim(), display_name: newDisplayName.trim(), transport: newTransport,
+        command: newTransport === "stdio" ? newCommand.trim() : undefined,
+        url: newTransport !== "stdio" ? newUrl.trim() : undefined,
+        tool_prefix: newPrefix.trim() || undefined,
+      });
+      setShowCreate(false); setNewName(""); setNewDisplayName(""); setNewCommand(""); setNewUrl(""); setNewPrefix("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Lỗi tạo MCP server");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -225,6 +254,61 @@ export default function MCPScreen() {
           </View>
         }
       />
+
+      {/* Create MCP Server Modal */}
+      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Thêm MCP Server</Text>
+              <TouchableOpacity onPress={() => setShowCreate(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tên (key) *</Text>
+              <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                value={newName} onChangeText={setNewName} placeholder="vd: filesystem" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" />
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tên hiển thị *</Text>
+              <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                value={newDisplayName} onChangeText={setNewDisplayName} placeholder="vd: Filesystem MCP" placeholderTextColor={colors.mutedForeground} />
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Transport</Text>
+              <View style={[styles.transportToggle, { borderColor: colors.border }]}>
+                {(["stdio", "sse", "streamable-http"] as const).map((t) => {
+                  const cfg = TRANSPORT_CONFIG[t];
+                  return (
+                    <TouchableOpacity key={t} onPress={() => setNewTransport(t)}
+                      style={[styles.transportBtn, { backgroundColor: newTransport === t ? cfg.color + "20" : colors.secondary }]}>
+                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: newTransport === t ? cfg.color : colors.mutedForeground }}>{cfg.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {newTransport === "stdio" ? (
+                <>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Command *</Text>
+                  <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                    value={newCommand} onChangeText={setNewCommand} placeholder="npx -y @modelcontextprotocol/server-filesystem" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>URL *</Text>
+                  <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                    value={newUrl} onChangeText={setNewUrl} placeholder="https://mcp.example.com/sse" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" keyboardType="url" />
+                </>
+              )}
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Tool prefix (tùy chọn)</Text>
+              <TextInput style={[styles.fieldInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                value={newPrefix} onChangeText={setNewPrefix} placeholder="vd: fs_" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" />
+              {createError && <Text style={{ color: colors.destructive, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>{createError}</Text>}
+              <TouchableOpacity onPress={submitCreate} disabled={creating}
+                style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: creating ? 0.6 : 1 }]}>
+                {creating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Tạo MCP Server</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -267,4 +351,14 @@ const styles = StyleSheet.create({
   latencyText: { fontSize: 11, fontFamily: "Inter_700Bold" },
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, padding: 20, maxHeight: "85%" },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  fieldLabel: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 5 },
+  fieldInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 12 },
+  transportToggle: { flexDirection: "row", borderRadius: 10, borderWidth: 1, overflow: "hidden", marginBottom: 12 },
+  transportBtn: { flex: 1, alignItems: "center", paddingVertical: 8 },
+  submitBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 4, marginBottom: 12 },
+  submitBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 });
