@@ -19,6 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { useCreateAgent, AgentFormData } from "@/hooks/useCreateAgent";
 import { useAgentDetail } from "@/hooks/useAgentDetail";
 import { useModels } from "@/hooks/useModels";
+import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/context/AuthContext";
 
 const AGENT_TYPES = [
@@ -28,7 +29,7 @@ const AGENT_TYPES = [
   { value: "assistant", label: "Assistant", icon: "chatbubble-ellipses-outline" as const, desc: "Assistant tổng quát" },
 ];
 
-const PROVIDERS = ["openai", "anthropic", "gemini", "groq", "together", "mistral", "ollama"];
+const PROVIDERS_FALLBACK = ["openai", "anthropic", "gemini", "groq", "together", "mistral", "ollama"];
 
 function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -56,6 +57,11 @@ export default function AgentCreateScreen() {
   const { createAgent, updateAgent, saving, error, clearError } = useCreateAgent();
   const { agent, loading: loadingAgent } = useAgentDetail(id);
   const { models: allModels, loading: modelsLoading } = useModels();
+  const { providers: serverProviders } = useProviders();
+
+  const PROVIDERS = serverProviders.length > 0
+    ? serverProviders.map((p) => p.name ?? p.id)
+    : PROVIDERS_FALLBACK;
 
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState("");
@@ -105,6 +111,14 @@ export default function AgentCreateScreen() {
 
   const set = (field: keyof AgentFormData) => (val: string) =>
     setForm((f) => ({ ...f, [field]: val }));
+
+  const handleNameChange = (val: string) => {
+    setForm((f) => ({
+      ...f,
+      name: val,
+      ...(isEdit ? {} : { agent_key: val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") }),
+    }));
+  };
 
   const topPad = insets.top;
 
@@ -210,27 +224,28 @@ export default function AgentCreateScreen() {
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Thông tin cơ bản</Text>
 
-            <FormField label="Agent Key" required>
+            <FormField label="Tên hiển thị" required>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+                value={form.name}
+                onChangeText={handleNameChange}
+                placeholder="vd: Sales Assistant"
+                placeholderTextColor={colors.mutedForeground}
+                autoFocus={!isEdit}
+              />
+            </FormField>
+
+            <FormField label="Agent Key" required>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: isEdit ? colors.mutedForeground : colors.foreground }]}
                 value={form.agent_key}
                 onChangeText={set("agent_key")}
-                placeholder="vd: sales-assistant"
+                placeholder="vd: sales-assistant (tự điền từ tên)"
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="none"
                 editable={!isEdit}
               />
-              <Text style={[styles.hint, { color: colors.mutedForeground }]}>Chỉ dùng chữ thường, số và dấu gạch ngang</Text>
-            </FormField>
-
-            <FormField label="Tên hiển thị">
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
-                value={form.name}
-                onChangeText={set("name")}
-                placeholder="vd: Sales Assistant"
-                placeholderTextColor={colors.mutedForeground}
-              />
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>{isEdit ? "Không thể đổi sau khi tạo" : "Tự sinh từ tên, chỉ dùng chữ thường/số/gạch ngang"}</Text>
             </FormField>
 
             <FormField label="Mô tả / System Prompt">

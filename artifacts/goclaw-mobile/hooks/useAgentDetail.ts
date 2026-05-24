@@ -27,8 +27,9 @@ export interface AgentDetail {
 
 export interface AgentFile {
   path: string;
-  content: string;
+  content?: string;
   size?: number;
+  missing?: boolean;
   updated_at?: string;
 }
 
@@ -47,10 +48,36 @@ export function useAgentDetail(agentId: string | undefined) {
     try {
       let agentData: AgentDetail | null = null;
 
-      // Try HTTP first
+      // Try HTTP first (CORS configured for mobile.vnsi.app)
       if (http) {
         try {
-          agentData = await http.get<AgentDetail>(`/v1/agents/${agentId}`);
+          const raw = await http.get<any>(`/v1/agents/${agentId}`);
+          if (raw && (raw.agent_key || raw.id)) {
+            agentData = {
+              id: raw.id,
+              agent_key: raw.agent_key ?? raw.id,
+              name: raw.display_name ?? raw.name ?? raw.agent_key,
+              description: raw.agent_description ?? raw.description ?? raw.frontmatter,
+              provider: raw.provider ?? "",
+              model: raw.model ?? "",
+              status: raw.status ?? "active",
+              agent_type: raw.agent_type,
+              is_default: raw.is_default,
+              context_window: raw.context_window,
+              max_tool_iterations: raw.max_tool_iterations,
+              workspace: raw.workspace,
+              memory_enabled: raw.memory_config?.enabled ?? raw.memory_enabled ?? false,
+              embedding_provider: raw.embedding_provider,
+              embedding_model: raw.embedding_model,
+              skills: raw.skills,
+              channels: raw.channels,
+              owner_id: raw.owner_id,
+              created_at: raw.created_at,
+              updated_at: raw.updated_at,
+              ...(raw.temperature != null ? { temperature: raw.temperature } : {}),
+              ...(raw.max_tokens != null ? { max_tokens: raw.max_tokens } : {}),
+            };
+          }
         } catch {
           // fall through to WS
         }
@@ -87,8 +114,13 @@ export function useAgentDetail(agentId: string | undefined) {
       // Load files via WS
       if (ws?.isConnected) {
         try {
-          const filesRes = await ws.call<{ files: AgentFile[] }>(Methods.AGENTS_FILES_LIST, { agentId });
-          setFiles(filesRes.files ?? []);
+          const filesRes = await ws.call<{ files: Array<{ name?: string; path?: string; size?: number; missing?: boolean; content?: string }> }>(Methods.AGENTS_FILES_LIST, { agentId });
+          setFiles((filesRes.files ?? []).map((f) => ({
+            path: f.path ?? f.name ?? "",
+            content: f.content,
+            size: f.size,
+            missing: f.missing,
+          })));
         } catch {
           // files optional
         }

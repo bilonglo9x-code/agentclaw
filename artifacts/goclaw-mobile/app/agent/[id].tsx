@@ -367,26 +367,30 @@ export default function AgentDetailScreen() {
 
               {tab === "files" && (
                 <View>
-                  {files.length === 0 ? (
+                  {files.filter((f) => !f.missing).length === 0 ? (
                     <View style={styles.emptyWrap}>
                       <Ionicons name="document-text-outline" size={36} color={colors.mutedForeground} />
                       <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Không có bootstrap files</Text>
                     </View>
                   ) : (
-                    files.map((f, i) => (
+                    files.filter((f) => !f.missing).map((f, i) => (
                       <View key={i} style={[styles.fileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <View style={styles.fileHeader}>
                           <Ionicons name="document-outline" size={16} color={colors.primary} />
-                          <Text style={[styles.filePath, { color: colors.foreground }]}>{f.path}</Text>
+                          <Text style={[styles.filePath, { color: colors.foreground }]} numberOfLines={1}>{f.path || "(unknown)"}</Text>
                           {f.size != null && (
                             <Text style={[styles.fileSize, { color: colors.mutedForeground }]}>
                               {f.size > 1024 ? `${(f.size / 1024).toFixed(1)}KB` : `${f.size}B`}
                             </Text>
                           )}
                         </View>
-                        <Text style={[styles.fileContent, { color: colors.mutedForeground, backgroundColor: colors.secondary }]} numberOfLines={6}>
-                          {f.content}
-                        </Text>
+                        {f.content ? (
+                          <Text style={[styles.fileContent, { color: colors.mutedForeground, backgroundColor: colors.secondary }]} numberOfLines={6}>
+                            {f.content}
+                          </Text>
+                        ) : (
+                          <Text style={[styles.fileSize, { color: colors.mutedForeground, fontStyle: "italic" }]}>Nhấn để xem nội dung</Text>
+                        )}
                       </View>
                     ))
                   )}
@@ -901,7 +905,7 @@ const styles = StyleSheet.create({
   quickRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, marginBottom: 14 },
   quickCard: { flex: 1, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
   quickLabel: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
-  tabRow: { borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: 0 },
+  tabRow: { flexGrow: 0, flexShrink: 0, borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: 0 },
   tab: { paddingHorizontal: 4, paddingVertical: 10, marginRight: 20 },
   tabText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   tabContent: { flex: 1 },

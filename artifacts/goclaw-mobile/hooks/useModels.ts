@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Methods } from "@/lib/api/protocol";
+import { useProviders } from "@/hooks/useProviders";
 
 export interface ModelInfo {
   name: string;
@@ -13,41 +13,64 @@ export interface ModelInfo {
   is_default?: boolean;
 }
 
-export function useModels() {
-  const { ws, connected, http } = useAuth();
+export function useModels(targetProvider?: string) {
+  const { connected, http } = useAuth();
+  const { providers } = useProviders();
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const fetchedRef = useRef<string>("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (providerNameOrId?: string) => {
+    if (!http || !connected) return;
     setLoading(true);
     setError(null);
     try {
-      if (ws?.isConnected) {
-        const res = await ws.call<{ models: ModelInfo[] }>(Methods.MODELS_LIST, {});
-        setModels(res.models ?? []);
-      } else if (http) {
-        const res = await http.get<{ models: ModelInfo[] }>("/v1/models");
-        setModels(res.models ?? []);
+      const allModels: ModelInfo[] = [];
+      // Determine which providers to fetch
+      const targetProviders = providerNameOrId
+        ? providers.filter((p) => p.name === providerNameOrId || p.id === providerNameOrId)
+        : providers;
+
+      if (targetProviders.length === 0 && providerNameOrId) {
+        // Try by id directly
+        const res = await http.get<{ models: Array<{ id: string; name?: string; type?: string }> }>(`/v1/providers/${encodeURIComponent(providerNameOrId)}/models`);
+        (res.models ?? []).forEach((m) => {
+          allModels.push({ name: m.id ?? m.name ?? "", provider: providerNameOrId, display_name: m.name });
+        });
+      } else {
+        await Promise.allSettled(
+          targetProviders.map(async (p) => {
+            try {
+              const res = await http.get<{ models: Array<{ id: string; name?: string; type?: string }> }>(`/v1/providers/${p.id}/models`);
+              (res.models ?? []).forEach((m) => {
+                allModels.push({ name: m.id ?? m.name ?? "", provider: p.name ?? p.id, display_name: m.name });
+              });
+            } catch {
+              // skip this provider
+            }
+          })
+        );
       }
+      setModels(allModels);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load models");
     } finally {
       setLoading(false);
     }
-  }, [ws, http]);
+  }, [http, connected, providers]);
 
   useEffect(() => {
-    if (connected && !fetchedRef.current) {
-      fetchedRef.current = true;
-      load();
+    const key = targetProvider ?? "__all__";
+    if (connected && providers.length > 0 && fetchedRef.current !== key) {
+      fetchedRef.current = key;
+      load(targetProvider);
     }
-  }, [connected, load]);
+  }, [connected, providers, targetProvider, load]);
 
   useEffect(() => {
-    if (!connected) fetchedRef.current = false;
+    if (!connected) fetchedRef.current = "";
   }, [connected]);
 
-  return { models, loading, error, refresh: load };
+  return { models, loading, error, refresh: () => load(targetProvider) };
 }
