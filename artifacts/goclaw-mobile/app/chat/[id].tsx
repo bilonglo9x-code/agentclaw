@@ -155,6 +155,9 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
   const isUser = role === "user";
   const hasCode = !isUser && content.includes("```");
 
+  // Skip rendering empty messages that are not streaming
+  if (!isStreaming && !content?.trim()) return null;
+
   if (isStreaming && !content) {
     return (
       <View style={styles.bubbleWrap}>
@@ -234,6 +237,104 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
   );
 }
 
+function deriveQuickActions(description?: string, agentKey?: string): string[] {
+  const desc = (description ?? agentKey ?? "").toLowerCase();
+  const actions: string[] = [];
+  if (/code|lập trình|debug|python|javascript|review/.test(desc)) {
+    actions.push("Review đoạn code này cho tôi", "Giải thích lỗi này", "Viết unit test");
+  }
+  if (/write|viết|content|bài|email|văn bản/.test(desc)) {
+    actions.push("Viết email chuyên nghiệp", "Tóm tắt nội dung", "Cải thiện bài viết");
+  }
+  if (/search|tìm kiếm|research|nghiên cứu/.test(desc)) {
+    actions.push("Tìm hiểu về...", "Tổng hợp thông tin về...", "So sánh...");
+  }
+  if (/data|dữ liệu|phân tích|analysis|excel/.test(desc)) {
+    actions.push("Phân tích dữ liệu này", "Tạo biểu đồ từ...", "Giải thích số liệu");
+  }
+  if (/chat|trò chuyện|hỗ trợ|support|giúp/.test(desc)) {
+    actions.push("Giới thiệu bản thân đi", "Bạn có thể làm gì?", "Hỗ trợ tôi với...");
+  }
+  if (actions.length === 0) {
+    actions.push("Bạn có thể giúp gì?", "Giới thiệu bản thân đi", "Cho tôi ví dụ");
+  }
+  return actions.slice(0, 4);
+}
+
+interface WelcomePanelProps {
+  agentName: string;
+  agentKey?: string;
+  description?: string;
+  model?: string;
+  colors: ReturnType<typeof useColors>;
+  connected: boolean;
+  onQuickSend: (msg: string) => void;
+}
+
+function WelcomePanel({ agentName, agentKey, description, model, colors, connected, onQuickSend }: WelcomePanelProps) {
+  const [expanded, setExpanded] = React.useState(false);
+  const initials = agentName.slice(0, 2).toUpperCase();
+  const quickActions = deriveQuickActions(description, agentKey);
+  const descTrimmed = description?.trim();
+  const isLong = (descTrimmed?.length ?? 0) > 120;
+
+  return (
+    <View style={[welcomeStyles.container, { transform: [{ scaleY: -1 }] }]}>
+      <View style={[welcomeStyles.avatarWrap, { backgroundColor: colors.primary + "20" }]}>
+        <Text style={[welcomeStyles.initials, { color: colors.primary }]}>{initials}</Text>
+      </View>
+      <Text style={[welcomeStyles.name, { color: colors.foreground }]}>{agentName}</Text>
+      {model ? (
+        <Text style={[welcomeStyles.modelLabel, { color: colors.mutedForeground }]}>{model}</Text>
+      ) : null}
+      {descTrimmed ? (
+        <TouchableOpacity onPress={() => isLong && setExpanded((v) => !v)} activeOpacity={isLong ? 0.7 : 1}>
+          <Text
+            style={[welcomeStyles.desc, { color: colors.mutedForeground }]}
+            numberOfLines={expanded ? undefined : 3}
+          >
+            {descTrimmed}
+          </Text>
+          {isLong && (
+            <Text style={[welcomeStyles.expandBtn, { color: colors.primary }]}>
+              {expanded ? "Thu gọn ▲" : "Xem thêm ▼"}
+            </Text>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <Text style={[welcomeStyles.desc, { color: colors.mutedForeground }]}>
+          {connected ? "Nhập tin nhắn để bắt đầu trò chuyện" : "Kết nối server để bắt đầu chat"}
+        </Text>
+      )}
+      <View style={welcomeStyles.chipsWrap}>
+        {quickActions.map((action) => (
+          <TouchableOpacity
+            key={action}
+            onPress={() => onQuickSend(action)}
+            activeOpacity={0.7}
+            style={[welcomeStyles.chip, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+          >
+            <Text style={[welcomeStyles.chipText, { color: colors.foreground }]}>{action}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const welcomeStyles = StyleSheet.create({
+  container: { alignItems: "center", paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20, gap: 10 },
+  avatarWrap: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  initials: { fontSize: 26, fontFamily: "Inter_700Bold" },
+  name: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  modelLabel: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: -4 },
+  desc: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20, textAlign: "center", marginTop: 4 },
+  expandBtn: { fontSize: 12, fontFamily: "Inter_500Medium", textAlign: "center", marginTop: 4 },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+});
+
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
@@ -253,6 +354,7 @@ export default function ChatScreen() {
   const [pickerProvider, setPickerProvider] = useState<string>("");
   const [pickerModel, setPickerModel] = useState("");
   const [attachments, setAttachments] = useState<AttachedImage[]>([]);
+  const [isMicListening, setIsMicListening] = useState(false);
 
   const { models: allModels, loading: modelsLoading } = useModels(pickerProvider || undefined);
   const { providers: serverProviders } = useProviders();
@@ -333,8 +435,14 @@ export default function ChatScreen() {
     ? rawDisplayMessages.filter((m) => typeof m.content === "string" && m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : rawDisplayMessages;
 
-  const agentName = liveSession?.agentName ?? id?.split(":")[1] ?? "Agent";
-  const model = liveSession?.model ?? "";
+  const agentKey = id?.split(":")[1] ?? "";
+  const currentAgent = agents.find((a) => a.agent_key === agentKey);
+  const agentDisplayName = liveSession?.agentName ?? currentAgent?.display_name ?? agentKey;
+  // Proper title-case for agent name
+  const agentName = agentDisplayName
+    ? agentDisplayName.charAt(0).toUpperCase() + agentDisplayName.slice(1)
+    : "Agent";
+  const model = liveSession?.model ?? currentAgent?.model ?? "";
 
   const handleRenameOpen = useCallback(() => {
     setShowMenu(false);
@@ -392,6 +500,32 @@ export default function ChatScreen() {
     setText("");
     setAttachments([]);
   }, [text, attachments, id, sessionKey, sendLive]);
+
+  const handleMic = useCallback(() => {
+    if (Platform.OS === "web") {
+      const SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        Alert.alert("Không hỗ trợ", "Trình duyệt không hỗ trợ nhập giọng nói.");
+        return;
+      }
+      if (isMicListening) { setIsMicListening(false); return; }
+      const rec = new SpeechRecognition();
+      rec.lang = "vi-VN";
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.onstart = () => setIsMicListening(true);
+      rec.onend = () => setIsMicListening(false);
+      rec.onerror = () => setIsMicListening(false);
+      rec.onresult = (e: any) => {
+        const transcript = e.results[0][0].transcript;
+        setText((prev) => prev ? `${prev} ${transcript}` : transcript);
+        inputRef.current?.focus();
+      };
+      rec.start();
+    } else {
+      Alert.alert("Sắp có", "Tính năng nhập giọng nói đang phát triển.");
+    }
+  }, [isMicListening]);
 
   const topPad = insets.top;
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending && !isRunning;
@@ -724,17 +858,18 @@ export default function ChatScreen() {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View style={styles.emptyChat}>
-            <View style={[styles.emptyChatIcon, { backgroundColor: colors.primary + "18" }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.primary} />
-            </View>
-            <Text style={[styles.emptyChatTitle, { color: colors.foreground }]}>
-              {agentName}
-            </Text>
-            <Text style={[styles.emptyChatSub, { color: colors.mutedForeground }]}>
-              {connected ? "Nhập tin nhắn để bắt đầu cuộc trò chuyện" : "Kết nối server để bắt đầu chat"}
-            </Text>
-          </View>
+          <WelcomePanel
+            agentName={agentName}
+            agentKey={agentKey}
+            description={currentAgent?.description}
+            model={model}
+            colors={colors}
+            connected={connected}
+            onQuickSend={(msg) => {
+              setText(msg);
+              inputRef.current?.focus();
+            }}
+          />
         }
       />
 
@@ -752,8 +887,12 @@ export default function ChatScreen() {
           >
             <Ionicons name="attach" size={16} color={attachments.length > 0 ? colors.primary : colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} activeOpacity={0.7}>
-            <Ionicons name="mic-outline" size={16} color={colors.mutedForeground} />
+          <TouchableOpacity
+            style={[styles.toolbarBtn, { backgroundColor: isMicListening ? "#ef444420" : colors.secondary }]}
+            onPress={handleMic}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={isMicListening ? "mic" : "mic-outline"} size={16} color={isMicListening ? "#ef4444" : colors.mutedForeground} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.toolbarBtn, { backgroundColor: colors.secondary }]} onPress={handlePickCamera} activeOpacity={0.7}>
             <Ionicons name="camera-outline" size={16} color={colors.mutedForeground} />

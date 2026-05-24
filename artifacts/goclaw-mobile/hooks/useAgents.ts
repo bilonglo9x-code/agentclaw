@@ -30,12 +30,20 @@ export function useAgents() {
       setLoading(true);
       setError(null);
       try {
-        // On web, skip HTTP (CORS). On native, try HTTP first (faster REST).
-        if (Platform.OS !== "web" && http) {
+        if (http) {
           try {
-            const res = await http.get<{ agents: AgentData[] }>("/v1/agents");
+            const res = await http.get<{ agents: Array<any> }>("/v1/agents");
             if (res.agents && res.agents.length > 0) {
-              setAgents(res.agents);
+              setAgents(res.agents.map((a: any) => ({
+                id: a.id,
+                agent_key: a.agent_key ?? a.agentKey ?? a.id,
+                display_name: a.display_name ?? a.displayName ?? a.name ?? a.agent_key,
+                provider: a.provider,
+                model: a.model ?? "",
+                agent_type: (a.agent_type ?? a.agentType) === "predefined" ? "predefined" : "open",
+                status: a.status ?? "idle",
+                description: a.agent_description ?? a.description ?? a.frontmatter,
+              })));
               return;
             }
           } catch {
@@ -44,7 +52,7 @@ export function useAgents() {
         }
 
         if (ws) {
-          const res = await ws.call<{ agents: { id: string; name?: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string; status?: string }[] }>(
+          const res = await ws.call<{ agents: { id: string; name?: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string; status?: string; description?: string }[] }>(
             Methods.AGENTS_LIST,
           );
           setAgents(
@@ -56,6 +64,7 @@ export function useAgents() {
               model: a.model,
               agent_type: a.agentType === "predefined" ? "predefined" : "open",
               status: a.isRunning ? "active" : (a.status ?? "idle"),
+              description: a.description,
             })),
           );
         }
