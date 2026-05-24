@@ -792,6 +792,12 @@ export default function ChatScreen() {
             multiline
             maxLength={4000}
             returnKeyType="default"
+            onKeyPress={Platform.OS === "web" ? ((e: any) => {
+              if (e.nativeEvent?.key === "Enter" && !e.nativeEvent?.shiftKey) {
+                e.preventDefault?.();
+                if (canSend) handleSend();
+              }
+            }) : undefined}
           />
           <TouchableOpacity
             style={[styles.sendBtn, { backgroundColor: canSend ? colors.primary : colors.secondary }]}

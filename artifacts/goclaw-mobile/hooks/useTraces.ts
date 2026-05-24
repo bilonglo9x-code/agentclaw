@@ -33,10 +33,33 @@ export function useTraces(limit = 50) {
     setLoading(true);
     setError(null);
     try {
-      const res = await http.get<{ traces: TraceData[]; total?: number }>("/v1/traces", {
+      const res = await http.get<{ traces: Array<any>; total?: number }>("/v1/traces", {
         limit: String(limit),
       });
-      setTraces(res.traces ?? []);
+      const mapped: TraceData[] = (res.traces ?? []).map((t) => {
+        // Extract agent key from session_key like "agent:nina:ws:..."
+        const sessionParts = (t.session_key ?? "").split(":");
+        const agentKeyFromSession = sessionParts.length >= 2 ? sessionParts[1] : undefined;
+        return {
+          id: t.id,
+          session_key: t.session_key,
+          agent_id: t.agent_id,
+          agent_name: t.agent_name ?? agentKeyFromSession ?? t.name,
+          user_id: t.user_id,
+          channel: t.channel,
+          status: t.status ?? "completed",
+          started_at: t.start_time ?? t.started_at ?? t.created_at,
+          finished_at: t.end_time ?? t.finished_at,
+          duration_ms: t.duration_ms ?? (t.start_time && t.end_time ? new Date(t.end_time).getTime() - new Date(t.start_time).getTime() : undefined),
+          input_tokens: t.input_tokens ?? t.total_input_tokens,
+          output_tokens: t.output_tokens ?? t.total_output_tokens,
+          total_cost: t.total_cost,
+          error: t.error,
+          tool_call_count: t.tool_call_count,
+          llm_call_count: t.llm_call_count,
+        };
+      });
+      setTraces(mapped);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load traces");
     } finally {
