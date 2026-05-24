@@ -84,7 +84,10 @@ export class HttpClient {
     const token = this.getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const userId = this.getUserId();
-    if (userId) headers["X-User-ID"] = userId;
+    if (userId) {
+      headers["X-User-ID"] = userId;
+      headers["X-GoClaw-User-Id"] = userId;
+    }
     return headers;
   }
 
