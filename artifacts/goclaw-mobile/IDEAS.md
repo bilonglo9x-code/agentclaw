@@ -124,29 +124,37 @@
 | Module | Real Data | Add/Edit | Delete | Search | Notes |
 |--------|-----------|----------|--------|--------|-------|
 | Chat | ✅ | ✅ | ✅ | ✅ | OK |
-| Agents | ✅ | ⚠️ | ✅ | ✅ | Create form incomplete |
-| Dashboard | ✅ | — | — | — | Fixed period re-fetch |
-| Monitor | ✅ | — | ✅ | ✅ | OK |
-| Traces | ✅ | — | — | ✅ | Detail screen missing |
-| Skills | ✅ | — | — | ✅ | OK |
+| Agents | ✅ | ✅ | ✅ | ✅ | Create form with auto-key |
+| Dashboard | ✅ | — | — | — | Live events, real usage |
+| Monitor | ✅ | — | ✅ | ✅ | Real logs only |
+| Traces | ✅ | — | — | ✅ | ✅ Detail screen /traces/[id] |
+| Skills | ✅ | — | — | ✅ | Real data only |
 | Approvals | ✅ | — | ✅ | — | OK |
-| Sessions | ✅ | ✅ | ✅ | ✅ | OK |
-| Memory | ❌→empty | — | ✅ | ✅ | API 404 |
-| Channels | ❌→empty | ❌ + btn | ✅ | ✅ | + btn shows Alert only |
-| Cron Jobs | ❌→empty | ❌ + btn | — | ✅ | + btn shows Alert only |
-| MCP Servers | ❌→empty | ❌ + btn | — | ✅ | + btn shows Alert only |
+| Sessions | ✅ | ✅ | ✅ | ✅ | Real data only |
+| Memory | ✅ | — | ✅ | ✅ | Real data |
+| Channels | ✅ | ✅ modal | ✅ | ✅ | Create modal wired to WS |
+| Cron Jobs | ✅ | ✅ modal | ✅ | ✅ | Create modal wired to WS |
+| MCP Servers | ✅ | ✅ modal | ✅ | ✅ | Create modal wired to REST |
 | Events | ✅ live | — | ✅ | ✅ | OK (live WS) |
-| Models | ✅ | — | — | ✅ | Missing ctx window info |
-| Providers | ✅ | — | — | — | OK |
-| Voice/TTS | ⚠️ | — | — | — | Playback bugs |
-| Search | ❌ | — | — | — | Broken |
-| Vault | ❌ demo | — | — | — | API 404 |
-| Teams | ❌ demo | — | — | — | API 404 |
-| Knowledge Graph | ❌ | — | — | — | Static demo |
-| Storage | ❌ demo | — | — | — | API 404 |
-| Activity Log | ⚠️ | — | — | — | Limited |
-| Health | ✅ | — | — | — | OK |
-| Contacts | ✅ | — | — | — | Verify schema |
-| Packages | ❌ demo | — | — | — | API 404 |
+| Models | ✅ | — | — | ✅ | Real data only |
+| Providers | ✅ | — | — | — | Real data only |
+| Voice/TTS | ✅ | — | — | — | Fixed args + audio playback |
+| Search | ✅ | — | — | — | Fixed crash (conversations→sessions) |
+| Vault | ✅ | — | ✅ | ✅ | Real data only |
+| Teams | ✅ | ✅ modal | ✅ | ✅ | Real data, create modal |
+| Knowledge Graph | ✅ | — | ✅ | ✅ | Per-agent, real API |
+| Storage | ✅ | — | ✅ | ✅ | Real data, file browser |
+| Activity Log | ✅ | — | — | ✅ | Real data only |
+| Health | ✅ | — | — | — | Real data only |
+| Contacts | ✅ | — | — | ✅ | Real data only |
+| Packages | ✅ | ✅ install | — | ✅ | Real data only |
+| API Keys | ✅ | ✅ create | ✅ revoke | ✅ | Real data |
+| Devices | ✅ | ✅ pair | ✅ unpair | — | Real data |
+| Tenants | ✅ | ✅ create | — | — | Real data, null-safe |
+| Permissions | ✅ | ✅ grant | ✅ revoke | ✅ | Real data |
+| TTS Config | ✅ | ✅ save | — | — | OK |
+| Backup | ✅ | ✅ run | — | — | OK |
+| Evolution | ✅ | — | — | ✅ | Per-agent |
+| Vault Graph | ✅ | — | — | — | OK |
 
 Legend: ✅ Working | ⚠️ Partial | ❌ Not working/demo
