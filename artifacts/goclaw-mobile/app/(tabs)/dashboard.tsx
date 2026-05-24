@@ -132,9 +132,7 @@ export default function DashboardScreen() {
     : ["Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Hôm nay"];
 
   const { events: liveEvents } = useEvents();
-  const costData = timeseries.length > 0
-    ? timeseries.slice(-7).map((p) => (p as unknown as Record<string, number>).cost ?? 0)
-    : [0.12, 0.25, 0.18, 0.34, 0.28, 0.41, 0.38];
+  const costData = timeseries.slice(-7).map((p) => (p as unknown as Record<string, number>).cost ?? 0);
   const costMax = Math.max(...costData, 0.01);
 
   const lastUpdated = loading ? "Đang tải..." : summary ? "Vừa cập nhật" : "Demo data";

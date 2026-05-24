@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Platform,
   ScrollView,
@@ -311,18 +310,7 @@ export default function TracesScreen() {
               <TouchableOpacity
                 style={[styles.traceCard, { backgroundColor: colors.card, borderColor: item.status === "failed" ? "#ef444440" : colors.border }]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  Alert.alert(
-                    `Trace: ${item.agent_name ?? item.agent_id ?? "Agent"}`,
-                    [
-                      `ID: ${item.id}`,
-                      `Status: ${item.status}`,
-                      item.duration_ms != null ? `Duration: ${item.duration_ms < 1000 ? `${item.duration_ms}ms` : `${(item.duration_ms / 1000).toFixed(2)}s`}` : null,
-                      item.total_cost != null && item.total_cost > 0 ? `Cost: $${item.total_cost.toFixed(6)}` : null,
-                      item.error ? `Error: ${item.error}` : null,
-                    ].filter(Boolean).join("\n"),
-                  );
-                }}
+                onPress={() => router.push(`/traces/${item.id}` as never)}
               >
                 <View style={styles.traceTop}>
                   <View style={styles.traceLeft}>
