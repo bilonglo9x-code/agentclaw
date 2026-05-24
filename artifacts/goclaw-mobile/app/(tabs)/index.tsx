@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { useAllSessions } from "@/hooks/useSessions";
 import { useAgents } from "@/hooks/useAgents";
 import { ConversationItem } from "@/components/ConversationItem";
@@ -122,12 +123,30 @@ export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const { sessions, loading: sessionsLoading, refresh: refreshSessions } = useAllSessions();
+  const { sessions, loading: sessionsLoading, refresh: refreshSessions, deleteSession } = useAllSessions();
+  const { showToast } = useToast();
   const { agents } = useAgents();
   const [search, setSearch] = useState("");
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => { setRefreshing(true); await refreshSessions?.(); setRefreshing(false); };
+  const searchRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchRef.current?.focus?.();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        setShowPicker(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   interface DisplayItem {
     id: string;
@@ -209,7 +228,7 @@ export default function ChatsScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Tìm cuộc trò chuyện..." />
+        <SearchBar ref={searchRef} value={search} onChangeText={setSearch} placeholder="Tìm cuộc trò chuyện... (⌘K)" />
       </View>
 
       {isLoading ? (
@@ -231,6 +250,7 @@ export default function ChatsScreen() {
             <ConversationItem
               conversation={item}
               onPress={() => router.push(`/chat/${item.id}`)}
+              onDelete={() => { deleteSession?.(item.id); showToast("Đã xoá session", "success"); }}
             />
           )}
           contentContainerStyle={styles.list}

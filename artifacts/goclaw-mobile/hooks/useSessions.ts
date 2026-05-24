@@ -114,5 +114,14 @@ export function useAllSessions() {
     doFetch();
   }, [doFetch]);
 
-  return { sessions, loading, error, refresh };
+  const deleteSession = useCallback(
+    async (key: string) => {
+      if (!ws?.isConnected) return;
+      await ws.call(Methods.SESSIONS_DELETE, { key });
+      setSessions((prev) => prev.filter((s) => s.key !== key));
+    },
+    [ws],
+  );
+
+  return { sessions, loading, error, refresh, deleteSession };
 }

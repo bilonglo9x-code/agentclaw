@@ -1,6 +1,7 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { Conversation } from "@/context/AppContext";
 
@@ -16,17 +17,42 @@ function formatTime(date: Date): string {
 interface ConversationItemProps {
   conversation: Conversation;
   onPress: () => void;
+  onDelete?: () => void;
 }
 
-export function ConversationItem({ conversation, onPress }: ConversationItemProps) {
+export function ConversationItem({ conversation, onPress, onDelete }: ConversationItemProps) {
   const colors = useColors();
   const initials = conversation.agentName.slice(0, 2).toUpperCase();
   const hasUnread = conversation.unread > 0;
+  const [showDelete, setShowDelete] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const toggleDelete = () => {
+    const toValue = showDelete ? 0 : 1;
+    setShowDelete(!showDelete);
+    Animated.spring(slideAnim, { toValue, useNativeDriver: true }).start();
+  };
+
+  const deleteTranslate = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [72, 0] });
 
   return (
+    <View style={{ overflow: "hidden" }}>
+      {onDelete && (
+        <Animated.View style={[styles.deleteAction, { transform: [{ translateX: deleteTranslate }] }]}>
+          <TouchableOpacity
+            style={[styles.deleteBtn, { backgroundColor: "#ef4444" }]}
+            onPress={() => { setShowDelete(false); onDelete(); }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     <TouchableOpacity
       style={[styles.container, { borderBottomColor: colors.border }]}
-      onPress={onPress}
+      onPress={() => { if (showDelete) { toggleDelete(); } else { onPress(); } }}
+      onLongPress={() => { if (onDelete) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); toggleDelete(); } }}
+      delayLongPress={400}
       activeOpacity={0.7}
     >
       <View style={[styles.avatar, { backgroundColor: colors.primary + "25" }]}>
@@ -60,6 +86,7 @@ export function ConversationItem({ conversation, onPress }: ConversationItemProp
         <Text style={[styles.model, { color: colors.mutedForeground }]}>{conversation.model}</Text>
       </View>
     </TouchableOpacity>
+    </View>
   );
 }
 
@@ -134,5 +161,21 @@ const styles = StyleSheet.create({
   model: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
+  },
+  deleteAction: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 72,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

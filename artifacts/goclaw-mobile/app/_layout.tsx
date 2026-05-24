@@ -50,6 +50,14 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="traces/[id]"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
         name="traces"
         options={{
           headerShown: false,

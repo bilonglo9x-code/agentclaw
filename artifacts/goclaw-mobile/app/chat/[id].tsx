@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAvoidingView as RNKAKeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -355,6 +356,24 @@ export default function ChatScreen() {
   const { showToast } = useToast();
   const { sessions } = useAllSessions();
   const [text, setText] = useState("");
+  const draftKey = id ? `goclaw:draft:${id}` : null;
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    AsyncStorage.getItem(draftKey).then((v) => { if (v) setText(v); });
+    return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
+  }, [draftKey]);
+
+  const handleTextChange = useCallback((val: string) => {
+    setText(val);
+    if (!draftKey) return;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      if (val.trim()) AsyncStorage.setItem(draftKey, val);
+      else AsyncStorage.removeItem(draftKey);
+    }, 600);
+  }, [draftKey]);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -512,6 +531,7 @@ export default function ChatScreen() {
       sendLive(msgText);
     }
     setText("");
+    if (draftKey) AsyncStorage.removeItem(draftKey);
     setAttachments([]);
   }, [text, attachments, id, sessionKey, sendLive]);
 
@@ -940,7 +960,7 @@ export default function ChatScreen() {
             ref={inputRef}
             style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground, height: Math.max(40, Math.min(inputHeight, 120)) }]}
             value={text}
-            onChangeText={setText}
+            onChangeText={handleTextChange}
             onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height + 16)}
             placeholder="Nhập tin nhắn..."
             placeholderTextColor={colors.mutedForeground}

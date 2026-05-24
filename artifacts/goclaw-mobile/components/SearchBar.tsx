@@ -9,24 +9,27 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-export function SearchBar({ value, onChangeText, placeholder = "Search..." }: SearchBarProps) {
-  const colors = useColors();
-  return (
-    <View style={[styles.container, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-      <Ionicons name="search" size={16} color={colors.mutedForeground} />
-      <TextInput
-        style={[styles.input, { color: colors.foreground }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.mutedForeground}
-        autoCorrect={false}
-        autoCapitalize="none"
-        clearButtonMode="while-editing"
-      />
-    </View>
-  );
-}
+export const SearchBar = React.forwardRef<TextInput, SearchBarProps>(
+  ({ value, onChangeText, placeholder = "Search..." }, ref) => {
+    const colors = useColors();
+    return (
+      <View style={[styles.container, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+        <Ionicons name="search" size={16} color={colors.mutedForeground} />
+        <TextInput
+          ref={ref}
+          style={[styles.input, { color: colors.foreground }]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.mutedForeground}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
+      </View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
