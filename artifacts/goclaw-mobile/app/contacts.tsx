@@ -69,9 +69,7 @@ export default function ContactsScreen() {
   const topPad = insets.top;
 
   const { contacts: liveContacts, total: liveTotal, loading, error, refresh } = useContacts(search, channelFilter);
-  const contacts = connected && liveContacts.length > 0
-    ? liveContacts
-    : MOCK_CONTACTS.filter((c) => {
+  const contacts = liveContacts.filter((c) => {
         if (channelFilter && c.channel_type !== channelFilter) return false;
         if (search) {
           const q = search.toLowerCase();
@@ -81,10 +79,10 @@ export default function ContactsScreen() {
         }
         return true;
       });
-  const total = connected ? liveTotal : contacts.length;
+  const total = liveTotal || contacts.length;
   const onlineCount = contacts.filter((c) => isOnline(c.last_seen_at)).length;
 
-  const channels = [...new Set(MOCK_CONTACTS.map((c) => c.channel_type))];
+  const channels = [...new Set(liveContacts.map((c) => c.channel_type))];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

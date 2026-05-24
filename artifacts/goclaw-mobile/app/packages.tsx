@@ -68,9 +68,9 @@ export default function PackagesScreen() {
   const [search, setSearch] = useState("");
   const topPad = insets.top;
 
-  const pip = connected && packages.pip ? packages.pip : MOCK_PIP;
-  const npm = connected && packages.npm ? packages.npm : MOCK_NPM;
-  const system = connected && packages.system ? packages.system : MOCK_SYSTEM;
+  const pip = packages.pip ?? [];
+  const npm = packages.npm ?? [];
+  const system = packages.system ?? [];
   const github = packages.github ?? [];
 
   const rawList: (PackageInfo | GitHubPackageInfo)[] = tab === "pip" ? pip : tab === "npm" ? npm : tab === "system" ? system : github;

@@ -128,7 +128,7 @@ export default function StorageScreen() {
   const [previewFile, setPreviewFile] = useState<StorageFile | null>(null);
   const topPad = insets.top;
 
-  const rootFiles = connected && liveFiles.length > 0 ? liveFiles : MOCK_FILES.filter((f) => !f.path.slice(1).includes("/"));
+  const rootFiles = liveFiles;
 
   const handleDir = async (file: StorageFile) => {
     if (!file.isDir) {
@@ -139,13 +139,7 @@ export default function StorageScreen() {
       setExpanded((prev) => { const n = { ...prev }; delete n[file.path]; return n; });
       return;
     }
-    if (!connected) {
-      setExpanded((prev) => ({
-        ...prev,
-        [file.path]: MOCK_FILES.filter((f) => f.path.startsWith(file.path + "/") && !f.path.slice(file.path.length + 1).includes("/"))
-      }));
-      return;
-    }
+    if (!connected) return;
     setLoadingDir(file.path);
     try {
       const children = await loadSubtree(file.path);
@@ -196,9 +190,7 @@ export default function StorageScreen() {
   const fileCount = rootFiles.filter((f) => !f.isDir).length;
   const totalSize = rootFiles.reduce((s, f) => s + f.size, 0);
 
-  const previewContent = previewFile
-    ? (MOCK_FILE_CONTENT[previewFile.path] ?? `# ${previewFile.name}\n\nFile content not available in demo mode.\nConnect to server to view real content.`)
-    : "";
+  const previewContent = previewFile ? `# ${previewFile.name}\n\nFile path: ${previewFile.path}\nSize: ${previewFile.size} bytes\n\nNội dung file không khả dụng trên mobile.` : "";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

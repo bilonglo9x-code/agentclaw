@@ -62,7 +62,7 @@ export default function HealthScreen() {
   const [testing, setTesting] = useState<string | null>(null);
   const topPad = insets.top;
 
-  const targets = connected && config?.targets && config.targets.length > 0 ? config.targets : MOCK_TARGETS;
+  const targets = config?.targets ?? [];
   const okCount = targets.filter((t) => t.last_status === "ok").length;
   const errorCount = targets.filter((t) => t.last_status === "error").length;
   const enabledCount = targets.filter((t) => t.enabled).length;

@@ -109,7 +109,7 @@ export default function ActivityScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const topPad = insets.top;
 
-  const allLogs = connected && liveLogs.length > 0 ? liveLogs : MOCK_LOGS;
+  const allLogs = liveLogs;
   const timeMs = TIME_RANGES.find((t) => t.value === timeRange)?.ms ?? Infinity;
 
   const logs = useMemo(() => allLogs.filter((l) => {

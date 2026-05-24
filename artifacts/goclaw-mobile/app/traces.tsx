@@ -183,7 +183,7 @@ export default function TracesScreen() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  const traces = connected && liveTraces.length > 0 ? liveTraces : MOCK_TRACES;
+  const traces = liveTraces;
   const filtered = useMemo(() => {
     let list = filter === "all" ? traces : traces.filter((t) => t.status === filter);
     if (search.trim()) {

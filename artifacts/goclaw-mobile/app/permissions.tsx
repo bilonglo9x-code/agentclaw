@@ -94,7 +94,7 @@ export default function PermissionsScreen() {
   const { permissions: livePerms, loading, error, refresh, grantPermission, revokePermission } = useConfigPermissions();
   const topPad = insets.top;
 
-  const permissions = connected && livePerms.length > 0 ? livePerms : MOCK_PERMISSIONS;
+  const permissions = livePerms;
 
   const [showGrant, setShowGrant] = useState(false);
   const [granting, setGranting] = useState(false);

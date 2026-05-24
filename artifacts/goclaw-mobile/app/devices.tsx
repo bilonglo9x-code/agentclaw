@@ -159,7 +159,7 @@ export default function DevicesScreen() {
   const topPad = insets.top;
 
   const { devices: liveDevices, pairing, loading, error, refresh, initiratePairing, unpair, cancelPairing } = useDevices();
-  const devices = connected && liveDevices.length > 0 ? liveDevices : MOCK_DEVICES;
+  const devices = liveDevices;
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {

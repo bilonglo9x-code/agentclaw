@@ -53,7 +53,7 @@ export default function MediaScreen() {
   const { files: liveFiles, loading, uploading, error, load, refresh, upload, getMediaUrl, deleteFile } = useMedia();
   const topPad = insets.top;
 
-  const files = connected && liveFiles.length > 0 ? liveFiles : (!connected ? MOCK_FILES : []);
+  const files = liveFiles;
 
   useEffect(() => {
     if (connected) load();

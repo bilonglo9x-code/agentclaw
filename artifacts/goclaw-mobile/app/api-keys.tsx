@@ -94,7 +94,7 @@ export default function ApiKeysScreen() {
 
   const [search, setSearch] = useState("");
 
-  const allKeys = connected && liveKeys.length > 0 ? liveKeys : MOCK_KEYS;
+  const allKeys = liveKeys;
   const apiKeys = useMemo(() => {
     if (!search.trim()) return allKeys;
     const q = search.toLowerCase();

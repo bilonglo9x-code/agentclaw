@@ -69,9 +69,7 @@ export default function SessionsScreen() {
   const [previewMsgs, setPreviewMsgs] = useState<Array<{ role: string; content: string; created_at?: string }>>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const { ws } = useAuth();
-  const baseSessions = connected && liveSessions.length > 0
-    ? liveSessions
-    : MOCK_SESSIONS.filter((s) => !agentFilter || s.agentName?.toLowerCase().includes(agentFilter.toLowerCase()));
+  const baseSessions = liveSessions.filter((s) => !agentFilter || s.agentName?.toLowerCase().includes(agentFilter.toLowerCase()));
 
   const sessions = search
     ? baseSessions.filter((s) => {

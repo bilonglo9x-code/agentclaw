@@ -170,7 +170,7 @@ export default function ProvidersScreen() {
   const [showCompare, setShowCompare] = useState(false);
   const topPad = insets.top;
 
-  const providers = liveProviders.length > 0 ? liveProviders : MOCK_PROVIDERS;
+  const providers = liveProviders;
   const enabledCount = providers.filter((p) => p.enabled).length;
   const filteredProviders = useMemo(() => {
     if (!search.trim()) return providers;

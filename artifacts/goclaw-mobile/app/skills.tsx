@@ -63,7 +63,7 @@ export default function SkillsScreen() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = insets.top;
 
-  const rawSkills = connected && liveSkills.length > 0 ? liveSkills : MOCK_SKILLS;
+  const rawSkills = liveSkills;
 
   const filtered = useMemo(() => {
     return rawSkills.filter((s) => {

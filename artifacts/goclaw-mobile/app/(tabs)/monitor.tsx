@@ -68,7 +68,7 @@ export default function MonitorScreen() {
   const listRef = useRef<FlatList>(null);
   const topPad = insets.top;
 
-  const displayLogs = connected && logs.length > 0 ? logs : MOCK_LOGS;
+  const displayLogs = logs;
 
   const filtered = displayLogs.filter((l) => {
     const matchLevel = filter === "all" || l.level === filter;

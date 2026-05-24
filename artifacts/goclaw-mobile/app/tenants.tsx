@@ -193,8 +193,8 @@ export default function TenantsScreen() {
   } = useTenants();
   const topPad = insets.top;
 
-  const mine = connected && liveMine ? liveMine : MOCK_MINE;
-  const allTenants = connected && liveTenants.length > 0 ? liveTenants : MOCK_TENANTS;
+  const mine = liveMine;
+  const allTenants = liveTenants;
 
   const [selectedTenant, setSelectedTenant] = useState<TenantData | null>(null);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
@@ -218,10 +218,10 @@ export default function TenantsScreen() {
     setShowDetail(true);
     setLoadingUsers(true);
     try {
-      const users = connected ? await loadUsers(tenant.id) : MOCK_USERS;
-      setTenantUsers(users.length > 0 ? users : MOCK_USERS);
+      const users = await loadUsers(tenant.id);
+      setTenantUsers(users);
     } catch {
-      setTenantUsers(MOCK_USERS);
+      setTenantUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -307,11 +307,11 @@ export default function TenantsScreen() {
         {!isMasterScope && (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>TỔ CHỨC HIỆN TẠI</Text>
-            <TenantCard tenant={mine} isMine colors={colors} onPress={() => openDetail(mine)} />
-            {(isOwner || isMasterScope) && (
+            {mine && <TenantCard tenant={mine} isMine colors={colors} onPress={() => openDetail(mine!)} />}
+            {(isOwner || isMasterScope) && mine && (
               <TouchableOpacity
                 style={[styles.editTenantBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => openEdit(mine)}
+                onPress={() => openEdit(mine!)}
                 activeOpacity={0.75}
               >
                 <Ionicons name="pencil-outline" size={15} color={colors.mutedForeground} />
@@ -339,7 +339,7 @@ export default function TenantsScreen() {
                 <TenantCard
                   key={t.id}
                   tenant={t}
-                  isMine={t.id === mine.id}
+                  isMine={t.id === mine?.id}
                   colors={colors}
                   onPress={() => openDetail(t)}
                 />

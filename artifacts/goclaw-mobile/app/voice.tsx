@@ -79,10 +79,18 @@ export default function VoiceScreen() {
     }
     setPlayingVoice(voiceId);
     try {
-      await synthesize(voiceId, demoText);
-    } finally {
-      setPlayingVoice(null);
+      const url = await synthesize(demoText, voiceId);
+      if (url && typeof window !== "undefined") {
+        const audio = new window.Audio(url);
+        audio.onended = () => setPlayingVoice(null);
+        audio.onerror = () => setPlayingVoice(null);
+        await audio.play();
+        return;
+      }
+    } catch {
+      // ignore
     }
+    setPlayingVoice(null);
   };
 
   const renderVoice = ({ item }: { item: Voice }) => {
