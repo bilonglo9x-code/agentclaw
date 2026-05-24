@@ -44,18 +44,18 @@ export function useAgents() {
         }
 
         if (ws) {
-          const res = await ws.call<{ agents: { id: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string }[] }>(
+          const res = await ws.call<{ agents: { id: string; name?: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string; status?: string }[] }>(
             Methods.AGENTS_LIST,
           );
           setAgents(
             (res.agents ?? []).map((a) => ({
               id: a.id,
               agent_key: a.agentKey ?? a.id,
-              display_name: a.displayName ?? a.id,
+              display_name: a.displayName ?? a.name ?? a.id,
               provider: a.provider,
               model: a.model,
               agent_type: a.agentType === "predefined" ? "predefined" : "open",
-              status: a.isRunning ? "active" : "idle",
+              status: a.isRunning ? "active" : (a.status ?? "idle"),
             })),
           );
         }

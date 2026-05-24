@@ -21,13 +21,15 @@ import { useEvents } from "@/hooks/useEvents";
 
 type Period = "today" | "7d" | "30d";
 
-function fmt(n: number, decimals = 0): string {
+function fmt(n: number | undefined | null, decimals = 0): string {
+  if (n == null || isNaN(n)) return "0";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toFixed(decimals);
 }
 
-function fmtCost(n: number): string {
+function fmtCost(n: number | undefined | null): string {
+  if (n == null || isNaN(n)) return "$0.00";
   return `$${n.toFixed(2)}`;
 }
 
@@ -414,13 +416,13 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.sparkLegend}>
           <Text style={[styles.sparkMin, { color: colors.mutedForeground }]}>
-            Min ${Math.min(...costData).toFixed(2)}
+            Min ${costData.length ? Math.min(...costData).toFixed(2) : "0.00"}
           </Text>
           <Text style={[styles.sparkCurrent, { color: "#f59e0b" }]}>
-            Hôm nay ${costData[costData.length - 1].toFixed(2)}
+            Hôm nay ${costData.length ? (costData[costData.length - 1] ?? 0).toFixed(2) : "0.00"}
           </Text>
           <Text style={[styles.sparkMax, { color: colors.mutedForeground }]}>
-            Max ${Math.max(...costData).toFixed(2)}
+            Max ${costData.length ? Math.max(...costData).toFixed(2) : "0.00"}
           </Text>
         </View>
       </View>

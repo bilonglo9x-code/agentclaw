@@ -81,6 +81,14 @@ export default function MonitorScreen() {
     return acc;
   }, {} as Record<LogLevel, number>);
 
+  // Auto-start tailing when connected
+  useEffect(() => {
+    if (connected && !tailing) {
+      startTail("info");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
+
   useEffect(() => {
     if (autoScroll && filtered.length > 0) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -105,12 +113,20 @@ export default function MonitorScreen() {
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.title, { color: colors.foreground }]}>Monitor</Text>
-          {tailing && (
+          {tailing && logs.length > 0 ? (
             <View style={[styles.tailingBadge, { backgroundColor: "#22c55e15" }]}>
               <View style={[styles.tailingDot, { backgroundColor: "#22c55e" }]} />
               <Text style={[styles.tailingText, { color: "#22c55e" }]}>Live</Text>
             </View>
-          )}
+          ) : connected && tailing ? (
+            <View style={[styles.tailingBadge, { backgroundColor: "#60a5fa15" }]}>
+              <Text style={[styles.tailingText, { color: "#60a5fa" }]}>Chờ logs...</Text>
+            </View>
+          ) : !connected ? (
+            <View style={[styles.tailingBadge, { backgroundColor: "#f59e0b15" }]}>
+              <Text style={[styles.tailingText, { color: "#f59e0b" }]}>Demo</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.headerActions}>

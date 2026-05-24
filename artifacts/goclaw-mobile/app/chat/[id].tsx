@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView as RNKAKeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
@@ -46,7 +46,11 @@ interface MsgBubbleProps {
 
 function copyToClipboard(text: string) {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  Clipboard.setString(text);
+  if (Platform.OS === "web" && navigator?.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => Clipboard.setString(text));
+  } else {
+    Clipboard.setString(text);
+  }
 }
 
 function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>, key: number) {
@@ -255,6 +259,23 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const handlePickImage = useCallback(async () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.multiple = true;
+      input.onchange = async () => {
+        const files = Array.from(input.files ?? []).slice(0, 4);
+        const picked: AttachedImage[] = await Promise.all(files.map((f) => new Promise<AttachedImage>((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => res({ uri: e.target?.result as string, name: f.name, mimeType: f.type });
+          reader.readAsDataURL(f);
+        })));
+        setAttachments((prev) => [...prev, ...picked].slice(0, 4));
+      };
+      input.click();
+      return;
+    }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert("Cần quyền truy cập", "Cho phép truy cập ảnh để đính kèm");
@@ -368,11 +389,12 @@ export default function ChatScreen() {
   const topPad = insets.top;
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending && !isRunning;
 
+  const ChatContainer = Platform.OS === "web" ? View : RNKAKeyboardAvoidingView;
+
   return (
-    <KeyboardAvoidingView
+    <ChatContainer
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior="padding"
-      keyboardVerticalOffset={0}
+      {...(Platform.OS !== "web" ? { behavior: "padding", keyboardVerticalOffset: 0 } : {})}
     >
       <View
         style={[
@@ -571,11 +593,26 @@ export default function ChatScreen() {
             <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 }}>Model</Text>
             <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
               {allModels.filter((m) => !pickerProvider || m.provider === pickerProvider).length === 0 ? (
-                <View style={{ padding: 24, alignItems: "center", gap: 8 }}>
-                  <Ionicons name="cloud-offline-outline" size={28} color={colors.mutedForeground} />
-                  <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
-                    {connected ? "Không có model nào" : "Kết nối server để xem danh sách model"}
+                <View style={{ padding: 16, gap: 12 }}>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                    {connected ? "Nhập tên model thủ công" : "Kết nối server để xem danh sách model"}
                   </Text>
+                  <TextInput
+                    style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary, minHeight: 40, paddingTop: 9, paddingBottom: 9 }]}
+                    placeholder={`vd: gpt-4o, claude-3-5-sonnet, gemini-2.0-flash`}
+                    placeholderTextColor={colors.mutedForeground}
+                    defaultValue={model}
+                    returnKeyType="done"
+                    onSubmitEditing={async (e) => {
+                      const newModel = e.nativeEvent.text.trim();
+                      if (!newModel) return;
+                      const currentAgent = agents.find((a) => a.agent_key === agentName);
+                      if (currentAgent) {
+                        try { await updateAgent(currentAgent.id, { model: newModel, provider: pickerProvider || undefined }); } catch { Alert.alert("Lỗi", "Không thể đổi model"); }
+                      }
+                      setShowModelPicker(false);
+                    }}
+                  />
                 </View>
               ) : (
                 allModels
@@ -682,7 +719,13 @@ export default function ChatScreen() {
             <Ionicons name="camera-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
           <View style={styles.toolbarSpacer} />
-          <Text style={[styles.contextText, { color: colors.mutedForeground }]}>context: 12% ▓░░░░</Text>
+          <Text style={[styles.contextText, { color: colors.mutedForeground }]}>
+            {liveSession?.estimatedTokens && liveSession?.contextWindow
+              ? `ctx: ${Math.min(100, Math.round((liveSession.estimatedTokens / liveSession.contextWindow) * 100))}%`
+              : liveSession?.estimatedTokens
+              ? `~${liveSession.estimatedTokens >= 1000 ? `${(liveSession.estimatedTokens/1000).toFixed(1)}k` : liveSession.estimatedTokens} tok`
+              : "ctx: —"}
+          </Text>
         </View>
 
         {/* Attachment preview strip */}
@@ -725,7 +768,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </ChatContainer>
   );
 }
 
