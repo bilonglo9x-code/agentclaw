@@ -155,6 +155,8 @@ export class WsClient {
 
   private async authenticate(generation: number): Promise<void> {
     try {
+      // Use stable mobile user ID so server-side userID != ""
+      const effectiveUserId = this.getUserId() || "mobile-gateway";
       const res = await this.call<{
         role?: string;
         status?: string;
@@ -167,7 +169,7 @@ export class WsClient {
         server?: { name?: string; version?: string };
       }>("connect", {
         token: this.getToken(),
-        user_id: this.getUserId(),
+        user_id: effectiveUserId,
         sender_id: this.getSenderID(),
         locale: "vi",
         tenant_hint: "",
