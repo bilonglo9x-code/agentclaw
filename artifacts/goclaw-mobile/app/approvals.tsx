@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -181,6 +182,8 @@ export default function ApprovalsScreen() {
   const router = useRouter();
   const { approvals, loading, pendingCount, approve, deny, refresh } = useApprovals();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const topPad = insets.top;
 
   const handleApprove = async (id: string) => {
@@ -352,6 +355,7 @@ export default function ApprovalsScreen() {
         )}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           pending.length > 1 && !hasSelection ? (

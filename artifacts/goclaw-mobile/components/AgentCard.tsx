@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { Agent } from "@/context/AppContext";
 
@@ -29,9 +30,11 @@ interface AgentCardProps {
   agent: Agent;
   onPress: () => void;
   onChatPress?: () => void;
+  isFavorite?: boolean;
+  onFavorite?: () => void;
 }
 
-export function AgentCard({ agent, onPress, onChatPress }: AgentCardProps) {
+export function AgentCard({ agent, onPress, onChatPress, isFavorite, onFavorite }: AgentCardProps) {
   const colors = useColors();
   const statusCfg = STATUS_CONFIG[agent.status];
   const typeCfg = TYPE_CONFIG[agent.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.open;
@@ -49,8 +52,15 @@ export function AgentCard({ agent, onPress, onChatPress }: AgentCardProps) {
           <Text style={styles.emoji}>{emoji}</Text>
         </View>
         <View style={styles.topRight}>
-          <View style={[styles.typeBadge, { backgroundColor: typeCfg.bg, borderColor: typeCfg.color + "40" }]}>
-            <Text style={[styles.typeBadgeText, { color: typeCfg.color }]}>{typeCfg.label}</Text>
+          <View style={styles.badgeRow}>
+            <View style={[styles.typeBadge, { backgroundColor: typeCfg.bg, borderColor: typeCfg.color + "40" }]}>
+              <Text style={[styles.typeBadgeText, { color: typeCfg.color }]}>{typeCfg.label}</Text>
+            </View>
+            {onFavorite && (
+              <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} activeOpacity={0.7}>
+                <Ionicons name={isFavorite ? "star" : "star-outline"} size={14} color={isFavorite ? "#f59e0b" : colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: statusCfg.color }]} />
@@ -102,6 +112,7 @@ const styles = StyleSheet.create({
   },
   emoji: { fontSize: 22 },
   topRight: { alignItems: "flex-end", gap: 4 },
+  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   typeBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,

@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { useMessages } from "@/hooks/useMessages";
 import { useAllSessions } from "@/hooks/useSessions";
 import { useModels } from "@/hooks/useModels";
@@ -45,13 +46,14 @@ interface MsgBubbleProps {
   colors: ReturnType<typeof useColors>;
 }
 
-function copyToClipboard(text: string) {
+function copyToClipboard(text: string, showToast?: (msg: string, type?: "success" | "error" | "info" | "warning") => void) {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   if (Platform.OS === "web" && navigator?.clipboard) {
     navigator.clipboard.writeText(text).catch(() => Clipboard.setString(text));
   } else {
     Clipboard.setString(text);
   }
+  showToast?.("Đã sao chép", "success");
 }
 
 function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>, key: number) {
@@ -153,6 +155,7 @@ function renderContent(content: string, colors: ReturnType<typeof useColors>) {
 
 function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubbleProps) {
   const isUser = role === "user";
+  const { showToast } = useToast();
   const hasCode = !isUser && content.includes("```");
 
   // Skip rendering empty messages that are not streaming
@@ -195,7 +198,7 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
       <TouchableOpacity
         activeOpacity={1}
         onLongPress={() => {
-          copyToClipboard(content);
+          copyToClipboard(content, showToast);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }}
         delayLongPress={350}
@@ -232,7 +235,7 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
           </Text>
           {!isUser && !isStreaming && content && (
             <TouchableOpacity
-              onPress={() => copyToClipboard(content)}
+              onPress={() => copyToClipboard(content, showToast)}
               style={styles.copyBtn}
               activeOpacity={0.6}
             >
@@ -349,6 +352,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected, ws } = useAuth();
+  const { showToast } = useToast();
   const { sessions } = useAllSessions();
   const [text, setText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
@@ -465,8 +469,9 @@ export default function ChatScreen() {
     try {
       await ws.call(Methods.SESSIONS_PATCH, { key: sessionKey, label: renameText.trim() || null });
       setRenameLabel(renameText.trim());
+      showToast("Đã đổi tên session", "success");
     } catch {
-      Alert.alert("Lỗi", "Không thể đổi tên session");
+      showToast("Không thể đổi tên session", "error");
     } finally {
       setShowRename(false);
     }
@@ -829,7 +834,7 @@ export default function ChatScreen() {
                   try {
                     await updateAgent(currentAgent.id, { model: newModel, provider: pickerProvider || undefined });
                   } catch {
-                    Alert.alert("Lỗi", "Không thể đổi model");
+                    showToast("Không thể đổi model", "error");
                   }
                 }
                 setShowModelPicker(false);

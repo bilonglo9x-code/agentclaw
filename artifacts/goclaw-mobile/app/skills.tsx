@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -60,6 +61,8 @@ export default function SkillsScreen() {
   const { skills: liveSkills, loading, error, refresh } = useSkills();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const topPad = insets.top;
 
@@ -266,6 +269,7 @@ export default function SkillsScreen() {
         }}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="flash-outline" size={36} color={colors.mutedForeground} />

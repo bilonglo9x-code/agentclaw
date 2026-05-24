@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -107,6 +108,8 @@ export default function ActivityScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const topPad = insets.top;
 
   const allLogs = liveLogs;
@@ -272,6 +275,7 @@ export default function ActivityScreen() {
         }}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="list-outline" size={36} color={colors.mutedForeground} />

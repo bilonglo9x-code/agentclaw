@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -177,14 +178,24 @@ export default function TracesScreen() {
   const { traces: liveTraces, loading, error, refresh } = useTraces(50);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const topPad = insets.top;
 
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [agentFilter, setAgentFilter] = useState<string | null>(null);
 
   const traces = liveTraces;
+  const agentNames = useMemo(() => {
+    const names = new Set<string>();
+    traces.forEach((t) => { if (t.agent_name) names.add(t.agent_name); });
+    return Array.from(names).sort();
+  }, [traces]);
+
   const filtered = useMemo(() => {
     let list = filter === "all" ? traces : traces.filter((t) => t.status === filter);
+    if (agentFilter) list = list.filter((t) => t.agent_name === agentFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((t) =>
@@ -194,7 +205,7 @@ export default function TracesScreen() {
       );
     }
     return list;
-  }, [traces, filter, search]);
+  }, [traces, filter, agentFilter, search]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -264,7 +275,7 @@ export default function TracesScreen() {
         })}
       </View>
 
-      {/* Filter chips */}
+      {/* Status filter chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.chips}>
         {FILTERS.map((f) => {
           const active = filter === f.value;
@@ -289,6 +300,30 @@ export default function TracesScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Agent filter chips */}
+      {agentNames.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.filterScroll, { marginTop: -4 }]} contentContainerStyle={styles.chips}>
+          <TouchableOpacity
+            onPress={() => setAgentFilter(null)}
+            style={[styles.chip, { backgroundColor: !agentFilter ? colors.primary + "20" : colors.muted, borderColor: !agentFilter ? colors.primary + "60" : colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.chipText, { color: !agentFilter ? colors.primary : colors.mutedForeground }]}>Tất cả agent</Text>
+          </TouchableOpacity>
+          {agentNames.map((name) => (
+            <TouchableOpacity
+              key={name}
+              onPress={() => setAgentFilter(agentFilter === name ? null : name)}
+              style={[styles.chip, { backgroundColor: agentFilter === name ? "#a78bfa20" : colors.muted, borderColor: agentFilter === name ? "#a78bfa60" : colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="hardware-chip-outline" size={11} color={agentFilter === name ? "#a78bfa" : colors.mutedForeground} />
+              <Text style={[styles.chipText, { color: agentFilter === name ? "#a78bfa" : colors.mutedForeground }]}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       {error && (
         <View style={[styles.errorBanner, { backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "30" }]}>
@@ -383,6 +418,7 @@ export default function TracesScreen() {
           }}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Ionicons name="search-outline" size={36} color={colors.mutedForeground} />
@@ -436,7 +472,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2, textTransform: "capitalize" },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   chips: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start" },
   chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   errorBanner: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, borderWidth: 1, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },

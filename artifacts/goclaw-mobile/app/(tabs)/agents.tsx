@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   FlatList,
@@ -38,6 +39,22 @@ export default function AgentsScreen() {
   const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    AsyncStorage.getItem("goclaw:agent_favorites").then((v) => {
+      if (v) try { setFavorites(new Set(JSON.parse(v))); } catch {}
+    });
+  }, []);
+
+  const toggleFavorite = (id: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      AsyncStorage.setItem("goclaw:agent_favorites", JSON.stringify(Array.from(next)));
+      return next;
+    });
+  };
 
   const rawAgents = realAgents.map((a) => ({
     id: a.id,
@@ -66,7 +83,7 @@ export default function AgentsScreen() {
         return matchSearch && matchFilter;
       }),
     [rawAgents, search, filter],
-  );
+  ).sort((a, b) => (favorites.has(b.id) ? 1 : 0) - (favorites.has(a.id) ? 1 : 0));
 
   const topPad = insets.top;
 
@@ -143,7 +160,9 @@ export default function AgentsScreen() {
                   const key = `agent:${item.key}:ws:direct:${uid}`;
                   router.push(`/chat/${encodeURIComponent(key)}`);
                 }}
-              />
+              isFavorite={favorites.has(item.id)}
+              onFavorite={() => toggleFavorite(item.id)}
+            />
             </View>
           )}
           contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 100 }]}
