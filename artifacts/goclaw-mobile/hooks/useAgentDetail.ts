@@ -45,22 +45,53 @@ export function useAgentDetail(agentId: string | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const [agentRes, filesRes] = await Promise.allSettled([
-        http
-          ? http.get<AgentDetail>(`/v1/agents/${agentId}`)
-          : Promise.reject(new Error("no http")),
-        ws?.isConnected
-          ? ws.call<{ files: AgentFile[] }>(Methods.AGENTS_FILES_LIST, { agentId })
-          : Promise.reject(new Error("no ws")),
-      ]);
+      let agentData: AgentDetail | null = null;
 
-      if (agentRes.status === "fulfilled") {
-        setAgent(agentRes.value);
+      // Try HTTP first
+      if (http) {
+        try {
+          agentData = await http.get<AgentDetail>(`/v1/agents/${agentId}`);
+        } catch {
+          // fall through to WS
+        }
+      }
+
+      // WS fallback: get from agents.list
+      if (!agentData && ws?.isConnected) {
+        try {
+          const res = await ws.call<{ agents: Array<{ id: string; name?: string; model: string; isRunning?: boolean; displayName?: string; agentType?: string; agentKey?: string; provider?: string; status?: string; description?: string }> }>(Methods.AGENTS_LIST);
+          const raw = (res.agents ?? []).find((a) => a.id === agentId || a.agentKey === agentId);
+          if (raw) {
+            agentData = {
+              id: raw.id,
+              agent_key: raw.agentKey ?? raw.id,
+              name: raw.displayName ?? raw.name ?? raw.id,
+              provider: raw.provider ?? "",
+              model: raw.model ?? "",
+              status: raw.status === "active" ? "active" : "inactive",
+              agent_type: raw.agentType,
+              description: raw.description,
+            };
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (agentData) {
+        setAgent(agentData);
       } else {
         setError("Cannot load agent detail");
       }
-      if (filesRes.status === "fulfilled") {
-        setFiles(filesRes.value.files ?? []);
+
+      // Load files via WS
+      if (ws?.isConnected) {
+        try {
+          const filesRes = await ws.call<{ files: AgentFile[] }>(Methods.AGENTS_FILES_LIST, { agentId });
+          setFiles(filesRes.files ?? []);
+        } catch {
+          // files optional
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load agent");
