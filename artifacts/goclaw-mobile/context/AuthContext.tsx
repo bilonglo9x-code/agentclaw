@@ -27,6 +27,7 @@ interface AuthContextValue {
   login: (serverUrl: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
   isReady: boolean;
+  authError: string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isOwner, setIsOwner] = useState(false);
   const [isMasterScope, setIsMasterScope] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const wsRef = useRef<WsClient | null>(null);
   const httpRef = useRef<HttpClient | null>(null);
@@ -73,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     );
     ws.onAuthFailure = async () => {
+      setAuthError("Token không hợp lệ hoặc bị từ chối bởi máy chủ");
       await logout();
     };
     wsRef.current = ws;
@@ -95,6 +98,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (url: string, tok: string) => {
+    setAuthError(null);
+    const base = url.endsWith("/") ? url.slice(0, -1) : url;
+    // Pre-validate: check server reachable and token accepted via HTTP
+    const testHttp = new HttpClient(base, () => tok, () => "");
+    try {
+      await testHttp.get("/health");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("UNAUTHORIZED") || msg.includes("401") || msg.includes("403")) {
+        throw new Error("Token không hợp lệ");
+      }
+      // Server reachable but /health returned non-auth error → still proceed
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("ECONNREFUSED")) {
+        throw new Error(`Không kết nối được máy chủ: ${base}`);
+      }
+    }
     const uid = "";
     const sid = `mobile-${Date.now()}`;
     const auth: AuthState = { serverUrl: url, token: tok, userId: uid, senderID: sid };
@@ -140,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isReady,
+        authError,
       }}
     >
       {children}

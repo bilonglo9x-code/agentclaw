@@ -20,11 +20,12 @@ export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, connectionState } = useAuth();
+  const { login, connectionState, authError } = useAuth();
 
-  const [serverUrl, setServerUrl] = useState("http://");
+  const [serverUrl, setServerUrl] = useState("https://");
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const error = localError ?? authError;
   const [loading, setLoading] = useState(false);
   const [showToken, setShowToken] = useState(false);
 
@@ -32,16 +33,16 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!serverUrl.trim() || !token.trim()) {
-      setError("Vui lòng nhập Server URL và API Token");
+      setLocalError("Vui lòng nhập Server URL và API Token");
       return;
     }
-    setError(null);
+    setLocalError(null);
     setLoading(true);
     try {
       await login(serverUrl.trim(), token.trim());
       router.replace("/");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Đăng nhập thất bại");
+      setLocalError(e instanceof Error ? e.message : "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
