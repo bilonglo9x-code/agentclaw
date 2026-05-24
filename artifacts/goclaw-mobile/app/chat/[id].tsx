@@ -192,7 +192,15 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
           <Ionicons name="sparkles" size={13} color={colors.primary} />
         </View>
       )}
-      <View style={[styles.bubbleContent, isUser && styles.userBubbleContent]}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onLongPress={() => {
+          copyToClipboard(content);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }}
+        delayLongPress={350}
+        style={[styles.bubbleContent, isUser && styles.userBubbleContent]}
+      >
         {role === "tool" && toolName && (
           <View style={[styles.toolBadge, { backgroundColor: "#3b82f615", borderColor: "#3b82f630" }]}>
             <Ionicons name="settings-outline" size={12} color="#60a5fa" />
@@ -232,7 +240,7 @@ function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubblePr
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -355,6 +363,7 @@ export default function ChatScreen() {
   const [pickerModel, setPickerModel] = useState("");
   const [attachments, setAttachments] = useState<AttachedImage[]>([]);
   const [isMicListening, setIsMicListening] = useState(false);
+  const [inputHeight, setInputHeight] = useState(40);
 
   const { models: allModels, loading: modelsLoading } = useModels(pickerProvider || undefined);
   const { providers: serverProviders } = useProviders();
@@ -924,9 +933,10 @@ export default function ChatScreen() {
         <View style={styles.inputRow}>
           <TextInput
             ref={inputRef}
-            style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground, height: Math.max(40, Math.min(inputHeight, 120)) }]}
             value={text}
             onChangeText={setText}
+            onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height + 16)}
             placeholder="Nhập tin nhắn..."
             placeholderTextColor={colors.mutedForeground}
             multiline
@@ -1033,7 +1043,7 @@ const styles = StyleSheet.create({
   attachThumb: { width: 64, height: 64 },
   attachRemove: { position: "absolute", top: 2, right: 2 },
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular", maxHeight: 120 },
+  input: { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 14, fontFamily: "Inter_400Regular" },
   sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular" },

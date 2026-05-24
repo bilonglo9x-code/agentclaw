@@ -5,10 +5,11 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { useApprovals } from "@/hooks/useApprovals";
 
 function NativeTabLayout() {
   return (
@@ -37,11 +38,29 @@ function NativeTabLayout() {
   );
 }
 
+function TabBadge({ count, color }: { count: number; color: string }) {
+  if (count <= 0) return null;
+  return (
+    <View style={{
+      position: "absolute", top: -4, right: -6,
+      minWidth: 16, height: 16, borderRadius: 8,
+      backgroundColor: "#ef4444",
+      alignItems: "center", justifyContent: "center",
+      paddingHorizontal: 3,
+    }}>
+      <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" }}>
+        {count > 99 ? "99+" : String(count)}
+      </Text>
+    </View>
+  );
+}
+
 function ClassicTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { pendingCount } = useApprovals();
 
   return (
     <Tabs
@@ -130,12 +149,16 @@ function ClassicTabLayout() {
         name="more"
         options={{
           title: "More",
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="ellipsis" tintColor={color} size={24} />
-            ) : (
-              <Ionicons name={focused ? "ellipsis-horizontal-circle" : "ellipsis-horizontal-circle-outline"} size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ position: "relative" }}>
+              {isIOS ? (
+                <SymbolView name="ellipsis" tintColor={color} size={24} />
+              ) : (
+                <Ionicons name={focused ? "ellipsis-horizontal-circle" : "ellipsis-horizontal-circle-outline"} size={22} color={color} />
+              )}
+              <TabBadge count={pendingCount} color={color} />
+            </View>
+          ),
         }}
       />
     </Tabs>

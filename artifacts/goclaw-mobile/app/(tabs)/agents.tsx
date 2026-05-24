@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,7 +33,9 @@ export default function AgentsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const { agents: realAgents, loading } = useRealAgents();
+  const { agents: realAgents, loading, refresh } = useRealAgents();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
@@ -146,6 +149,7 @@ export default function AgentsScreen() {
           contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.row}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         />
       )}
     </View>

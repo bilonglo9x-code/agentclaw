@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useTheme, type ThemeMode } from "@/context/ThemeContext";
 
 interface OptionItemProps {
   label: string;
@@ -84,6 +85,7 @@ export default function ThemeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const topPad = insets.top;
+  const { mode, resolvedScheme, setMode } = useTheme();
 
   const [accentColor] = useState<string>("amber");
 
@@ -107,56 +109,45 @@ export default function ThemeScreen() {
             <View style={[styles.previewDot, { backgroundColor: "#f59e0b" }]} />
             <View style={[styles.previewDot, { backgroundColor: "#22c55e" }]} />
           </View>
-          <View style={[styles.previewBody, { backgroundColor: "#09090b" }]}>
-            <View style={[styles.previewSidebar, { backgroundColor: "#18181b" }]}>
-              {[colors.primary, "#a1a1aa", "#a1a1aa", "#a1a1aa"].map((c, i) => (
-                <View key={i} style={[styles.previewSidebarItem, { backgroundColor: c + "20" }]} />
+          <View style={[styles.previewBody, { backgroundColor: colors.background }]}>
+            <View style={[styles.previewSidebar, { backgroundColor: colors.card }]}>
+              {[colors.primary, colors.mutedForeground, colors.mutedForeground, colors.mutedForeground].map((c, i) => (
+                <View key={i} style={[styles.previewSidebarItem, { backgroundColor: c + "30" }]} />
               ))}
             </View>
             <View style={styles.previewContent}>
-              <View style={[styles.previewLine, { backgroundColor: "#27272a", width: "70%" }]} />
-              <View style={[styles.previewLine, { backgroundColor: "#27272a", width: "90%" }]} />
-              <View style={[styles.previewLine, { backgroundColor: colors.primary + "40", width: "50%" }]} />
+              <View style={[styles.previewLine, { backgroundColor: colors.border, width: "70%" }]} />
+              <View style={[styles.previewLine, { backgroundColor: colors.border, width: "90%" }]} />
+              <View style={[styles.previewLine, { backgroundColor: colors.primary + "60", width: "50%" }]} />
             </View>
           </View>
           <View style={styles.previewFooter}>
-            <Ionicons name="moon" size={12} color={colors.primary} />
-            <Text style={[styles.previewLabel, { color: colors.mutedForeground }]}>Dark Mode — Đang dùng</Text>
+            <Ionicons name={resolvedScheme === "dark" ? "moon" : "sunny"} size={12} color={colors.primary} />
+            <Text style={[styles.previewLabel, { color: colors.mutedForeground }]}>
+              {resolvedScheme === "dark" ? "Dark" : "Light"} Mode — Đang dùng
+            </Text>
           </View>
         </View>
 
         {/* Color scheme */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>CHẾ ĐỘ HIỂN THỊ</Text>
-        <OptionItem
-          label="Dark Mode"
-          description="Nền tối zinc-950, giảm mỏi mắt khi dùng ban đêm"
-          selected
-          icon="moon-outline"
-          iconColor="#a78bfa"
-          badge="Đang dùng"
-          onPress={() => {}}
-          colors={colors}
-        />
-        <OptionItem
-          label="Light Mode"
-          description="Nền sáng, phù hợp ban ngày"
-          selected={false}
-          locked
-          icon="sunny-outline"
-          iconColor="#f59e0b"
-          onPress={() => {}}
-          colors={colors}
-        />
-        <OptionItem
-          label="Theo hệ thống"
-          description="Tự động chuyển theo dark/light của thiết bị"
-          selected={false}
-          locked
-          icon="contrast-outline"
-          iconColor="#60a5fa"
-          onPress={() => {}}
-          colors={colors}
-        />
+        {([
+          { key: "dark" as ThemeMode, label: "Dark Mode", desc: "Nền tối zinc-950, giảm mỏi mắt khi dùng ban đêm", icon: "moon-outline" as const, iconColor: "#a78bfa" },
+          { key: "light" as ThemeMode, label: "Light Mode", desc: "Nền sáng, phù hợp ban ngày", icon: "sunny-outline" as const, iconColor: "#f59e0b" },
+          { key: "system" as ThemeMode, label: "Theo hệ thống", desc: "Tự động chuyển theo dark/light của thiết bị", icon: "contrast-outline" as const, iconColor: "#60a5fa" },
+        ] as const).map((item) => (
+          <OptionItem
+            key={item.key}
+            label={item.label}
+            description={item.desc}
+            selected={mode === item.key}
+            icon={item.icon}
+            iconColor={item.iconColor}
+            badge={mode === item.key ? "Đang dùng" : undefined}
+            onPress={() => setMode(item.key)}
+            colors={colors}
+          />
+        ))}
 
         {/* Accent color */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>MÀU NHẤN</Text>
@@ -212,7 +203,7 @@ export default function ThemeScreen() {
         />
 
         <Text style={[styles.note, { color: colors.mutedForeground }]}>
-          * Hiện tại ứng dụng chỉ hỗ trợ Dark Mode với màu nhấn Amber. Các tuỳ chọn khác sẽ được mở trong phiên bản tới.
+          * Màu nhấn tùy chỉnh sẽ được mở trong phiên bản tới. Dark/Light/System đã hoạt động.
         </Text>
       </ScrollView>
     </View>
