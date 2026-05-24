@@ -4,7 +4,55 @@
 
 ---
 
-## 🔥 High Priority (UX tác động lớn)
+## � Sprint 4 Plan — Audit 24/05/2026
+
+### Bugs cần fix ngay
+
+| # | Vấn đề | File | Ghi chú |
+|---|--------|------|---------|
+| B1 | Agent name lowercase trong Conversation List | `index.tsx:152` | `s.agentName` chưa capitalize, cần lookup `agents.display_name` |
+| B2 | Chats screen thiếu pull-to-refresh | `index.tsx:217` | FlatList sessions không có `RefreshControl` |
+| B3 | `MOCK_SESSIONS` dead code | `sessions.tsx:24-30` | Khai báo nhưng không dùng, gây nhầm lẫn |
+| B4 | `MOCK_VOICES` dead code | `voice.tsx:29-40` | Tương tự, xóa ngay |
+| B5 | `MOCK_ACTIVITY` dead code | `dashboard.tsx:49-55` | Dead code, xóa ngay |
+| B6 | `MOCK_SESSIONS` inputTokens/outputTokens | `sessions.tsx` | SessionInfo có field này nhưng real API không trả — cần graceful fallback |
+| B7 | Onboarding screen tồn tại nhưng không auto-trigger | `_layout.tsx` | Không có logic check `isOnboarded()` khi app khởi động |
+| B8 | Dashboard bar chart không tap được | `dashboard.tsx:362-381` | `View` thay vì `TouchableOpacity`, không có tooltip |
+| B9 | Agent picker modal hiển thị agent key thay vì display name | `index.tsx:52` | `a.display_name ?? a.agent_key` — đúng nhưng chưa capitalize |
+
+### Upgrades cần làm
+
+| # | Feature | File | Chi tiết |
+|---|---------|------|---------|
+| U1 | Pull-to-refresh tất cả list screens | nhiều files | sessions, memory, monitor, skills, traces, approvals |
+| U2 | Agent Create Form — system prompt editor full | `agent/create.tsx` | Hiện có `agent_description` nhưng thiếu skills/channel assignment section |
+| U3 | Toast/Snackbar khi copy, delete, save | global | Thay Alert bằng toast nhẹ hơn |
+| U4 | Dashboard chart bar tap → tooltip | `dashboard.tsx` | Tap bar → hiện popup với request count + date |
+| U5 | Chats list — hiển thị unread badge | `index.tsx` | `unread` luôn = 0, cần subscribe WS events |
+| U6 | Chat list — quick swipe to delete session | `index.tsx` | Swipe left → Delete action |
+| U7 | Onboarding auto-trigger | `_layout.tsx` | Check `isOnboarded()` trên mount, redirect nếu false |
+| U8 | Agent card — model + provider chip | `AgentCard.tsx` | Hiện chỉ có status dot + tên, thiếu model label |
+| U9 | Sessions screen — inline rename | `sessions.tsx` | Hiện dùng Modal bottom sheet, cần inline edit |
+| U10 | More screen — thêm Voice, Import/Export shortcuts | `more.tsx` | Shortcuts thiếu: voice, import-export, evolution |
+
+### Bổ sung mới
+
+| # | Feature | Priority | Chi tiết |
+|---|---------|----------|---------|
+| N1 | Global Toast/Snackbar system | High | Context + component hiển thị toast ở góc màn hình |
+| N2 | Chat pinned messages | Medium | Long press → Pin message, hiển thị ở top chat |
+| N3 | Agent favorite/bookmark | Medium | Tap ⭐ trên agent card → ghim lên top của list |
+| N4 | Session export to file | Low | Export PDF hoặc .txt, share via iOS Files app |
+| N5 | Offline mode indicator | Medium | Banner đỏ khi mất kết nối server |
+| N6 | Chat draft save | Low | Lưu draft tin nhắn đang gõ vào AsyncStorage |
+| N7 | Traces screen — agent filter chip | Medium | Filter traces theo agent name |
+| N8 | Global keyboard shortcut (web) | Low | Cmd+K mở search, Cmd+N tạo chat mới |
+
+---
+
+---
+
+## �🔥 High Priority (UX tác động lớn)
 
 ### 1. Push Notification Badge trên Tab Bar
 - Badge số trên icon "More" khi có approval pending

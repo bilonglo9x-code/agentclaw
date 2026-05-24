@@ -21,14 +21,6 @@ import { useAgents } from "@/hooks/useAgents";
 import { useAuth } from "@/context/AuthContext";
 import { Methods } from "@/lib/api/protocol";
 
-const MOCK_SESSIONS: SessionInfo[] = [
-  { key: "sess_abc123", messageCount: 24, created: new Date(Date.now() - 86400000 * 2).toISOString(), updated: new Date(Date.now() - 3600000).toISOString(), label: "Marketing Q2 analysis", agentName: "Assistant", model: "claude-3-5-sonnet", channel: "web", inputTokens: 12400, outputTokens: 8200 },
-  { key: "sess_def456", messageCount: 8, created: new Date(Date.now() - 86400000).toISOString(), updated: new Date(Date.now() - 7200000).toISOString(), agentName: "Code Expert", model: "gpt-4o", channel: "slack", inputTokens: 3200, outputTokens: 5600 },
-  { key: "sess_ghi789", messageCount: 42, created: new Date(Date.now() - 86400000 * 5).toISOString(), updated: new Date(Date.now() - 86400000).toISOString(), label: "Research: LLM benchmark 2025", agentName: "Researcher", model: "gemini-pro", channel: "web", inputTokens: 28000, outputTokens: 18000 },
-  { key: "sess_jkl012", messageCount: 6, created: new Date(Date.now() - 86400000 * 7).toISOString(), updated: new Date(Date.now() - 86400000 * 6).toISOString(), agentName: "Writer", model: "claude-3-5-haiku", channel: "telegram", inputTokens: 1800, outputTokens: 3400 },
-  { key: "sess_mno345", messageCount: 15, created: new Date(Date.now() - 86400000 * 14).toISOString(), updated: new Date(Date.now() - 86400000 * 10).toISOString(), label: "Sprint planning", agentName: "Assistant", model: "gpt-4o", channel: "web", inputTokens: 6000, outputTokens: 4200 },
-];
-
 const CHANNEL_ICONS: Record<string, { icon: keyof typeof Ionicons["glyphMap"]; color: string }> = {
   web: { icon: "globe-outline", color: "#60a5fa" },
   telegram: { icon: "paper-plane-outline", color: "#2AABEE" },

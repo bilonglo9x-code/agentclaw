@@ -18,6 +18,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ToastProvider } from "@/context/ToastContext";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -315,6 +317,17 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+    if (!fontsLoaded && !fontError) return;
+    import("./onboarding").then(({ isOnboarded }) => {
+      isOnboarded().then((done) => {
+        if (!done) {
+          setTimeout(() => router.replace("/onboarding"), 300);
+        }
+      });
+    }).catch(() => {});
+  }, [fontsLoaded, fontError]);
+
   if (!fontsLoaded && !fontError) return null;
 
   return (
@@ -326,7 +339,10 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <AuthProvider>
                   <AppProvider>
-                    <RootLayoutNav />
+                    <ToastProvider>
+                      <RootLayoutNav />
+                      <OfflineBanner />
+                    </ToastProvider>
                   </AppProvider>
                 </AuthProvider>
               </KeyboardProvider>

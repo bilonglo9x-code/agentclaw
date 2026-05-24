@@ -46,13 +46,6 @@ const AGENT_STATUS_COLOR: Record<string, string> = {
   offline: "#a1a1aa",
 };
 
-const MOCK_ACTIVITY = [
-  { id: "1", icon: "checkmark-circle-outline" as const, color: "#22c55e", text: "Agent 'Sales Bot' hoàn thành task", time: "2m" },
-  { id: "2", icon: "time-outline" as const, color: "#60a5fa", text: "Cron 'daily_report' chạy lúc 09:00", time: "15m" },
-  { id: "3", icon: "warning-outline" as const, color: "#f59e0b", text: "Channel Telegram latency cao (>2s)", time: "32m" },
-  { id: "4", icon: "sparkles-outline" as const, color: "#a78bfa", text: "Memory consolidation hoàn tất", time: "1h" },
-  { id: "5", icon: "alert-circle-outline" as const, color: "#ef4444", text: "Provider timeout: OpenAI 3 lần", time: "2h" },
-];
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -64,6 +57,7 @@ export default function DashboardScreen() {
   const { pendingCount } = useApprovals();
   const { agents } = useAgents();
   const { quota, usagePercent, isNearLimit, isOverLimit } = useQuota();
+  const [selectedBarIdx, setSelectedBarIdx] = useState<number | null>(null);
 
   const topPad = insets.top;
 
@@ -360,18 +354,29 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.bars}>
           {barData.map((h, i) => (
-            <View key={i} style={styles.barWrap}>
+            <TouchableOpacity
+              key={i}
+              style={styles.barWrap}
+              onPress={() => setSelectedBarIdx(selectedBarIdx === i ? null : i)}
+              activeOpacity={0.7}
+            >
+              {selectedBarIdx === i && (
+                <View style={[styles.barTooltip, { backgroundColor: colors.card, borderColor: colors.primary + "60" }]}>
+                  <Text style={[styles.barTooltipCount, { color: colors.primary }]}>{fmt(h)}</Text>
+                  <Text style={[styles.barTooltipLabel, { color: colors.mutedForeground }]}>{barLabels[i]}</Text>
+                </View>
+              )}
               <View
                 style={[
                   styles.bar,
                   {
                     height: `${Math.round((h / barMax) * 100)}%` as unknown as number,
-                    backgroundColor: i === barData.length - 1 ? colors.primary : colors.primary + "40",
+                    backgroundColor: selectedBarIdx === i ? colors.primary : i === barData.length - 1 ? colors.primary + "CC" : colors.primary + "40",
                     borderRadius: 4,
                   },
                 ]}
               />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
         <View style={styles.barLabels}>
@@ -560,8 +565,11 @@ const styles = StyleSheet.create({
   chartTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   chartSubtitle: { fontSize: 11, fontFamily: "Inter_400Regular" },
   bars: { flexDirection: "row", alignItems: "flex-end", height: 80, gap: 4, marginBottom: 6 },
-  barWrap: { flex: 1, height: "100%", justifyContent: "flex-end" },
+  barWrap: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center" },
   bar: { width: "100%" },
+  barTooltip: { position: "absolute", top: -44, borderRadius: 8, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 4, alignItems: "center", zIndex: 10 },
+  barTooltipCount: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  barTooltipLabel: { fontSize: 9, fontFamily: "Inter_400Regular" },
   barLabels: { flexDirection: "row", gap: 4 },
   barLabel: { flex: 1, fontSize: 9, fontFamily: "Inter_400Regular", textAlign: "center" },
   sparklineWrap: { flexDirection: "row", alignItems: "flex-end", height: 60, gap: 3, marginBottom: 8 },

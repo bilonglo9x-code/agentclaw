@@ -4,6 +4,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -121,9 +122,12 @@ export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { connected } = useAuth();
-  const { sessions, loading: sessionsLoading } = useAllSessions();
+  const { sessions, loading: sessionsLoading, refresh: refreshSessions } = useAllSessions();
+  const { agents } = useAgents();
   const [search, setSearch] = useState("");
   const [showPicker, setShowPicker] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => { setRefreshing(true); await refreshSessions?.(); setRefreshing(false); };
 
   interface DisplayItem {
     id: string;
@@ -146,17 +150,23 @@ export default function ChatsScreen() {
           (s.label ?? s.key).toLowerCase().includes(q)
         );
       })
-      .map((s) => ({
+      .map((s) => {
+        const agentKey = s.agentName ?? s.key.split(":")[1] ?? "";
+        const agentRec = agents.find((a) => a.agent_key === agentKey || a.display_name?.toLowerCase() === agentKey.toLowerCase());
+        const rawName = agentRec?.display_name ?? agentKey;
+        const displayName = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : "Agent";
+        return ({
         id: s.key,
         agentId: s.key.split(":")[1] ?? "",
-        agentName: s.agentName ?? s.key.split(":")[1] ?? "Agent",
+        agentName: displayName,
         model: s.model ?? "",
         lastMessage: s.label ?? `${s.messageCount} tin nhắn`,
         lastMessageAt: new Date(s.updated),
         unread: 0,
         sessionKey: s.key,
-      }));
-  }, [sessions, search]);
+      });
+      });
+  }, [sessions, search, agents]);
 
   const handleSelectAgent = (agentId: string, agentKey: string, agentName: string) => {
     setShowPicker(false);
@@ -225,6 +235,7 @@ export default function ChatsScreen() {
           )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         />
       )}
 

@@ -42,7 +42,7 @@ export default function AgentsScreen() {
   const rawAgents = realAgents.map((a) => ({
     id: a.id,
     key: a.agent_key,
-    displayName: a.display_name ?? a.id,
+    displayName: (() => { const n = a.display_name ?? a.id; return n.charAt(0).toUpperCase() + n.slice(1); })(),
     description: a.workspace ?? "",
     type: a.agent_type as "open" | "predefined",
     status: (a.status === "active" ? "active" : "idle") as "active" | "idle",

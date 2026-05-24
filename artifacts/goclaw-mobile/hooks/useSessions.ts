@@ -75,30 +75,28 @@ export function useAllSessions() {
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
+  const doFetch = useCallback(async () => {
+    if (!ws?.isConnected) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await ws.call<{ sessions: SessionInfo[] }>(Methods.SESSIONS_LIST, { channel: "ws" });
+      const sorted = (res.sessions ?? []).sort(
+        (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime(),
+      );
+      setSessions(sorted);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load sessions");
+    } finally {
+      setLoading(false);
+    }
+  }, [ws]);
+
   useEffect(() => {
     if (!connected || fetchedRef.current) return;
     fetchedRef.current = true;
-
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (ws?.isConnected) {
-          const res = await ws.call<{ sessions: SessionInfo[] }>(Methods.SESSIONS_LIST, {
-            channel: "ws",
-          });
-          const sorted = (res.sessions ?? []).sort(
-            (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime(),
-          );
-          setSessions(sorted);
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load sessions");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [connected, ws]);
+    doFetch();
+  }, [connected, doFetch]);
 
   useEffect(() => {
     if (!connected) fetchedRef.current = false;
@@ -111,5 +109,10 @@ export function useAllSessions() {
     });
   }, [ws]);
 
-  return { sessions, loading, error };
+  const refresh = useCallback(() => {
+    fetchedRef.current = false;
+    doFetch();
+  }, [doFetch]);
+
+  return { sessions, loading, error, refresh };
 }

@@ -26,18 +26,6 @@ const PROVIDER_COLORS: Record<string, string> = {
   deepgram: "#a78bfa",
 };
 
-const MOCK_VOICES: Voice[] = [
-  { id: "alloy", name: "Alloy", provider: "openai", language: "en", gender: "neutral" },
-  { id: "echo", name: "Echo", provider: "openai", language: "en", gender: "male" },
-  { id: "fable", name: "Fable", provider: "openai", language: "en", gender: "male" },
-  { id: "onyx", name: "Onyx", provider: "openai", language: "en", gender: "male" },
-  { id: "nova", name: "Nova", provider: "openai", language: "en", gender: "female" },
-  { id: "shimmer", name: "Shimmer", provider: "openai", language: "en", gender: "female" },
-  { id: "rachel", name: "Rachel", provider: "elevenlabs", language: "en", gender: "female", tags: ["conversational"] },
-  { id: "adam", name: "Adam", provider: "elevenlabs", language: "en", gender: "male", tags: ["narrative"] },
-  { id: "vi-female-1", name: "Vietnamese Female", provider: "minimax", language: "vi", gender: "female" },
-  { id: "vi-male-1", name: "Vietnamese Male", provider: "minimax", language: "vi", gender: "male" },
-];
 
 type GenderFilter = "all" | "female" | "male" | "neutral";
 
