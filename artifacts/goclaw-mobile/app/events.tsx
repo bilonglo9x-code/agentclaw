@@ -74,7 +74,7 @@ export default function EventsScreen() {
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const topPad = insets.top;
 
-  const allEvents = connected && liveEvents.length > 0 ? liveEvents : MOCK_EVENTS;
+  const allEvents = liveEvents;
 
   const agentNames = useMemo(() => {
     const names = new Set<string>();

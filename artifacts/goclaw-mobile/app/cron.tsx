@@ -110,7 +110,7 @@ export default function CronScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "disabled" | "error">("all");
 
-  const allJobs = liveJobs.length > 0 ? liveJobs : MOCK_JOBS;
+  const allJobs = liveJobs;
   const jobs = useMemo(() => {
     let list = allJobs;
     if (statusFilter === "enabled") list = list.filter((j) => j.enabled);

@@ -76,6 +76,10 @@ export function useUsage(period: "today" | "7d" | "30d" = "today") {
   }, [http, connected, period]);
 
   useEffect(() => {
+    fetchedRef.current = false;
+  }, [period]);
+
+  useEffect(() => {
     if (connected && !fetchedRef.current) {
       fetchedRef.current = true;
       load();

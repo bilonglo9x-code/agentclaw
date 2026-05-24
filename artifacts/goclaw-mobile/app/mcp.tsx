@@ -55,7 +55,7 @@ export default function MCPScreen() {
   const [search, setSearch] = useState("");
   const [transportFilter, setTransportFilter] = useState<string | null>(null);
 
-  const allServers = liveServers.length > 0 ? liveServers : MOCK_SERVERS;
+  const allServers = liveServers;
   const servers = useMemo(() => {
     let list = allServers;
     if (transportFilter) list = list.filter((s) => s.transport === transportFilter);
@@ -68,7 +68,7 @@ export default function MCPScreen() {
 
   const enabledCount = allServers.filter((s) => s.enabled).length;
   const totalAgents = allServers.reduce((sum, s) => sum + (s.agent_count ?? 0), 0);
-  const totalTools = Object.values(MOCK_TOOL_COUNTS).reduce((a, b) => a + b, 0);
+  const totalTools = allServers.reduce((sum, s) => sum + (s.tool_count ?? 0), 0);
 
   const handleAddServer = () => {
     Alert.alert("Thêm MCP Server", "Cấu hình MCP server mới qua web console.\n\nHỗ trợ: STDIO, SSE, Streamable HTTP", [
@@ -151,8 +151,8 @@ export default function MCPScreen() {
         renderItem={({ item }) => {
           const tCfg = TRANSPORT_CONFIG[item.transport] ?? TRANSPORT_CONFIG.stdio;
           const endpoint = item.transport === "stdio" ? [item.command, ...(item.args ?? [])].join(" ") : item.url ?? "—";
-          const toolCount = MOCK_TOOL_COUNTS[item.id] ?? 0;
-          const latency = MOCK_LATENCY[item.id] ?? 0;
+          const toolCount = item.tool_count ?? 0;
+          const latency = item.latency_ms ?? 0;
           const latencyColor = getLatencyColor(latency, item.enabled);
 
           return (

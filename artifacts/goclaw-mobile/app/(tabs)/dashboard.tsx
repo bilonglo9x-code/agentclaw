@@ -139,14 +139,7 @@ export default function DashboardScreen() {
 
   const lastUpdated = loading ? "Đang tải..." : summary ? "Vừa cập nhật" : "Demo data";
 
-  const displayAgents = agents.length > 0 ? agents.slice(0, 6) : [
-    { id: "1", display_name: "Sales Bot", status: "active", agent_key: "sales" },
-    { id: "2", display_name: "Code Expert", status: "active", agent_key: "coder" },
-    { id: "3", display_name: "Researcher", status: "idle", agent_key: "research" },
-    { id: "4", display_name: "Writer", status: "idle", agent_key: "writer" },
-    { id: "5", display_name: "Support", status: "error", agent_key: "support" },
-    { id: "6", display_name: "Analyst", status: "active", agent_key: "analyst" },
-  ];
+  const displayAgents = agents.slice(0, 6);
 
   return (
     <ScrollView
@@ -342,15 +335,15 @@ export default function DashboardScreen() {
         <View style={styles.agentHealthSummaryRow}>
           <View style={styles.agentHealthStat}>
             <View style={[styles.agentHealthStatDot, { backgroundColor: "#22c55e" }]} />
-            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{activeAgents || 3} active</Text>
+            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{activeAgents} active</Text>
           </View>
           <View style={styles.agentHealthStat}>
             <View style={[styles.agentHealthStatDot, { backgroundColor: "#60a5fa" }]} />
-            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{idleAgents || 2} idle</Text>
+            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{idleAgents} idle</Text>
           </View>
           <View style={styles.agentHealthStat}>
             <View style={[styles.agentHealthStatDot, { backgroundColor: "#ef4444" }]} />
-            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{errorAgents || 1} error</Text>
+            <Text style={[styles.agentHealthStatText, { color: colors.mutedForeground }]}>{errorAgents} error</Text>
           </View>
         </View>
       </View>
@@ -435,22 +428,21 @@ export default function DashboardScreen() {
             <Text style={[styles.viewAll, { color: colors.primary }]}>Xem tất cả →</Text>
           </TouchableOpacity>
         </View>
-        {(liveEvents.length > 0 ? liveEvents.slice(0, 5) : MOCK_ACTIVITY).map((item, i, arr) => {
-          const isLive = liveEvents.length > 0;
-          const id = isLive ? (item as typeof liveEvents[0]).id : (item as typeof MOCK_ACTIVITY[0]).id;
-          const text = isLive ? (item as typeof liveEvents[0]).summary : (item as typeof MOCK_ACTIVITY[0]).text;
-          const timeVal = isLive
-            ? (() => { const d = Date.now() - (item as typeof liveEvents[0]).timestamp; return d < 60000 ? "vừa xong" : d < 3600000 ? `${Math.floor(d / 60000)}m` : `${Math.floor(d / 3600000)}h`; })()
-            : (item as typeof MOCK_ACTIVITY[0]).time;
-          const status = isLive ? (item as typeof liveEvents[0]).status : undefined;
-          const iconColor = status === "error" ? "#ef4444" : status === "running" ? "#60a5fa" : "#22c55e";
-          const iconName = (status === "error" ? "alert-circle-outline" : status === "running" ? "sync-outline" : "checkmark-circle-outline") as keyof typeof Ionicons["glyphMap"];
+        {liveEvents.length === 0 && (
+          <View style={[styles.activityRow, { borderBottomWidth: 0, justifyContent: "center", paddingVertical: 16 }]}>
+            <Text style={[styles.activityTime, { color: colors.mutedForeground }]}>Chưa có hoạt động — thử chat với agent</Text>
+          </View>
+        )}
+        {liveEvents.slice(0, 5).map((item, i, arr) => {
+          const timeVal = (() => { const d = Date.now() - item.timestamp; return d < 60000 ? "vừa xong" : d < 3600000 ? `${Math.floor(d / 60000)}m` : `${Math.floor(d / 3600000)}h`; })();
+          const iconColor = item.status === "error" ? "#ef4444" : item.status === "running" ? "#60a5fa" : "#22c55e";
+          const iconName = (item.status === "error" ? "alert-circle-outline" : item.status === "running" ? "sync-outline" : "checkmark-circle-outline") as keyof typeof Ionicons["glyphMap"];
           return (
-            <View key={id} style={[styles.activityRow, { borderBottomColor: colors.border }, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
-              <View style={[styles.activityIcon, { backgroundColor: (isLive ? iconColor : (item as typeof MOCK_ACTIVITY[0]).color) + "18" }]}>
-                <Ionicons name={isLive ? iconName as keyof typeof Ionicons["glyphMap"] : (item as typeof MOCK_ACTIVITY[0]).icon} size={14} color={isLive ? iconColor : (item as typeof MOCK_ACTIVITY[0]).color} />
+            <View key={item.id} style={[styles.activityRow, { borderBottomColor: colors.border }, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
+              <View style={[styles.activityIcon, { backgroundColor: iconColor + "18" }]}>
+                <Ionicons name={iconName} size={14} color={iconColor} />
               </View>
-              <Text style={[styles.activityText, { color: colors.foreground }]} numberOfLines={1}>{text}</Text>
+              <Text style={[styles.activityText, { color: colors.foreground }]} numberOfLines={1}>{item.summary}</Text>
               <Text style={[styles.activityTime, { color: colors.mutedForeground }]}>{timeVal}</Text>
             </View>
           );

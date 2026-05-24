@@ -64,8 +64,8 @@ export default function ChannelsScreen() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const allInstances = liveInst.length > 0 ? liveInst : MOCK_INSTANCES;
-  const statuses = Object.keys(liveStatus).length > 0 ? liveStatus : MOCK_STATUSES;
+  const allInstances = liveInst;
+  const statuses = liveStatus;
 
   const instances = useMemo(() => {
     let list = allInstances;

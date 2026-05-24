@@ -64,8 +64,8 @@ export default function MemoryScreen() {
 
   const { documents: liveDocs, episodic: liveEpisodic, loading, error, refresh, deleteDocument } = useMemory(selectedAgent);
 
-  const documents = connected && liveDocs.length > 0 ? liveDocs : MOCK_DOCS;
-  const episodic = connected && liveEpisodic.length > 0 ? liveEpisodic : MOCK_EPISODIC;
+  const documents = liveDocs;
+  const episodic = liveEpisodic;
   const filteredDocs = useMemo(() => {
     if (!search.trim()) return documents;
     const q = search.toLowerCase();
@@ -97,11 +97,11 @@ export default function MemoryScreen() {
 
   const agentDocCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    MOCK_DOCS.forEach((d) => {
+    documents.forEach((d) => {
       if (d.agent_id) counts[d.agent_id] = (counts[d.agent_id] ?? 0) + 1;
     });
     return counts;
-  }, []);
+  }, [documents]);
 
   const totalTokens = episodic.reduce((s, e) => s + (e.token_count ?? 0), 0);
   const maxTokens = Math.max(...episodic.map((e) => e.token_count ?? 0), 1);
