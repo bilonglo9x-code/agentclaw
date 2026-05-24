@@ -33,6 +33,10 @@ export class ErrorBoundary extends Component<
     if (typeof this.props.onError === "function") {
       this.props.onError(error, info.componentStack);
     }
+    // Expose for debugging
+    if (typeof window !== "undefined") {
+      (window as unknown as Record<string, unknown>).__lastError = { message: error.message, stack: error.stack?.substring(0, 500) };
+    }
   }
 
   resetError = (): void => {
