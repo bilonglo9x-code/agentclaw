@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const base = url.endsWith("/") ? url.slice(0, -1) : url;
-    const wsUrl = base.replace(/^http/, "ws") + "/v1/ws";
+    const wsUrl = base.replace(/^http/, "ws") + "/ws";
     const httpBase = base;
 
     const http = new HttpClient(httpBase, () => tok, () => uid);
