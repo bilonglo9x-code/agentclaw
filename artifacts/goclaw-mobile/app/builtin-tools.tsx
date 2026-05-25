@@ -98,7 +98,7 @@ export default function BuiltinToolsScreen() {
   const filtered = tools.filter((t) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return t.name.includes(q) || t.display_name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
+    return t.name.includes(q) || (t.display_name ?? "").toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q);
   });
 
   const grouped = new Map<string, BuiltinToolData[]>();
@@ -214,13 +214,13 @@ export default function BuiltinToolsScreen() {
                     style={[styles.toolRow, { borderBottomColor: colors.border, opacity: tool.enabled ? 1 : 0.65 }]}
                   >
                     <View style={{ flex: 1, gap: 3 }}>
-                      <Text style={[styles.toolName, { color: colors.foreground }]}>{tool.display_name}</Text>
+                      <Text style={[styles.toolName, { color: colors.foreground }]}>{tool.display_name ?? tool.name}</Text>
                       <Text style={[styles.toolDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
                         {tool.description}
                       </Text>
-                      {tool.requires.length > 0 && (
+                      {(tool.requires?.length ?? 0) > 0 && (
                         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
-                          {tool.requires.map((r) => (
+                          {(tool.requires ?? []).map((r) => (
                             <View key={r} style={[styles.requireBadge, { backgroundColor: "#ef444415" }]}>
                               <Ionicons name="key-outline" size={9} color="#ef4444" />
                               <Text style={[styles.requireText, { color: "#ef4444" }]}>{r}</Text>
