@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { useBrandingApplier } from "@/hooks/useBrandingApplier";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +31,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function RootLayoutNav() {
+  useBrandingApplier();
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -279,6 +281,14 @@ function RootLayoutNav() {
           headerShown: false,
           presentation: "modal",
           animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
+        name="branding"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
         }}
       />
     </Stack>

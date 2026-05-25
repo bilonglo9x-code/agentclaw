@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./theme-provider";
 import { WsProvider } from "./ws-provider";
+import { BrandingProvider } from "./branding-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient({
@@ -20,7 +21,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <WsProvider>{children}</WsProvider>
+        <WsProvider><BrandingProvider>{children}</BrandingProvider></WsProvider>
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>

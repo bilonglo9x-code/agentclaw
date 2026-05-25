@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { usePendingPairingsCount } from "@/hooks/use-pending-pairings-count";
 import { useAuthStore } from "@/stores/use-auth-store";
 import { useTenants } from "@/hooks/use-tenants";
+import { useBrandingContext } from "@/components/providers/branding-provider";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -67,19 +68,7 @@ export function Sidebar({ collapsed, onNavItemClick }: SidebarProps) {
       }}
     >
       {/* Logo / title */}
-      <div className="flex h-14 items-center border-b px-4">
-        {!collapsed && (
-          <div className="flex items-center gap-2.5">
-            <img src="/goclaw-icon.svg" alt="GoClaw" className="h-8 w-8" />
-            <span className="text-lg font-bold tracking-tight text-sidebar-primary">
-              GoClaw
-            </span>
-          </div>
-        )}
-        {collapsed && (
-          <img src="/goclaw-icon.svg" alt="GoClaw" className="mx-auto h-7 w-7" />
-        )}
-      </div>
+      <BrandLogoRow collapsed={collapsed} />
 
       {/* Nav items */}
       <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
@@ -152,5 +141,24 @@ export function Sidebar({ collapsed, onNavItemClick }: SidebarProps) {
         <ConnectionStatus collapsed={collapsed} />
       </div>
     </aside>
+  );
+}
+
+function BrandLogoRow({ collapsed }: { collapsed: boolean }) {
+  const branding = useBrandingContext();
+  const name = branding.name?.trim() || "GoClaw";
+  const logoSrc = branding.logoUrl?.trim() || "/goclaw-icon.svg";
+  return (
+    <div className="flex h-14 items-center border-b px-4">
+      {!collapsed && (
+        <div className="flex items-center gap-2.5 min-w-0">
+          <img src={logoSrc} alt={name} className="h-8 w-8 shrink-0 rounded object-contain" onError={(e) => { (e.target as HTMLImageElement).src = "/goclaw-icon.svg"; }} />
+          <span className="text-lg font-bold tracking-tight text-sidebar-primary truncate">{name}</span>
+        </div>
+      )}
+      {collapsed && (
+        <img src={logoSrc} alt={name} className="mx-auto h-7 w-7 rounded object-contain" onError={(e) => { (e.target as HTMLImageElement).src = "/goclaw-icon.svg"; }} />
+      )}
+    </div>
   );
 }
