@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -60,31 +61,63 @@ function getFileIcon(file: StorageFile): { icon: keyof typeof Ionicons["glyphMap
   return { icon: "document-outline", color: "#71717a" };
 }
 
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "svg", "heic", "heif"];
+const TEXT_EXTS = ["md", "txt", "log", "yaml", "yml", "json", "py", "go", "ts", "js", "sh", "toml", "env", "ini", "html", "css", "xml", "csv"];
+const CODE_EXTS = ["yaml", "yml", "json", "py", "go", "ts", "js", "sh", "toml", "html", "css", "xml"];
+
 function FilePreviewModal({
   file,
-  content,
   colors,
+  serverUrl,
+  token,
   onClose,
 }: {
   file: StorageFile;
-  content: string;
   colors: ReturnType<typeof useColors>;
+  serverUrl: string;
+  token: string;
   onClose: () => void;
 }) {
   const { icon, color } = getFileIcon(file);
-  const ext = file.name.split(".").pop()?.toLowerCase();
-  const isCode = ["yaml", "yml", "json", "py", "go", "ts", "js", "sh"].includes(ext ?? "");
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const isImage = IMAGE_EXTS.includes(ext);
+  const isText = TEXT_EXTS.includes(ext);
+  const isCode = CODE_EXTS.includes(ext);
+
+  const [content, setContent] = useState<string | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  const contentUrl = serverUrl
+    ? `${serverUrl.replace(/\/$/, "")}/v1/storage/files/content?path=${encodeURIComponent(file.path)}`
+    : null;
+
+  useEffect(() => {
+    if (!isText || !contentUrl || !token) return;
+    setContentLoading(true);
+    setContentError(null);
+    fetch(contentUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then(setContent)
+      .catch((e) => setContentError(e instanceof Error ? e.message : "Không thể tải nội dung"))
+      .finally(() => setContentLoading(false));
+  }, [isText, contentUrl, token]);
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[previewStyles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
         <View style={[previewStyles.header, { borderBottomColor: colors.border }]}>
           <View style={[previewStyles.fileIcon, { backgroundColor: color + "18" }]}>
             <Ionicons name={icon} size={18} color={color} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[previewStyles.fileName, { color: colors.foreground }]}>{file.name}</Text>
-            <Text style={[previewStyles.filePath, { color: colors.mutedForeground }]}>{file.path}</Text>
+            <Text style={[previewStyles.fileName, { color: colors.foreground }]} numberOfLines={1}>{file.name}</Text>
+            <Text style={[previewStyles.filePath, { color: colors.mutedForeground }]} numberOfLines={2}>{file.path}</Text>
           </View>
           <View style={styles.headerRight}>
             {file.size > 0 && (
@@ -97,19 +130,68 @@ function FilePreviewModal({
             </TouchableOpacity>
           </View>
         </View>
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          <Text
-            style={[
-              previewStyles.content,
-              isCode
-                ? { backgroundColor: "#0f172a", color: "#e2e8f0", fontFamily: "monospace" }
-                : { color: colors.foreground },
-            ]}
-            selectable
+
+        {/* Body */}
+        {isImage ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={previewStyles.imageContainer}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            showsVerticalScrollIndicator={false}
           >
-            {content}
-          </Text>
-        </ScrollView>
+            {contentUrl && !imgError ? (
+              <Image
+                source={{ uri: contentUrl, headers: { Authorization: `Bearer ${token}` } }}
+                style={previewStyles.imagePreview}
+                resizeMode="contain"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <View style={previewStyles.unavailable}>
+                <Ionicons name="image-outline" size={40} color={colors.mutedForeground} />
+                <Text style={[previewStyles.unavailableText, { color: colors.mutedForeground }]}>
+                  {imgError ? "Không thể tải ảnh" : "Chưa kết nối server"}
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        ) : isText ? (
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {contentLoading ? (
+              <View style={previewStyles.loadingWrap}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : contentError ? (
+              <View style={previewStyles.unavailable}>
+                <Ionicons name="alert-circle-outline" size={32} color={colors.destructive} />
+                <Text style={[previewStyles.unavailableText, { color: colors.destructive }]}>{contentError}</Text>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  previewStyles.content,
+                  isCode
+                    ? { backgroundColor: "#0f172a", color: "#e2e8f0", fontFamily: "monospace" }
+                    : { color: colors.foreground },
+                ]}
+                selectable
+              >
+                {content ?? ""}
+              </Text>
+            )}
+          </ScrollView>
+        ) : (
+          <View style={previewStyles.unavailable}>
+            <Ionicons name="document-outline" size={40} color={colors.mutedForeground} />
+            <Text style={[previewStyles.unavailableText, { color: colors.mutedForeground }]}>
+              Không xem trước được định dạng .{ext || "file"} trên mobile
+            </Text>
+            <Text style={[previewStyles.unavailableHint, { color: colors.mutedForeground }]}>
+              {fmtSize(file.size)}
+            </Text>
+          </View>
+        )}
       </View>
     </Modal>
   );
@@ -119,7 +201,7 @@ export default function StorageScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { connected } = useAuth();
+  const { connected, serverUrl, token } = useAuth();
   const { files: liveFiles, baseDir, loading, error, refresh, loadSubtree, deleteFile } = useStorage();
   const [expanded, setExpanded] = useState<Record<string, StorageFile[]>>({});
   const [loadingDir, setLoadingDir] = useState<string | null>(null);
@@ -189,8 +271,6 @@ export default function StorageScreen() {
   const dirCount = rootFiles.filter((f) => f.isDir).length;
   const fileCount = rootFiles.filter((f) => !f.isDir).length;
   const totalSize = rootFiles.reduce((s, f) => s + f.size, 0);
-
-  const previewContent = previewFile ? `# ${previewFile.name}\n\nFile path: ${previewFile.path}\nSize: ${previewFile.size} bytes\n\nNội dung file không khả dụng trên mobile.` : "";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -345,8 +425,9 @@ export default function StorageScreen() {
       {previewFile && (
         <FilePreviewModal
           file={previewFile}
-          content={previewContent}
           colors={colors}
+          serverUrl={serverUrl}
+          token={token}
           onClose={() => setPreviewFile(null)}
         />
       )}
@@ -364,6 +445,12 @@ const previewStyles = StyleSheet.create({
   sizeText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   closeBtn: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   content: { flex: 1, padding: 16, fontSize: 13, lineHeight: 20, fontFamily: "Inter_400Regular" },
+  imageContainer: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16 },
+  imagePreview: { width: "100%", height: 400 },
+  unavailable: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40, gap: 12 },
+  unavailableText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  unavailableHint: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
 });
 
 const styles = StyleSheet.create({
