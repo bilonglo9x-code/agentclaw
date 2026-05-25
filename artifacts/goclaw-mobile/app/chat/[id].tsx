@@ -88,8 +88,16 @@ function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>
   return nodes.length > 0 ? nodes : [<Text key={`t${key}0`} style={[styles.bubbleText, { color: colors.foreground }]}>{text}</Text>];
 }
 
+const MEDIA_TAG_RE = /<media:[a-z]+(?: [^>]*)?>(?:\n<transcript>[\s\S]*?<\/transcript>)?/g;
+
+function stripMediaTags(text: string): string {
+  return text.replace(MEDIA_TAG_RE, "").replace(/^\n+/, "").trim();
+}
+
 function renderContent(content: string | undefined | null, colors: ReturnType<typeof useColors>) {
   if (!content?.trim()) return null;
+  content = stripMediaTags(content);
+  if (!content) return null;
   const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
@@ -130,12 +138,12 @@ function renderContent(content: string | undefined | null, colors: ReturnType<ty
           if (h1) return <Text key={li} style={[styles.mdH1, { color: colors.foreground }]}>{h1[1]}</Text>;
           if (h2) return <Text key={li} style={[styles.mdH2, { color: colors.foreground }]}>{h2[1]}</Text>;
           if (h3) return <Text key={li} style={[styles.mdH3, { color: colors.foreground }]}>{h3[1]}</Text>;
-          // List item (- or *)
-          const listItem = line.match(/^[-*] (.+)/);
+          // List item (- * or Unicode bullet •)
+          const listItem = line.match(/^[-*•]\s+(.+)/);
           if (listItem) return (
             <View key={li} style={styles.listItem}>
               <View style={[styles.listDot, { backgroundColor: colors.primary }]} />
-              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{listItem[1]}</Text>
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{renderInlineMarkdown(listItem[1], colors, li * 1000 + i)}</Text>
             </View>
           );
           // Numbered list
@@ -143,7 +151,7 @@ function renderContent(content: string | undefined | null, colors: ReturnType<ty
           if (numItem) return (
             <View key={li} style={styles.listItem}>
               <Text style={[styles.numLabel, { color: colors.primary }]}>{numItem[1]}.</Text>
-              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{numItem[2]}</Text>
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{renderInlineMarkdown(numItem[2], colors, li * 1000 + i + 500)}</Text>
             </View>
           );
           // Empty line → spacing
