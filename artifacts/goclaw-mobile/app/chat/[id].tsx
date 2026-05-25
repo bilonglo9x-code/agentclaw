@@ -25,7 +25,6 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useMessages } from "@/hooks/useMessages";
-import type { AttachedImage as MsgAttachedImage, MediaRef } from "@/hooks/useMessages";
 import { useAllSessions } from "@/hooks/useSessions";
 import { useModels } from "@/hooks/useModels";
 import { useProviders } from "@/hooks/useProviders";
@@ -38,7 +37,6 @@ interface AttachedImage {
   uri: string;
   name: string;
   mimeType: string;
-  file?: File;
 }
 
 interface MsgBubbleProps {
@@ -47,9 +45,6 @@ interface MsgBubbleProps {
   isStreaming?: boolean;
   toolName?: string;
   colors: ReturnType<typeof useColors>;
-  attachedImages?: MsgAttachedImage[];
-  mediaRefs?: MediaRef[];
-  serverUrl?: string;
 }
 
 function copyToClipboard(text: string, showToast?: (msg: string, type?: "success" | "error" | "info" | "warning") => void) {
@@ -88,16 +83,7 @@ function renderInlineMarkdown(text: string, colors: ReturnType<typeof useColors>
   return nodes.length > 0 ? nodes : [<Text key={`t${key}0`} style={[styles.bubbleText, { color: colors.foreground }]}>{text}</Text>];
 }
 
-const MEDIA_TAG_RE = /<media:[a-z]+(?: [^>]*)?>(?:\n<transcript>[\s\S]*?<\/transcript>)?/g;
-
-function stripMediaTags(text: string): string {
-  return text.replace(MEDIA_TAG_RE, "").replace(/^\n+/, "").trim();
-}
-
-function renderContent(content: string | undefined | null, colors: ReturnType<typeof useColors>) {
-  if (!content?.trim()) return null;
-  content = stripMediaTags(content);
-  if (!content) return null;
+function renderContent(content: string, colors: ReturnType<typeof useColors>) {
   const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
   const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
@@ -138,12 +124,12 @@ function renderContent(content: string | undefined | null, colors: ReturnType<ty
           if (h1) return <Text key={li} style={[styles.mdH1, { color: colors.foreground }]}>{h1[1]}</Text>;
           if (h2) return <Text key={li} style={[styles.mdH2, { color: colors.foreground }]}>{h2[1]}</Text>;
           if (h3) return <Text key={li} style={[styles.mdH3, { color: colors.foreground }]}>{h3[1]}</Text>;
-          // List item (- * or Unicode bullet •)
-          const listItem = line.match(/^[-*•]\s+(.+)/);
+          // List item (- or *)
+          const listItem = line.match(/^[-*] (.+)/);
           if (listItem) return (
             <View key={li} style={styles.listItem}>
               <View style={[styles.listDot, { backgroundColor: colors.primary }]} />
-              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{renderInlineMarkdown(listItem[1], colors, li * 1000 + i)}</Text>
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{listItem[1]}</Text>
             </View>
           );
           // Numbered list
@@ -151,7 +137,7 @@ function renderContent(content: string | undefined | null, colors: ReturnType<ty
           if (numItem) return (
             <View key={li} style={styles.listItem}>
               <Text style={[styles.numLabel, { color: colors.primary }]}>{numItem[1]}.</Text>
-              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{renderInlineMarkdown(numItem[2], colors, li * 1000 + i + 500)}</Text>
+              <Text style={[styles.bubbleText, { color: colors.foreground, flex: 1 }]}>{numItem[2]}</Text>
             </View>
           );
           // Empty line → spacing
@@ -168,56 +154,13 @@ function renderContent(content: string | undefined | null, colors: ReturnType<ty
   });
 }
 
-function ImageGrid({ images }: { images: { uri: string; name: string }[] }) {
-  const [lightbox, setLightbox] = React.useState<string | null>(null);
-  if (images.length === 0) return null;
-  return (
-    <View style={imgStyles.grid}>
-      {images.map((img, i) => (
-        <TouchableOpacity key={i} activeOpacity={0.85} onPress={() => setLightbox(img.uri)} style={imgStyles.thumb}>
-          <Image
-            source={{ uri: img.uri }}
-            style={imgStyles.thumbImg}
-            resizeMode="cover"
-          />
-          {img.name && (
-            <Text style={imgStyles.thumbName} numberOfLines={1}>{img.name}</Text>
-          )}
-        </TouchableOpacity>
-      ))}
-      <Modal visible={!!lightbox} transparent animationType="fade" onRequestClose={() => setLightbox(null)}>
-        <TouchableOpacity style={imgStyles.lbOverlay} activeOpacity={1} onPress={() => setLightbox(null)}>
-          {lightbox && (
-            <Image source={{ uri: lightbox }} style={imgStyles.lbImg} resizeMode="contain" />
-          )}
-          <View style={imgStyles.lbClose}>
-            <Ionicons name="close-circle" size={32} color="#fff" />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </View>
-  );
-}
-
-const imgStyles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
-  thumb: { borderRadius: 10, overflow: "hidden", backgroundColor: "#1e293b", width: 120, maxWidth: "48%" as unknown as number },
-  thumbImg: { width: "100%" as unknown as number, height: 100, borderRadius: 10 },
-  thumbName: { fontSize: 10, fontFamily: "Inter_400Regular", color: "#94a3b8", paddingHorizontal: 6, paddingVertical: 3 },
-  lbOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
-  lbImg: { width: "95%", height: "80%", borderRadius: 12 } as unknown as object,
-  lbClose: { position: "absolute", top: 52, right: 20 },
-});
-
-function MsgBubble({ role, content, isStreaming, toolName, colors, attachedImages, mediaRefs, serverUrl }: MsgBubbleProps) {
+function MsgBubble({ role, content, isStreaming, toolName, colors }: MsgBubbleProps) {
   const isUser = role === "user";
   const { showToast } = useToast();
-  const hasCode = !isUser && !!content && content.includes("```");
+  const hasCode = !isUser && content.includes("```");
 
-  // Skip rendering empty messages that are not streaming (unless there are images)
-  const hasImages = (attachedImages && attachedImages.length > 0) || (mediaRefs && mediaRefs.length > 0);
-  // Never hide user messages — they were explicitly sent. Only hide empty non-user messages.
-  if (!isUser && !isStreaming && !content?.trim() && !hasImages) return null;
+  // Skip rendering empty messages that are not streaming
+  if (!isStreaming && !content?.trim()) return null;
 
   if (isStreaming && !content) {
     return (
@@ -277,20 +220,6 @@ function MsgBubble({ role, content, isStreaming, toolName, colors, attachedImage
             hasCode && styles.bubbleWide,
           ]}
         >
-          {/* Optimistic local images (before upload completes) */}
-          {attachedImages && attachedImages.length > 0 && (
-            <ImageGrid images={attachedImages.map((a) => ({ uri: a.uri, name: a.name }))} />
-          )}
-          {/* Server-side media_refs from history */}
-          {mediaRefs && mediaRefs.length > 0 && serverUrl && (
-            <ImageGrid images={mediaRefs
-              .filter((r) => (r.mime_type?.startsWith("image/")) || r.kind === "image")
-              .map((r) => ({
-                uri: r.path ? `${serverUrl}${r.path}` : `${serverUrl}/v1/media/${r.id}`,
-                name: r.kind,
-              }))
-            } />
-          )}
           {isStreaming && content ? (
             <>
               {renderContent(content, colors)}
@@ -423,7 +352,7 @@ export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { connected, ws, serverUrl } = useAuth();
+  const { connected, ws } = useAuth();
   const { showToast } = useToast();
   const { sessions } = useAllSessions();
   const [text, setText] = useState("");
@@ -477,14 +406,13 @@ export default function ChatScreen() {
       input.type = "file";
       input.accept = "image/*";
       input.multiple = true;
-      input.onchange = () => {
+      input.onchange = async () => {
         const files = Array.from(input.files ?? []).slice(0, 4);
-        const picked: AttachedImage[] = files.map((f) => ({
-          uri: URL.createObjectURL(f),
-          name: f.name,
-          mimeType: f.type || "image/jpeg",
-          file: f,
-        }));
+        const picked: AttachedImage[] = await Promise.all(files.map((f) => new Promise<AttachedImage>((res) => {
+          const reader = new FileReader();
+          reader.onload = (e) => res({ uri: e.target?.result as string, name: f.name, mimeType: f.type });
+          reader.readAsDataURL(f);
+        })));
         setAttachments((prev) => [...prev, ...picked].slice(0, 4));
       };
       input.click();
@@ -542,7 +470,7 @@ export default function ChatScreen() {
 
   const agentKey = id?.split(":")[1] ?? "";
   const currentAgent = agents.find((a) => a.agent_key === agentKey);
-  const agentDisplayName = liveSession?.agentName ?? currentAgent?.display_name ?? currentAgent?.agent_key ?? agentKey;
+  const agentDisplayName = liveSession?.agentName ?? currentAgent?.display_name ?? agentKey;
   // Proper title-case for agent name
   const agentName = agentDisplayName
     ? agentDisplayName.charAt(0).toUpperCase() + agentDisplayName.slice(1)
@@ -594,8 +522,14 @@ export default function ChatScreen() {
   const handleSend = useCallback(() => {
     if ((!text.trim() && attachments.length === 0) || !id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Build message: text + attachment references
+    let msgText = text.trim();
+    if (attachments.length > 0) {
+      const refs = attachments.map((a) => `[Image: ${a.name}]`).join(" ");
+      msgText = msgText ? `${msgText}\n${refs}` : refs;
+    }
     if (sessionKey) {
-      sendLive(text.trim(), attachments.length > 0 ? attachments : undefined);
+      sendLive(msgText);
     }
     setText("");
     if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; }
@@ -942,17 +876,14 @@ export default function ChatScreen() {
         data={[...displayMessages].reverse()}
         keyExtractor={(item) => ("id" in item ? (item as { id: string }).id : String(Math.random()))}
         renderItem={({ item }) => {
-          const msg = item as { id: string; role: "user" | "assistant" | "tool"; content: string; isStreaming?: boolean; toolName?: string; attachedImages?: MsgAttachedImage[]; media_refs?: MediaRef[] };
+          const msg = item as { id: string; role: "user" | "assistant" | "tool"; content: string; isStreaming?: boolean; toolName?: string };
           return (
             <MsgBubble
               role={msg.role}
-              content={msg.content ?? ""}
+              content={msg.content}
               isStreaming={msg.isStreaming}
               toolName={msg.toolName}
               colors={colors}
-              attachedImages={msg.attachedImages}
-              mediaRefs={msg.media_refs}
-              serverUrl={serverUrl}
             />
           );
         }}
