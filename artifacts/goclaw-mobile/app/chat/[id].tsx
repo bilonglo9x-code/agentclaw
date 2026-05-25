@@ -283,8 +283,11 @@ function MsgBubble({ role, content, isStreaming, toolName, colors, attachedImage
           {/* Server-side media_refs from history */}
           {mediaRefs && mediaRefs.length > 0 && serverUrl && (
             <ImageGrid images={mediaRefs
-              .filter((r) => r.mime_type.startsWith("image/"))
-              .map((r) => ({ uri: `${serverUrl}/v1/media/${r.id}`, name: r.kind }))
+              .filter((r) => (r.mime_type?.startsWith("image/")) || r.kind === "image")
+              .map((r) => ({
+                uri: r.path ? `${serverUrl}${r.path}` : `${serverUrl}/v1/media/${r.id}`,
+                name: r.kind,
+              }))
             } />
           )}
           {isStreaming && content ? (
