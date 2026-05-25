@@ -6,6 +6,8 @@ export interface AttachedImage {
   uri: string;
   name: string;
   mimeType: string;
+  /** Web-only: raw File object kept for FormData upload (data: URIs can't be appended on browsers) */
+  file?: File;
 }
 
 export interface MediaRef {
@@ -144,7 +146,13 @@ export function useMessages(sessionKey: string) {
           const uploads = await Promise.all(
             images.map(async (img) => {
               const fd = new FormData();
-              fd.append("file", { uri: img.uri, name: img.name, type: img.mimeType } as unknown as Blob);
+              if (img.file) {
+                // Web: append native File object (data: URIs are not valid FormData blobs in browsers)
+                fd.append("file", img.file, img.name);
+              } else {
+                // React Native: uri-object pattern understood by RN's fetch polyfill
+                fd.append("file", { uri: img.uri, name: img.name, type: img.mimeType } as unknown as Blob);
+              }
               const res = await http.postForm<{ path: string; filename: string; mime_type: string }>("/v1/media/upload", fd);
               return { path: res.path, filename: res.filename ?? img.name };
             }),

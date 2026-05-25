@@ -38,6 +38,7 @@ interface AttachedImage {
   uri: string;
   name: string;
   mimeType: string;
+  file?: File;
 }
 
 interface MsgBubbleProps {
@@ -464,13 +465,14 @@ export default function ChatScreen() {
       input.type = "file";
       input.accept = "image/*";
       input.multiple = true;
-      input.onchange = async () => {
+      input.onchange = () => {
         const files = Array.from(input.files ?? []).slice(0, 4);
-        const picked: AttachedImage[] = await Promise.all(files.map((f) => new Promise<AttachedImage>((res) => {
-          const reader = new FileReader();
-          reader.onload = (e) => res({ uri: e.target?.result as string, name: f.name, mimeType: f.type });
-          reader.readAsDataURL(f);
-        })));
+        const picked: AttachedImage[] = files.map((f) => ({
+          uri: URL.createObjectURL(f),
+          name: f.name,
+          mimeType: f.type || "image/jpeg",
+          file: f,
+        }));
         setAttachments((prev) => [...prev, ...picked].slice(0, 4));
       };
       input.click();
