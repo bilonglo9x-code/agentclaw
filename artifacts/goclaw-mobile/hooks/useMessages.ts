@@ -138,9 +138,9 @@ export function useMessages(sessionKey: string) {
         },
       ]);
 
-      try {
-        let mediaItems: { path: string; filename: string }[] | undefined;
-        if (images && images.length > 0 && http) {
+      let mediaItems: { path: string; filename: string }[] | undefined;
+      if (images && images.length > 0 && http) {
+        try {
           const uploads = await Promise.all(
             images.map(async (img) => {
               const fd = new FormData();
@@ -150,7 +150,18 @@ export function useMessages(sessionKey: string) {
             }),
           );
           mediaItems = uploads;
+        } catch (uploadErr) {
+          console.warn("[useMessages] image upload failed, sending without media:", uploadErr);
         }
+      }
+
+      // If upload failed and there's no text either, nothing useful to send
+      if (!message.trim() && (!mediaItems || mediaItems.length === 0)) {
+        setSending(false);
+        return;
+      }
+
+      try {
         await ws.call(
           Methods.CHAT_SEND,
           {
@@ -160,7 +171,8 @@ export function useMessages(sessionKey: string) {
           },
           30_000,
         );
-      } catch {
+      } catch (sendErr) {
+        console.warn("[useMessages] CHAT_SEND failed:", sendErr);
       } finally {
         setSending(false);
       }
