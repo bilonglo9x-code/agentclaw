@@ -174,7 +174,7 @@ export default function TraceDetailScreen() {
           <View style={[styles.statusBanner, { backgroundColor: cfg.color + "15", borderColor: cfg.color + "30" }]}>
             <Ionicons name={cfg.icon} size={20} color={cfg.color} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.statusLabel, { color: cfg.color }]}>{trace.status.toUpperCase()}</Text>
+              <Text style={[styles.statusLabel, { color: cfg.color }]}>{(trace.status ?? "unknown").toUpperCase()}</Text>
               <Text style={[styles.statusId, { color: colors.mutedForeground }]} numberOfLines={1}>{trace.id}</Text>
             </View>
             {trace.total_cost != null && trace.total_cost > 0 && (
