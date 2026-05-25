@@ -128,7 +128,7 @@ export default function StorageScreen() {
   const [previewFile, setPreviewFile] = useState<StorageFile | null>(null);
   const topPad = insets.top;
 
-  const rootFiles = liveFiles;
+  const rootFiles = connected ? liveFiles : (liveFiles.length > 0 ? liveFiles : MOCK_FILES);
 
   const handleDir = async (file: StorageFile) => {
     if (!file.isDir) {
@@ -272,6 +272,7 @@ export default function StorageScreen() {
       )}
 
       <FlatList
+        style={styles.list}
         data={displayItems}
         keyExtractor={(item) => item.file.path}
         renderItem={({ item }) => {
@@ -324,7 +325,7 @@ export default function StorageScreen() {
             </TouchableOpacity>
           );
         }}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 16 },
   errorBanner: { marginHorizontal: 16, marginBottom: 8, borderRadius: 10, padding: 10 },
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  list: {},
+  list: { flex: 1 },
   fileRow: { flexDirection: "row", alignItems: "center", paddingRight: 16, paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10, position: "relative" },
   depthLine: { position: "absolute", top: 0, bottom: 0, width: 1, borderLeftWidth: StyleSheet.hairlineWidth },
   fileIcon: { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center", flexShrink: 0 },
