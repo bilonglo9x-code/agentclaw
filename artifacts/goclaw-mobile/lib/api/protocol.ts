@@ -107,6 +107,9 @@ export const Methods = {
   DEVICE_PAIR_INITIATE: "device.pair.initiate",
   DEVICE_PAIR_UNPAIR: "device.pair.unpair",
   DEVICE_PAIR_CANCEL: "device.pair.cancel",
+  DEVICE_PAIR_APPROVE: "device.pair.approve",
+  DEVICE_PAIR_DENY: "device.pair.deny",
+  DEVICE_PAIR_REVOKE: "device.pair.revoke",
 
   WHATSAPP_QR_START: "whatsapp.qr.start",
   ZALO_PERSONAL_QR_START: "zalo.personal.qr.start",
@@ -130,6 +133,8 @@ export const Events = {
   SKILL_DEPS_COMPLETE: "skill.deps.complete",
   SKILL_DEPS_INSTALLING: "skill.deps.installing",
   SKILL_DEPS_INSTALLED: "skill.deps.installed",
+  DEVICE_PAIR_REQUESTED: "device.pair.requested",
+  DEVICE_PAIR_RESOLVED: "device.pair.resolved",
   HEARTBEAT: "heartbeat",
   LOG: "log",
   TEAM_TASK_CREATED: "team.task.created",

@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-import { useDevices, PairedDevice } from "@/hooks/useDevices";
+import { useDevices, PairedDevice, PendingPairing } from "@/hooks/useDevices";
 import { useAuth } from "@/context/AuthContext";
 
 const MOCK_DEVICES: PairedDevice[] = [
@@ -119,6 +119,48 @@ function PairingCodeCard({
   );
 }
 
+function PendingCard({ item, colors, onApprove, onDeny }: { item: PendingPairing; colors: ReturnType<typeof useColors>; onApprove: (code: string) => void; onDeny: (code: string) => void }) {
+  const chCfg = CHANNEL_CONFIG[item.channel] ?? CHANNEL_CONFIG.web;
+  return (
+    <View style={[styles.pendingCard, { backgroundColor: "#f97316" + "10", borderColor: "#f97316" + "30" }]}>
+      <View style={[styles.deviceIcon, { backgroundColor: chCfg.color + "18" }]}>
+        <Ionicons name={chCfg.icon} size={20} color={chCfg.color} />
+      </View>
+      <View style={styles.deviceInfo}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={[styles.deviceTitle, { color: colors.foreground }]} numberOfLines={1}>{item.sender_id}</Text>
+          <View style={[styles.channelBadge, { backgroundColor: "#f97316" + "15", borderColor: "#f97316" + "30" }]}>
+            <Text style={[styles.channelText, { color: "#f97316" }]}>Chờ duyệt</Text>
+          </View>
+        </View>
+        <View style={styles.deviceMeta}>
+          <View style={[styles.channelBadge, { backgroundColor: chCfg.color + "15", borderColor: chCfg.color + "30" }]}>
+            <Text style={[styles.channelText, { color: chCfg.color }]}>{chCfg.label}</Text>
+          </View>
+          {item.code && <Text style={[styles.chatId, { color: colors.mutedForeground, fontFamily: "monospace" }]}>{item.code}</Text>}
+          {item.created_at && <Text style={[styles.pairedAt, { color: colors.mutedForeground }]}>{fmtDate(item.created_at)}</Text>}
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <TouchableOpacity
+          onPress={() => onDeny(item.code)}
+          style={[styles.unpairBtn, { backgroundColor: "#ef444415", borderColor: "#ef444430" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close-outline" size={16} color="#ef4444" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onApprove(item.code)}
+          style={[styles.unpairBtn, { backgroundColor: "#22c55e15", borderColor: "#22c55e30" }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="checkmark-outline" size={16} color="#22c55e" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function DeviceCard({ item, colors, onUnpair }: { item: PairedDevice; colors: ReturnType<typeof useColors>; onUnpair: (id: string) => void }) {
   const chCfg = CHANNEL_CONFIG[item.channel] ?? CHANNEL_CONFIG.web;
   return (
@@ -158,9 +200,23 @@ export default function DevicesScreen() {
   const { connected } = useAuth();
   const topPad = insets.top;
 
-  const { devices: liveDevices, pairing, loading, error, refresh, initiratePairing, unpair, cancelPairing } = useDevices();
+  const { devices: liveDevices, pending, pairing, loading, error, refresh, initiratePairing, unpair, cancelPairing, approvePairing, denyPairing } = useDevices();
   const devices = liveDevices;
   const [generating, setGenerating] = useState(false);
+
+  const handleApprove = (code: string) => {
+    Alert.alert("Duyệt ghép thiết bị", "Cho phép thiết bị này kết nối?", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Đồng ý", onPress: () => approvePairing(code) },
+    ]);
+  };
+
+  const handleDeny = (code: string) => {
+    Alert.alert("Từ chối ghép thiết bị", "Từ chối yêu cầu này?", [
+      { text: "Hủy", style: "cancel" },
+      { text: "Từ chối", style: "destructive", onPress: () => denyPairing(code) },
+    ]);
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -212,6 +268,14 @@ export default function DevicesScreen() {
               expiresAt={pairing?.expires_at}
               generating={generating}
             />
+            {pending.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <Text style={[styles.sectionLabel, { color: "#f97316" }]}>CHỜ DUYỆT ({pending.length})</Text>
+                {pending.map((p) => (
+                  <PendingCard key={p.code} item={p} colors={colors} onApprove={handleApprove} onDeny={handleDeny} />
+                ))}
+              </View>
+            )}
             {devices.length > 0 && (
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>THIẾT BỊ ĐÃ GHÉP</Text>
             )}
@@ -273,4 +337,5 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   emptyWrap: { alignItems: "center", paddingTop: 30, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  pendingCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, borderWidth: 1, padding: 14, gap: 12 },
 });

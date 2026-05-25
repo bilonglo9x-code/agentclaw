@@ -41,6 +41,7 @@ const ALL_SHORTCUTS = [
   { key: "pending", icon: "mail-open-outline" as keyof typeof Ionicons["glyphMap"], label: "Pending Inbox", color: "#f97316", route: "/pending-messages" },
   { key: "hooks", icon: "git-branch-outline" as keyof typeof Ionicons["glyphMap"], label: "Webhooks", color: "#ec4899", route: "/hooks-webhooks" },
   { key: "builtin", icon: "construct-outline" as keyof typeof Ionicons["glyphMap"], label: "Builtin Tools", color: "#22c55e", route: "/builtin-tools" },
+  { key: "usage", icon: "bar-chart-outline" as keyof typeof Ionicons["glyphMap"], label: "Usage Analytics", color: "#06b6d4", route: "/usage" },
 ];
 const DEFAULT_PINNED = ["search", "traces", "approvals", "skills", "memory", "kg"];
 
@@ -143,6 +144,7 @@ export default function MoreScreen() {
     {
       title: "Hệ thống",
       items: [
+        { icon: "bar-chart-outline" as keyof typeof Ionicons["glyphMap"], label: "Usage Analytics", color: "#06b6d4", onPress: () => router.push("/usage") },
         { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
         { icon: "cube-outline", label: "Packages", color: "#3b82f6", onPress: () => router.push("/packages") },
         { icon: "cloud-upload-outline", label: "Backup & Restore", color: "#f97316", onPress: () => router.push("/backup") },
