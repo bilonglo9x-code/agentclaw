@@ -2,6 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Events, Methods, AgentEventTypes, ChatEventTypes } from "@/lib/api/protocol";
 
+export interface AttachedImage {
+  uri: string;
+  name: string;
+  mimeType: string;
+}
+
+export interface MediaRef {
+  id: string;
+  mime_type: string;
+  kind: string;
+  path?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant" | "tool";
@@ -11,10 +24,14 @@ export interface Message {
   created_at?: string;
   isStreaming?: boolean;
   toolName?: string;
+  /** local-only: image URIs attached before upload, for optimistic display */
+  attachedImages?: AttachedImage[];
+  /** server-side media references from history */
+  media_refs?: MediaRef[];
 }
 
 export function useMessages(sessionKey: string) {
-  const { ws, connected } = useAuth();
+  const { ws, http, connected, serverUrl } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -105,23 +122,50 @@ export function useMessages(sessionKey: string) {
   }, [ws, sessionKey, loadHistory]);
 
   const send = useCallback(
-    async (message: string) => {
-      if (!ws?.isConnected || !sessionKey || !message.trim()) return;
+    async (message: string, images?: AttachedImage[]) => {
+      if (!ws?.isConnected || !sessionKey) return;
+      if (!message.trim() && (!images || images.length === 0)) return;
       setSending(true);
 
       setMessages((prev) => [
         ...prev,
-        { id: `user-${Date.now()}`, role: "user", content: message.trim(), created_at: new Date().toISOString() },
+        {
+          id: `user-${Date.now()}`,
+          role: "user",
+          content: message.trim(),
+          created_at: new Date().toISOString(),
+          attachedImages: images && images.length > 0 ? images : undefined,
+        },
       ]);
 
       try {
-        await ws.call(Methods.CHAT_SEND, { sessionKey, message: message.trim() }, 5_000);
+        let mediaItems: { path: string; filename: string }[] | undefined;
+        if (images && images.length > 0 && http) {
+          const uploads = await Promise.all(
+            images.map(async (img) => {
+              const fd = new FormData();
+              fd.append("file", { uri: img.uri, name: img.name, type: img.mimeType } as unknown as Blob);
+              const res = await http.postForm<{ path: string; filename: string; mime_type: string }>("/v1/media/upload", fd);
+              return { path: res.path, filename: res.filename ?? img.name };
+            }),
+          );
+          mediaItems = uploads;
+        }
+        await ws.call(
+          Methods.CHAT_SEND,
+          {
+            sessionKey,
+            message: message.trim(),
+            ...(mediaItems && mediaItems.length > 0 ? { media: mediaItems } : {}),
+          },
+          30_000,
+        );
       } catch {
       } finally {
         setSending(false);
       }
     },
-    [ws, sessionKey],
+    [ws, http, sessionKey],
   );
 
   const abort = useCallback(async () => {
