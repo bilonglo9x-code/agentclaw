@@ -104,9 +104,6 @@ export const Methods = {
   MODELS_LIST: "models.list",
 
   DEVICE_PAIR_LIST: "device.pair.list",
-  DEVICE_PAIR_INITIATE: "device.pair.initiate",
-  DEVICE_PAIR_UNPAIR: "device.pair.unpair",
-  DEVICE_PAIR_CANCEL: "device.pair.cancel",
   DEVICE_PAIR_APPROVE: "device.pair.approve",
   DEVICE_PAIR_DENY: "device.pair.deny",
   DEVICE_PAIR_REVOKE: "device.pair.revoke",

@@ -22,17 +22,10 @@ export interface PendingPairing {
   expires_at?: string;
 }
 
-export interface PairingSession {
-  code: string;
-  expires_at: string;
-  qr_url?: string;
-}
-
 export function useDevices() {
   const { ws, connected } = useAuth();
   const [devices, setDevices] = useState<PairedDevice[]>([]);
   const [pending, setPending] = useState<PendingPairing[]>([]);
-  const [pairing, setPairing] = useState<PairingSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
@@ -63,31 +56,6 @@ export function useDevices() {
     if (!connected) fetchedRef.current = false;
   }, [connected]);
 
-  const initiratePairing = useCallback(async () => {
-    if (!ws?.isConnected) return;
-    try {
-      const res = await ws.call<PairingSession>(Methods.DEVICE_PAIR_INITIATE, {});
-      setPairing(res);
-      return res;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to initiate pairing");
-    }
-  }, [ws]);
-
-  const unpair = useCallback(
-    async (senderID: string) => {
-      if (!ws?.isConnected) return;
-      await ws.call(Methods.DEVICE_PAIR_UNPAIR, { sender_id: senderID });
-      setDevices((prev) => prev.filter((d) => d.sender_id !== senderID));
-    },
-    [ws],
-  );
-
-  const cancelPairing = useCallback(async () => {
-    if (!ws?.isConnected) return;
-    await ws.call(Methods.DEVICE_PAIR_CANCEL, {}).catch(() => {});
-    setPairing(null);
-  }, [ws]);
 
   const approvePairing = useCallback(async (code: string) => {
     if (!ws?.isConnected) return;
@@ -114,5 +82,5 @@ export function useDevices() {
     return () => { unsubReq?.(); unsubRes?.(); };
   }, [ws, load]);
 
-  return { devices, pending, pairing, loading, error, refresh: load, initiratePairing, unpair, cancelPairing, approvePairing, denyPairing, revokePairing };
+  return { devices, pending, loading, error, refresh: load, approvePairing, denyPairing, revokePairing };
 }

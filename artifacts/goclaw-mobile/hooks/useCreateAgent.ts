@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export interface AgentFormData {
   agent_key: string;
-  name?: string;
+  display_name?: string;
   agent_description?: string;
   provider?: string;
   model?: string;

@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,12 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useDevices, PairedDevice, PendingPairing } from "@/hooks/useDevices";
 import { useAuth } from "@/context/AuthContext";
-
-const MOCK_DEVICES: PairedDevice[] = [
-  { sender_id: "tg_123456", channel: "telegram", chat_id: "123456", paired_at: new Date(Date.now() - 86400000 * 5).toISOString(), user_id: "alice" },
-  { sender_id: "dc_789012", channel: "discord", chat_id: "789012", paired_at: new Date(Date.now() - 86400000 * 12).toISOString(), user_id: "alice" },
-  { sender_id: "wb_aabbcc", channel: "web", paired_at: new Date(Date.now() - 3600000 * 2).toISOString(), user_id: "alice" },
-];
 
 const CHANNEL_CONFIG: Record<string, { icon: keyof typeof Ionicons["glyphMap"]; color: string; label: string }> = {
   telegram: { icon: "paper-plane-outline", color: "#2AABEE", label: "Telegram" },
@@ -40,83 +33,6 @@ function fmtDate(iso?: string): string {
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h trước`;
   if (diff < 86400000 * 7) return `${Math.floor(diff / 86400000)} ngày trước`;
   return new Date(iso).toLocaleDateString("vi", { day: "2-digit", month: "2-digit", year: "2-digit" });
-}
-
-function PairingCodeCard({
-  colors,
-  onGenerate,
-  onCancel,
-  code,
-  expiresAt,
-  generating,
-}: {
-  colors: ReturnType<typeof useColors>;
-  onGenerate: () => void;
-  onCancel: () => void;
-  code?: string;
-  expiresAt?: string;
-  generating?: boolean;
-}) {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!expiresAt) { setRemaining(0); return; }
-    const tick = () => {
-      const diff = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-      setRemaining(diff);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [expiresAt]);
-
-  return (
-    <View style={[styles.pairingCard, { backgroundColor: colors.card, borderColor: code ? colors.primary + "40" : colors.border }]}>
-      <View style={styles.pairingHeader}>
-        <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
-        <Text style={[styles.pairingTitle, { color: colors.foreground }]}>Ghép thiết bị mới</Text>
-      </View>
-      <Text style={[styles.pairingDesc, { color: colors.mutedForeground }]}>
-        Tạo mã ghép để kết nối thiết bị qua Telegram, Discord hoặc kênh khác
-      </Text>
-
-      {code ? (
-        <View style={styles.codeArea}>
-          <View style={[styles.codeBox, { backgroundColor: colors.secondary, borderColor: colors.primary + "30" }]}>
-            <Text style={[styles.codeText, { color: colors.primary }]} selectable>{code}</Text>
-          </View>
-          {remaining > 0 && (
-            <Text style={[styles.expireText, { color: remaining < 60 ? "#f97316" : colors.mutedForeground }]}>
-              Hết hạn sau {remaining}s
-            </Text>
-          )}
-          <TouchableOpacity
-            onPress={onCancel}
-            style={[styles.cancelBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.cancelBtnText, { color: colors.mutedForeground }]}>Hủy mã</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          onPress={onGenerate}
-          style={[styles.generateBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}
-          activeOpacity={0.7}
-          disabled={generating}
-        >
-          {generating ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-          )}
-          <Text style={[styles.generateBtnText, { color: colors.primary }]}>
-            {generating ? "Đang tạo..." : "Tạo mã ghép"}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
 }
 
 function PendingCard({ item, colors, onApprove, onDeny }: { item: PendingPairing; colors: ReturnType<typeof useColors>; onApprove: (code: string) => void; onDeny: (code: string) => void }) {
@@ -200,9 +116,7 @@ export default function DevicesScreen() {
   const { connected } = useAuth();
   const topPad = insets.top;
 
-  const { devices: liveDevices, pending, pairing, loading, error, refresh, initiratePairing, unpair, cancelPairing, approvePairing, denyPairing } = useDevices();
-  const devices = liveDevices;
-  const [generating, setGenerating] = useState(false);
+  const { devices, pending, loading, error, refresh, approvePairing, denyPairing, revokePairing } = useDevices();
 
   const handleApprove = (code: string) => {
     Alert.alert("Duyệt ghép thiết bị", "Cho phép thiết bị này kết nối?", [
@@ -218,23 +132,13 @@ export default function DevicesScreen() {
     ]);
   };
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    await initiratePairing?.();
-    setGenerating(false);
-  };
-
-  const handleUnpair = (senderID: string) => {
+  const handleRevoke = (d: PairedDevice) => {
     Alert.alert(
-      "Gỡ kết nối thiết bị",
-      "Thiết bị này sẽ không thể gửi tin nhắn đến agent nữa.",
+      "Thu hồi kết nối",
+      `Gỡ kết nối ${d.sender_id}? Thiết bị sẽ không thể gửi tin nhắn đến agent nữa.`,
       [
         { text: "Hủy", style: "cancel" },
-        {
-          text: "Gỡ kết nối",
-          style: "destructive",
-          onPress: () => unpair(senderID),
-        },
+        { text: "Thu hồi", style: "destructive", onPress: () => revokePairing(d.sender_id, d.channel) },
       ],
     );
   };
@@ -247,7 +151,11 @@ export default function DevicesScreen() {
         </TouchableOpacity>
         <View style={styles.titleArea}>
           <Text style={[styles.title, { color: colors.foreground }]}>Devices</Text>
-          <Text style={[styles.badge, { color: colors.mutedForeground }]}>{devices.length}</Text>
+          {pending.length > 0 && (
+            <View style={[styles.pendingBadge, { backgroundColor: "#f97316" }]}>
+              <Text style={styles.pendingBadgeText}>{pending.length}</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
@@ -257,17 +165,18 @@ export default function DevicesScreen() {
       <FlatList
         data={devices}
         keyExtractor={(d) => d.sender_id}
-        renderItem={({ item }) => <DeviceCard item={item} colors={colors} onUnpair={handleUnpair} />}
+        renderItem={({ item }) => <DeviceCard item={item} colors={colors} onUnpair={() => handleRevoke(item)} />}
         ListHeaderComponent={() => (
           <View style={styles.listHeader}>
-            <PairingCodeCard
-              colors={colors}
-              onGenerate={handleGenerate}
-              onCancel={cancelPairing ?? (() => {})}
-              code={pairing?.code}
-              expiresAt={pairing?.expires_at}
-              generating={generating}
-            />
+            {/* How pairing works */}
+            <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+              <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+                Thiết bị ghép bằng cách gửi lệnh đến bot (Telegram, Discord...). Sau khi nhận yêu cầu, duyệt tại đây.
+              </Text>
+            </View>
+
+            {/* Pending */}
             {pending.length > 0 && (
               <View style={{ gap: 8 }}>
                 <Text style={[styles.sectionLabel, { color: "#f97316" }]}>CHỜ DUYỆT ({pending.length})</Text>
@@ -276,8 +185,9 @@ export default function DevicesScreen() {
                 ))}
               </View>
             )}
+
             {devices.length > 0 && (
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>THIẾT BỊ ĐÃ GHÉP</Text>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>ĐÃ GHÉP ({devices.length})</Text>
             )}
             {error && (
               <View style={[styles.errorBanner, { backgroundColor: colors.destructive + "15" }]}>
@@ -290,10 +200,13 @@ export default function DevicesScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <Ionicons name="phone-portrait-outline" size={36} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa có thiết bị nào được ghép</Text>
-          </View>
+          !loading && pending.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="phone-portrait-outline" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Chưa có thiết bị nào được ghép</Text>
+              <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>Gửi /pair hoặc /start tới bot để ghép</Text>
+            </View>
+          ) : null
         }
       />
     </View>
@@ -311,18 +224,6 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 14, paddingTop: 0 },
   listHeader: { gap: 14, marginBottom: 8 },
   sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8, paddingHorizontal: 2 },
-  pairingCard: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 10 },
-  pairingHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pairingTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  pairingDesc: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  codeArea: { gap: 8 },
-  codeBox: { borderRadius: 12, borderWidth: 1, padding: 12, alignItems: "center" },
-  codeText: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: 8 },
-  expireText: { fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center" },
-  cancelBtn: { borderRadius: 10, borderWidth: 1, paddingVertical: 8, alignItems: "center" },
-  cancelBtnText: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  generateBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingVertical: 10 },
-  generateBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   deviceCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, borderWidth: 1, padding: 14, gap: 12 },
   deviceIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   deviceInfo: { flex: 1, gap: 4 },
@@ -337,5 +238,10 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, fontFamily: "Inter_400Regular" },
   emptyWrap: { alignItems: "center", paddingTop: 30, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  emptyHint: { fontSize: 12, fontFamily: "Inter_400Regular" },
   pendingCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, borderWidth: 1, padding: 14, gap: 12 },
+  pendingBadge: { width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  pendingBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  infoCard: { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 12, borderWidth: 1, padding: 12 },
+  infoText: { flex: 1, fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
 });

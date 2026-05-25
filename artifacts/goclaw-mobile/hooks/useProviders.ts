@@ -7,9 +7,19 @@ export interface ProviderData {
   display_name: string;
   provider_type: string;
   api_base?: string;
+  api_key?: string;
   enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProviderCreateData {
+  name: string;
+  display_name?: string;
+  provider_type: string;
+  api_base?: string;
+  api_key?: string;
+  enabled?: boolean;
 }
 
 export function useProviders() {
@@ -55,5 +65,50 @@ export function useProviders() {
     [http],
   );
 
-  return { providers, loading, error, toggle, refresh: load };
+  const create = useCallback(
+    async (data: ProviderCreateData): Promise<ProviderData | null> => {
+      if (!http) return null;
+      try {
+        const res = await http.post<ProviderData>("/v1/providers", data);
+        setProviders((prev) => [...prev, res]);
+        return res;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to create provider");
+        return null;
+      }
+    },
+    [http],
+  );
+
+  const update = useCallback(
+    async (id: string, data: Partial<ProviderCreateData>): Promise<boolean> => {
+      if (!http) return false;
+      try {
+        const res = await http.put<ProviderData>(`/v1/providers/${id}`, data);
+        setProviders((prev) => prev.map((p) => (p.id === id ? { ...p, ...res } : p)));
+        return true;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to update provider");
+        return false;
+      }
+    },
+    [http],
+  );
+
+  const deleteProvider = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!http) return false;
+      try {
+        await http.delete(`/v1/providers/${id}`);
+        setProviders((prev) => prev.filter((p) => p.id !== id));
+        return true;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to delete provider");
+        return false;
+      }
+    },
+    [http],
+  );
+
+  return { providers, loading, error, toggle, refresh: load, create, update, deleteProvider };
 }

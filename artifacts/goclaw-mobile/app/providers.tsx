@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Platform,
@@ -8,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -15,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
-import { useProviders, ProviderData } from "@/hooks/useProviders";
+import { useProviders, ProviderData, ProviderCreateData } from "@/hooks/useProviders";
 import { SearchBar } from "@/components/SearchBar";
 
 const PROVIDER_ICONS: Record<string, { color: string; icon: keyof typeof Ionicons["glyphMap"] }> = {
@@ -158,17 +160,197 @@ function CompareModal({
   );
 }
 
+const PROVIDER_TYPES = ["openai", "anthropic", "gemini", "google", "mistral", "groq", "cohere", "together", "deepseek", "ollama", "azure", "openrouter", "perplexity", "custom"];
+
+const DEFAULT_FORM: ProviderCreateData = { name: "", display_name: "", provider_type: "openai", api_base: "", api_key: "", enabled: true };
+
+function ProviderFormModal({
+  colors,
+  insets,
+  existing,
+  saving,
+  formError,
+  onSave,
+  onClose,
+}: {
+  colors: ReturnType<typeof useColors>;
+  insets: { bottom: number };
+  existing?: ProviderData | null;
+  saving?: boolean;
+  formError?: string | null;
+  onSave: (data: ProviderCreateData) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<ProviderCreateData>(
+    existing
+      ? { name: existing.name, display_name: existing.display_name, provider_type: existing.provider_type, api_base: existing.api_base ?? "", api_key: "", enabled: existing.enabled }
+      : { ...DEFAULT_FORM }
+  );
+  const set = (k: keyof ProviderCreateData) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={[pfStyles.container, { backgroundColor: colors.background }]}>
+        <View style={[pfStyles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[pfStyles.title, { color: colors.foreground }]}>{existing ? "Sửa Provider" : "Thêm Provider"}</Text>
+          <TouchableOpacity onPress={onClose} style={[pfStyles.closeBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
+            <Ionicons name="close" size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={[pfStyles.body, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
+          {formError && (
+            <View style={[pfStyles.errorBanner, { backgroundColor: colors.destructive + "15" }]}>
+              <Text style={[pfStyles.errorText, { color: colors.destructive }]}>{formError}</Text>
+            </View>
+          )}
+
+          <Text style={[pfStyles.label, { color: colors.mutedForeground }]}>LOẠI PROVIDER *</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {PROVIDER_TYPES.map((pt) => {
+                const active = form.provider_type === pt;
+                const cfg = PROVIDER_ICONS[pt] ?? { color: colors.primary, icon: "server-outline" as const };
+                return (
+                  <TouchableOpacity
+                    key={pt}
+                    onPress={() => setForm((f) => ({ ...f, provider_type: pt }))}
+                    style={[pfStyles.typeChip, { backgroundColor: active ? cfg.color + "20" : colors.secondary, borderColor: active ? cfg.color : colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={cfg.icon} size={13} color={active ? cfg.color : colors.mutedForeground} />
+                    <Text style={[pfStyles.typeChipText, { color: active ? cfg.color : colors.mutedForeground }]}>{pt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          <Text style={[pfStyles.label, { color: colors.mutedForeground }]}>TÊN ĐỊNH DANH (slug) *</Text>
+          <TextInput
+            style={[pfStyles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            value={form.name}
+            onChangeText={set("name")}
+            placeholder="vd: openai-main"
+            placeholderTextColor={colors.mutedForeground}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!existing}
+          />
+
+          <Text style={[pfStyles.label, { color: colors.mutedForeground }]}>TÊN HIỂN THỊ</Text>
+          <TextInput
+            style={[pfStyles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            value={form.display_name}
+            onChangeText={set("display_name")}
+            placeholder="vd: OpenAI GPT-4"
+            placeholderTextColor={colors.mutedForeground}
+          />
+
+          <Text style={[pfStyles.label, { color: colors.mutedForeground }]}>API BASE URL</Text>
+          <TextInput
+            style={[pfStyles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            value={form.api_base}
+            onChangeText={set("api_base")}
+            placeholder="https://api.openai.com/v1 (để trống = mặc định)"
+            placeholderTextColor={colors.mutedForeground}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Text style={[pfStyles.label, { color: colors.mutedForeground }]}>API KEY</Text>
+          <TextInput
+            style={[pfStyles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            value={form.api_key}
+            onChangeText={set("api_key")}
+            placeholder={existing ? "Để trống = giữ nguyên key cũ" : "sk-..."}
+            placeholderTextColor={colors.mutedForeground}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={[pfStyles.hint, { color: colors.mutedForeground }]}>API key được mã hóa và lưu an toàn trên server</Text>
+        </ScrollView>
+
+        <View style={[pfStyles.footer, { borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
+          <TouchableOpacity onPress={onClose} style={[pfStyles.cancelBtn, { borderColor: colors.border }]} activeOpacity={0.7}>
+            <Text style={[pfStyles.cancelText, { color: colors.mutedForeground }]}>Hủy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onSave(form)}
+            disabled={saving}
+            style={[pfStyles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
+            activeOpacity={0.8}
+          >
+            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={pfStyles.saveText}>{existing ? "Cập nhật" : "Thêm"}</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const pfStyles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  title: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  body: { padding: 20, gap: 6 },
+  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, marginTop: 8 },
+  input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 11, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 4 },
+  hint: { fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 8 },
+  typeChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
+  typeChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  footer: { flexDirection: "row", gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  cancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: "center" },
+  cancelText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  saveBtn: { flex: 2, borderRadius: 12, paddingVertical: 13, alignItems: "center" },
+  saveText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  errorBanner: { borderRadius: 10, padding: 12, marginBottom: 8 },
+  errorText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+});
+
 export default function ProvidersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { providers: liveProviders, loading, error, toggle, refresh } = useProviders();
+  const { providers: liveProviders, loading, error, toggle, refresh, create, update, deleteProvider } = useProviders();
   const [compareMode, setCompareMode] = useState(false);
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCompare, setShowCompare] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<ProviderData | null>(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const topPad = insets.top;
+
+  const handleSaveProvider = async (data: ProviderCreateData) => {
+    if (!data.name.trim()) { setFormError("Tên định danh là bắt buộc"); return; }
+    setFormSaving(true);
+    setFormError(null);
+    let ok = false;
+    if (editingProvider) {
+      ok = await update(editingProvider.id, data);
+    } else {
+      const res = await create(data);
+      ok = !!res;
+    }
+    setFormSaving(false);
+    if (ok) {
+      setShowForm(false);
+      setEditingProvider(null);
+    } else {
+      setFormError(error ?? "Lưu thất bại");
+    }
+  };
+
+  const handleDelete = (p: ProviderData) => {
+    Alert.alert("Xóa Provider", `Xóa "${p.display_name}"? Các agent dùng provider này sẽ bị ảnh hưởng.`, [
+      { text: "Hủy", style: "cancel" },
+      { text: "Xóa", style: "destructive", onPress: () => deleteProvider(p.id) },
+    ]);
+  };
 
   const providers = liveProviders;
   const enabledCount = providers.filter((p) => p.enabled).length;
@@ -216,6 +398,13 @@ export default function ProvidersScreen() {
         </TouchableOpacity>
         <TouchableOpacity onPress={refresh} style={[styles.iconBtn, { backgroundColor: colors.muted }]} activeOpacity={0.7}>
           {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={15} color={colors.mutedForeground} />}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => { setEditingProvider(null); setFormError(null); setShowForm(true); }}
+          style={[styles.iconBtn, { backgroundColor: colors.primary }]}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -283,6 +472,13 @@ export default function ProvidersScreen() {
               ]}
               activeOpacity={compareMode ? 0.7 : 0.95}
               onPress={compareMode ? () => toggleSelect(item.id) : undefined}
+              onLongPress={!compareMode ? () => {
+                Alert.alert(item.display_name, "Chọn hành động", [
+                  { text: "Sửa", onPress: () => { setEditingProvider(item); setFormError(null); setShowForm(true); } },
+                  { text: "Xóa", style: "destructive", onPress: () => handleDelete(item) },
+                  { text: "Hủy", style: "cancel" },
+                ]);
+              } : undefined}
             >
               {compareMode && (
                 <View style={[styles.selectCheck, { borderColor: isSelected ? colors.primary : colors.border, backgroundColor: isSelected ? colors.primary : "transparent" }]}>
@@ -364,6 +560,18 @@ export default function ProvidersScreen() {
           providers={selectedProviders}
           colors={colors}
           onClose={() => setShowCompare(false)}
+        />
+      )}
+
+      {showForm && (
+        <ProviderFormModal
+          colors={colors}
+          insets={insets}
+          existing={editingProvider}
+          saving={formSaving}
+          formError={formError}
+          onSave={handleSaveProvider}
+          onClose={() => { setShowForm(false); setEditingProvider(null); setFormError(null); }}
         />
       )}
     </View>

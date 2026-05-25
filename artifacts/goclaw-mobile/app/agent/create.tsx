@@ -66,10 +66,12 @@ export default function AgentCreateScreen() {
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState("");
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   const [form, setForm] = useState<AgentFormData>({
     agent_key: "",
-    name: "",
+    display_name: "",
     agent_description: "",
     provider: "openai",
     model: "",
@@ -90,7 +92,7 @@ export default function AgentCreateScreen() {
     if (agent && isEdit) {
       setForm({
         agent_key: agent.agent_key ?? "",
-        name: agent.name ?? "",
+        display_name: agent.name ?? "",
         agent_description: agent.description ?? "",
         provider: agent.provider ?? "openai",
         model: agent.model ?? "",
@@ -115,10 +117,19 @@ export default function AgentCreateScreen() {
   const handleNameChange = (val: string) => {
     setForm((f) => ({
       ...f,
-      name: val,
+      display_name: val,
       ...(isEdit ? {} : { agent_key: val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") }),
     }));
   };
+
+  const PROMPT_TEMPLATES = [
+    { label: "Assistant tổng quát", icon: "chatbubble-ellipses-outline" as const, text: "Bạn là assistant thông minh và hữu ích. Hãy trả lời ngắn gọn, chính xác và thân thiện. Khi không biết, hãy nói rõ thay vì đoán." },
+    { label: "Lập trình viên", icon: "code-slash-outline" as const, text: "Bạn là senior software engineer. Ưu tiên code sạch, có test, và giải thích rõ ràng. Luôn hỏi clarifying questions trước khi implement nếu yêu cầu chưa rõ." },
+    { label: "Phân tích dữ liệu", icon: "bar-chart-outline" as const, text: "Bạn là data analyst chuyên nghiệp. Phân tích dữ liệu có hệ thống, đưa ra insights có giá trị, và trình bày kết quả rõ ràng với charts/tables khi cần." },
+    { label: "Customer Support", icon: "headset-outline" as const, text: "Bạn là nhân viên hỗ trợ khách hàng chuyên nghiệp. Lịch sự, kiên nhẫn, và luôn cố gắng giải quyết vấn đề của khách hàng một cách hiệu quả nhất." },
+    { label: "Research Assistant", icon: "search-outline" as const, text: "Bạn là research assistant. Tổng hợp thông tin từ nhiều nguồn, phân tích và đánh giá độ tin cậy, đưa ra kết luận có dẫn chứng rõ ràng." },
+    { label: "Writing Coach", icon: "pencil-outline" as const, text: "Bạn là writing coach giàu kinh nghiệm. Giúp người dùng viết rõ ràng, súc tích và thuyết phục. Đưa ra gợi ý cụ thể để cải thiện văn phong." },
+  ];
 
   const topPad = insets.top;
 
@@ -128,7 +139,7 @@ export default function AgentCreateScreen() {
       setForm((f) => ({
         ...f,
         agent_key: parsed.agent_key ?? parsed.key ?? f.agent_key,
-        name: parsed.name ?? parsed.display_name ?? f.name,
+        display_name: parsed.name ?? parsed.display_name ?? f.display_name,
         agent_description: parsed.agent_description ?? parsed.description ?? parsed.system_prompt ?? f.agent_description,
         provider: parsed.provider ?? f.provider,
         model: parsed.model ?? f.model,
@@ -153,15 +164,14 @@ export default function AgentCreateScreen() {
     if (isEdit && id) {
       const ok = await updateAgent(id, form);
       if (ok) {
-        Alert.alert("Thành công", "Đã cập nhật agent", [{ text: "OK", onPress: () => router.back() }]);
+        setSuccessMsg("Đã cập nhật agent thành công!");
+        setTimeout(() => router.back(), 1200);
       }
     } else {
       const res = await createAgent(form);
       if (res) {
-        Alert.alert("Tạo thành công", `Agent "${res.agent_key}" đã được tạo`, [
-          { text: "Xem chi tiết", onPress: () => { router.back(); router.push(`/agent/${res.id}`); } },
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        setSuccessMsg(`Agent "${res.agent_key}" đã được tạo!`);
+        setTimeout(() => { router.back(); }, 1200);
       }
     }
   };
@@ -213,12 +223,17 @@ export default function AgentCreateScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {error && (
+          {successMsg ? (
+            <View style={[styles.errorBanner, { backgroundColor: "#22c55e15", borderColor: "#22c55e30" }]}>
+              <Ionicons name="checkmark-circle-outline" size={14} color="#22c55e" />
+              <Text style={[styles.errorText, { color: "#22c55e" }]}>{successMsg}</Text>
+            </View>
+          ) : error ? (
             <View style={[styles.errorBanner, { backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "30" }]}>
               <Ionicons name="alert-circle-outline" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
-          )}
+          ) : null}
 
           {/* Basic info */}
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -227,7 +242,7 @@ export default function AgentCreateScreen() {
             <FormField label="Tên hiển thị" required>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
-                value={form.name}
+                value={form.display_name}
                 onChangeText={handleNameChange}
                 placeholder="vd: Sales Assistant"
                 placeholderTextColor={colors.mutedForeground}
@@ -249,6 +264,30 @@ export default function AgentCreateScreen() {
             </FormField>
 
             <FormField label="Mô tả / System Prompt">
+              <TouchableOpacity
+                onPress={() => setShowTemplates((v) => !v)}
+                style={[styles.templateToggle, { backgroundColor: showTemplates ? colors.primary + "15" : colors.secondary, borderColor: showTemplates ? colors.primary + "40" : colors.border }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="albums-outline" size={13} color={showTemplates ? colors.primary : colors.mutedForeground} />
+                <Text style={[styles.templateToggleText, { color: showTemplates ? colors.primary : colors.mutedForeground }]}>Mẫu gợi ý</Text>
+                <Ionicons name={showTemplates ? "chevron-up" : "chevron-down"} size={12} color={showTemplates ? colors.primary : colors.mutedForeground} />
+              </TouchableOpacity>
+              {showTemplates && (
+                <View style={styles.templateGrid}>
+                  {PROMPT_TEMPLATES.map((t) => (
+                    <TouchableOpacity
+                      key={t.label}
+                      onPress={() => { setForm((f) => ({ ...f, agent_description: t.text })); setShowTemplates(false); }}
+                      style={[styles.templateChip, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={t.icon} size={13} color={colors.primary} />
+                      <Text style={[styles.templateChipText, { color: colors.foreground }]}>{t.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               <TextInput
                 style={[styles.input, styles.textarea, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
                 value={form.agent_description}
@@ -256,8 +295,9 @@ export default function AgentCreateScreen() {
                 placeholder="Mô tả nhiệm vụ và hành vi của agent..."
                 placeholderTextColor={colors.mutedForeground}
                 multiline
-                numberOfLines={4}
+                numberOfLines={8}
               />
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>{(form.agent_description ?? "").length} ký tự</Text>
             </FormField>
           </View>
 
@@ -627,7 +667,12 @@ const styles = StyleSheet.create({
   section: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 14 },
   sectionTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
   input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular" },
-  textarea: { height: 100, textAlignVertical: "top", paddingTop: 10 },
+  textarea: { minHeight: 180, textAlignVertical: "top", paddingTop: 10 },
+  templateToggle: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, borderWidth: 1, alignSelf: "flex-start" },
+  templateToggleText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  templateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 8 },
+  templateChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  templateChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   hint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: -2 },
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   typeCard: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 12, gap: 4 },
