@@ -371,8 +371,23 @@ export default function VaultScreen() {
           <View style={styles.emptyWrap}>
             <Ionicons name="archive-outline" size={36} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              {search ? "Không tìm thấy tài liệu" : "Không có tài liệu"}
+              {search ? "Không tìm thấy tài liệu" : "Chưa có tài liệu nào"}
             </Text>
+            {!search && (
+              <Text style={[styles.emptySubText, { color: colors.mutedForeground }]}>
+                Tài liệu được tạo tự động khi agent học từ cuộc trò chuyện
+              </Text>
+            )}
+            {!search && (
+              <TouchableOpacity
+                onPress={() => router.push("/vault-graph")}
+                style={[styles.emptyBtn, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="git-network-outline" size={14} color={colors.primary} />
+                <Text style={[styles.emptyBtnText, { color: colors.primary }]}>Xem Vault Graph</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -429,8 +444,11 @@ const styles = StyleSheet.create({
   expandedMetaItem: { gap: 2 },
   expandedMetaLabel: { fontSize: 9, fontFamily: "Inter_500Medium", textTransform: "uppercase" },
   expandedMetaValue: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
+  emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10, paddingHorizontal: 32 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  emptySubText: { fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center", opacity: 0.7, lineHeight: 18 },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8, marginTop: 4 },
+  emptyBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   deleteDocBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7, marginTop: 4 },
   deleteDocText: { fontSize: 13, fontFamily: "Inter_500Medium" },
 });

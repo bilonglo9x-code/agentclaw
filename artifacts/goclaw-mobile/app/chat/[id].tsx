@@ -934,13 +934,13 @@ export default function ChatScreen() {
             <Ionicons name="camera-outline" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
           <View style={styles.toolbarSpacer} />
-          <Text style={[styles.contextText, { color: colors.mutedForeground }]}>
-            {liveSession?.estimatedTokens && liveSession?.contextWindow
-              ? `ctx: ${Math.min(100, Math.round((liveSession.estimatedTokens / liveSession.contextWindow) * 100))}%`
-              : liveSession?.estimatedTokens
-              ? `~${liveSession.estimatedTokens >= 1000 ? `${(liveSession.estimatedTokens/1000).toFixed(1)}k` : liveSession.estimatedTokens} tok`
-              : "ctx: —"}
-          </Text>
+          {(liveSession?.estimatedTokens != null) && (
+            <Text style={[styles.contextText, { color: colors.mutedForeground }]}>
+              {liveSession.estimatedTokens && liveSession?.contextWindow
+                ? `ctx: ${Math.min(100, Math.round((liveSession.estimatedTokens / liveSession.contextWindow) * 100))}%`
+                : `~${liveSession.estimatedTokens >= 1000 ? `${(liveSession.estimatedTokens/1000).toFixed(1)}k` : liveSession.estimatedTokens} tok`}
+            </Text>
+          )}
         </View>
 
         {/* Attachment preview strip */}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -131,6 +131,12 @@ export default function EvolutionScreen() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const topPad = insets.top;
+
+  useEffect(() => {
+    if (!paramAgentId && !selectedAgent && agents.length > 0) {
+      setSelectedAgent(agents[0].id);
+    }
+  }, [agents, paramAgentId, selectedAgent]);
 
   const { suggestions, toolAggs, statusFilter, setStatusFilter, loading, updating, error, refresh, updateSuggestion } =
     useEvolution(selectedAgent || undefined);

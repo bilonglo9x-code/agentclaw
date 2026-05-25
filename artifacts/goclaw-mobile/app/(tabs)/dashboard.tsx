@@ -268,7 +268,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.quotaMeta}>
             <Text style={[styles.quotaMetaText, { color: colors.mutedForeground }]}>
-              {quota ? `${fmt(quota.total_used)} / ${fmt(quota.total_limit)} requests` : "Kết nối để xem quota"}
+              {quota ? (quota.total_limit === 0 ? "Không có quota" : `${fmt(quota.total_used)} / ${fmt(quota.total_limit)} requests`) : "Kết nối để xem quota"}
             </Text>
             {quota?.reset_at && (
               <Text style={[styles.quotaMetaText, { color: colors.mutedForeground }]}>

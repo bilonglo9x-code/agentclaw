@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -278,6 +278,12 @@ export default function KnowledgeGraphScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedEntity, setSelectedEntity] = useState<KGEntity | null>(null);
   const topPad = insets.top;
+
+  useEffect(() => {
+    if (!selectedAgent && agents.length > 0) {
+      setSelectedAgent(agents[0].id);
+    }
+  }, [agents, selectedAgent]);
 
   const { entities, stats, loading, error, search, setSearch, refresh, deleteEntity } =
     useKnowledgeGraph(selectedAgent || undefined);

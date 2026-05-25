@@ -33,23 +33,6 @@ const LEVEL_CONFIG: Record<LogLevel, { color: string; bg: string; icon: keyof ty
   debug: { color: "#a1a1aa", bg: "#a1a1aa15", icon: "code-outline" },
 };
 
-const MOCK_LOGS: LogEntry[] = [
-  { id: "1", timestamp: Date.now() - 120000, level: "info", message: "Agent 'Sales Bot' completed task successfully", source: "agent" },
-  { id: "2", timestamp: Date.now() - 180000, level: "warn", message: "Rate limit approaching: 85% of hourly quota used", source: "api" },
-  { id: "3", timestamp: Date.now() - 240000, level: "error", message: "Embedding provider timeout after 30s", source: "provider" },
-  { id: "4", timestamp: Date.now() - 300000, level: "info", message: "Memory consolidation job started (scheduled)", source: "scheduler" },
-  { id: "5", timestamp: Date.now() - 360000, level: "debug", message: "Tool call: query_database({table: 'sales', month: 5})", source: "skill" },
-  { id: "6", timestamp: Date.now() - 420000, level: "info", message: "New session opened — user: admin@goclaw.dev", source: "auth" },
-  { id: "7", timestamp: Date.now() - 480000, level: "warn", message: "Context window at 78% — consider summarizing", source: "agent" },
-  { id: "8", timestamp: Date.now() - 540000, level: "error", message: "Webhook delivery failed: 3 retries exhausted", source: "webhook" },
-  { id: "9", timestamp: Date.now() - 600000, level: "info", message: "Cron job 'daily_report' completed in 2.3s", source: "scheduler" },
-  { id: "10", timestamp: Date.now() - 660000, level: "debug", message: "Cache hit: embedding vector for document #4821", source: "cache" },
-  { id: "11", timestamp: Date.now() - 720000, level: "error", message: "KG embedding failed: vector dimension mismatch", source: "kg" },
-  { id: "12", timestamp: Date.now() - 780000, level: "info", message: "Provider OpenAI authenticated, model: gpt-4o", source: "provider" },
-  { id: "13", timestamp: Date.now() - 840000, level: "debug", message: "BM25 index rebuilt: 1,247 documents processed", source: "vault" },
-  { id: "14", timestamp: Date.now() - 900000, level: "warn", message: "Channel Telegram slow response (1.8s avg)", source: "channel" },
-  { id: "15", timestamp: Date.now() - 960000, level: "info", message: "Backup completed: 24.3MB to /backups/2026-05-22.tar.gz", source: "backup" },
-];
 
 function formatTs(ts: number): string {
   return new Date(ts).toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit", second: "2-digit" });

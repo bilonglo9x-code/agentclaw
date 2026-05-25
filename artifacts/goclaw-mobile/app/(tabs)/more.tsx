@@ -101,7 +101,6 @@ export default function MoreScreen() {
         { icon: "hardware-chip-outline", label: "Channels", color: "#60a5fa", onPress: () => router.push("/channels") },
         { icon: "time-outline", label: "Cron Jobs", color: "#22c55e", onPress: () => router.push("/cron") },
         { icon: "server-outline", label: "MCP Servers", color: "#a78bfa", onPress: () => router.push("/mcp") },
-        { icon: "volume-high-outline", label: "Voices & TTS", color: "#f97316", onPress: () => router.push("/voice") },
         { icon: "cube-outline", label: "Models", color: "#60a5fa", onPress: () => router.push("/models") },
       ],
     },
@@ -136,7 +135,7 @@ export default function MoreScreen() {
       ],
     },
     {
-      title: "Sistema",
+      title: "Hệ thống",
       items: [
         { icon: "heart-outline", label: "Health Monitor", color: "#22c55e", onPress: () => router.push("/health") },
         { icon: "cube-outline", label: "Packages", color: "#3b82f6", onPress: () => router.push("/packages") },
