@@ -216,7 +216,8 @@ function MsgBubble({ role, content, isStreaming, toolName, colors, attachedImage
 
   // Skip rendering empty messages that are not streaming (unless there are images)
   const hasImages = (attachedImages && attachedImages.length > 0) || (mediaRefs && mediaRefs.length > 0);
-  if (!isStreaming && !content?.trim() && !hasImages) return null;
+  // Never hide user messages — they were explicitly sent. Only hide empty non-user messages.
+  if (!isUser && !isStreaming && !content?.trim() && !hasImages) return null;
 
   if (isStreaming && !content) {
     return (
