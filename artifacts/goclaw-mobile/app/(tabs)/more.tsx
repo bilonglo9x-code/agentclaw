@@ -38,6 +38,9 @@ const ALL_SHORTCUTS = [
   { key: "activity", icon: "time-outline" as keyof typeof Ionicons["glyphMap"], label: "Activity Log", color: "#60a5fa", route: "/activity" },
   { key: "evolution", icon: "bulb-outline" as keyof typeof Ionicons["glyphMap"], label: "Evolution", color: "#f59e0b", route: "/evolution" },
   { key: "sessions", icon: "chatbubble-ellipses-outline" as keyof typeof Ionicons["glyphMap"], label: "Sessions", color: "#a78bfa", route: "/sessions" },
+  { key: "pending", icon: "mail-open-outline" as keyof typeof Ionicons["glyphMap"], label: "Pending Inbox", color: "#f97316", route: "/pending-messages" },
+  { key: "hooks", icon: "git-branch-outline" as keyof typeof Ionicons["glyphMap"], label: "Webhooks", color: "#ec4899", route: "/hooks-webhooks" },
+  { key: "builtin", icon: "construct-outline" as keyof typeof Ionicons["glyphMap"], label: "Builtin Tools", color: "#22c55e", route: "/builtin-tools" },
 ];
 const DEFAULT_PINNED = ["search", "traces", "approvals", "skills", "memory", "kg"];
 
@@ -101,6 +104,8 @@ export default function MoreScreen() {
         { icon: "hardware-chip-outline", label: "Channels", color: "#60a5fa", onPress: () => router.push("/channels") },
         { icon: "time-outline", label: "Cron Jobs", color: "#22c55e", onPress: () => router.push("/cron") },
         { icon: "server-outline", label: "MCP Servers", color: "#a78bfa", onPress: () => router.push("/mcp") },
+        { icon: "construct-outline" as keyof typeof Ionicons["glyphMap"], label: "Builtin Tools", color: "#22c55e", onPress: () => router.push("/builtin-tools") },
+        { icon: "git-branch-outline" as keyof typeof Ionicons["glyphMap"], label: "Webhooks", color: "#ec4899", onPress: () => router.push("/hooks-webhooks") },
         { icon: "cube-outline", label: "Models", color: "#60a5fa", onPress: () => router.push("/models") },
       ],
     },
@@ -118,6 +123,7 @@ export default function MoreScreen() {
         { icon: "library-outline", label: "Memory & Knowledge", color: "#f97316", onPress: () => router.push("/memory") },
         { icon: "git-network-outline", label: "Knowledge Graph", color: "#a78bfa", onPress: () => router.push("/knowledge-graph") },
         { icon: "archive-outline", label: "Vault", color: "#60a5fa", onPress: () => router.push("/vault") },
+        { icon: "mail-open-outline" as keyof typeof Ionicons["glyphMap"], label: "Pending Inbox", color: "#f97316", onPress: () => router.push("/pending-messages") },
         { icon: "chatbubbles-outline", label: "Sessions History", color: "#a78bfa", onPress: () => router.push("/sessions") },
         { icon: "people-circle-outline", label: "Teams", color: "#22c55e", onPress: () => router.push("/teams") },
         { icon: "person-outline", label: "Contacts", color: "#60a5fa", onPress: () => router.push("/contacts") },
